@@ -1,0 +1,55 @@
+## Interface: 16001
+## Title: |cffd4a017Forever|r Compendium
+## Notes: A journal of the creatures you meet, their loot, and where your quests are. Part of the Forever suite. /fc
+## Author: wtFAQ
+## Version: 2.4.0
+## Dependencies: ForeverCore
+## SavedVariables: ForeverCompendiumDB
+## SavedVariablesPerCharacter: ForeverCompendiumCharDB
+## IconTexture: Interface\Icons\INV_Misc_Book_11
+
+# Joins the suite first (Forever Core), then strings
+Part.lua
+Locales\enUS.lua
+Locales\enUS_Modules.lua
+Migrations.lua
+
+Changelog.lua
+
+# Modules: one line per file, grouped by category (each folder is a category; Data holds the
+# journal's merging, text, Bestiary Import and Archive, in the Journal category)
+Modules\Journal\Places.lua
+Modules\Journal\Book.lua
+Modules\Data\BookMerge.lua
+Modules\Data\Codec.lua
+Modules\Journal\RecorderLoot.lua
+Modules\Journal\RecorderQuests.lua
+Modules\Journal\RecorderCombat.lua
+Modules\Journal\RecorderNpcs.lua
+Modules\Journal\Recorder.lua
+Modules\Data\ImportCreatures.lua
+Modules\Data\ImportQuests.lua
+Modules\Data\Import.lua
+Modules\Data\Archive.lua
+Modules\Journal\JournalText.lua
+Modules\Journal\JournalKit.lua
+Modules\Journal\JournalLists.lua
+Modules\Journal\CreatureFilter.lua
+Modules\Journal\Journal.lua
+Modules\Journal\CreatureOverview.lua
+Modules\Journal\CreatureDetail.lua
+Modules\Journal\CreatureQuestTab.lua
+Modules\Journal\CreatureTabs.lua
+Modules\Journal\CreaturesPage.lua
+Modules\Journal\ItemsPage.lua
+Modules\Journal\TrophiesPage.lua
+Modules\Map\QuestPins.lua
+Modules\Map\RarePins.lua
+Modules\Map\CreatureAreas.lua
+Modules\Tooltips\TooltipLines.lua
+Modules\Social\Transport.lua
+Modules\Social\Sharing.lua
+Modules\Social\Badges.lua
+Modules\Social\BadgesPage.lua
+Modules\Notifications\Banner.lua
+

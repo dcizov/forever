@@ -1,0 +1,69 @@
+name: Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua 5.1
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
+
+      - name: Syntax (luac5.1 -p)
+        run: find . -name '*.lua' -not -path './.git/*' -print0 | xargs -0 luac5.1 -p
+
+      - name: ASCII only
+        run: |
+          if grep -rnP '[^\x00-\x7F]' --include='*.lua' --include='*.toc' .; then
+            echo "Non-ASCII characters found above."; exit 1
+          fi
+
+      - name: Each addon's TOC lists every one of its files, and every listed file exists
+        run: |
+          for addon in ForeverCore ForeverTweaks ForeverCompendium; do
+            (cd "$addon"
+              grep -E '\.lua\s*$' "$addon.toc" | tr -d '\r' | sed 's#\\#/#g; s/[[:space:]]*$//' | sort > ../listed.txt
+              find . -name '*.lua' | sed 's#^\./##' | sort > ../present.txt)
+            echo "$addon"; diff listed.txt present.txt
+          done
+
+      - name: Every addon is at the same version
+        run: |
+          versions=$(grep -h -m1 '^## Version:' */*.toc | sort -u | wc -l)
+          if [ "$versions" != "1" ]; then grep -H '^## Version:' */*.toc; echo "The TOCs' versions differ."; exit 1; fi
+
+      - name: Tests
+        run: lua5.1 tests/run.lua
+
+  # Mechanical code health (docs/code-health.md): desloppify's detectors, with the project's
+  # settings from .desloppify/config.json. Fails if the objective score drops below 100. The
+  # subjective review isn't run here: it needs AI reviewers (desloppify review).
+  desloppify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install desloppify
+        run: pip install "desloppify[full]==1.0"
+
+      - name: Scan
+        run: desloppify scan --path . --profile ci --no-badge
+
+      - name: Objective score is 100
+        run: |
+          python - <<'PY'
+          import json, sys
+          score = json.load(open(".desloppify/state-lua.json"))["objective_score"]
+          print(f"objective score: {score}")
+          if score < 100:
+              print("Mechanical findings above: run `desloppify scan --path .` and `desloppify next` locally.")
+              sys.exit(1)
+          PY
