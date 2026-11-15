@@ -128,22 +128,40 @@ eq(ForeverTweaksDB.data.TestOptions.notes, nil, "and not the account's")
 -- The sidebar: the Forever page (Settings), the Tweaks page (its modules), Tweaks for Addons,
 -- About, Debug and Changelog; no page for any other category or a module.
 for _, page in ipairs({ ns.title, ns.member.short, L.CATEGORY_ADDONS, L.ABOUT, L.DEBUG, L.CHANGELOG }) do
-    check(W.categories[page] ~= nil, "a sidebar page: " .. page)
+    check(ForeverCore.SettingsWindow.Page(page) ~= nil, "a sidebar page: " .. page)
 end
 for _, key in ipairs(ns.member.categories) do
     if key ~= "settings" and key ~= "addons" then
-        eq(W.categories[ns:CategoryLabel(key)], nil, "no page of its own for " .. key)
+        eq(ForeverCore.SettingsWindow.Page(ns:CategoryLabel(key)), nil, "no page of its own for " .. key)
     end
 end
-eq(W.categories[ns.modules.FullBags.title], nil, "no page of its own for a module")
+eq(ForeverCore.SettingsWindow.Page(ns.modules.FullBags.title), nil, "no page of its own for a module")
+-- The Forever window: Settings > AddOns > Forever is a launcher; the window keeps its place.
+local Window = ForeverCore.SettingsWindow
+check(W.categories[ns.title] ~= nil and W.categories[ns.member.short] == nil, "one launcher page in Settings > AddOns")
+local launcher = W.categories[ns.title].frame
+launcher:Show()
+local openButton = under(launcher, function(f) return f._kind == "Button" and f._text == L.OPEN end)[1]
+openButton:Fire("OnClick")
+check(Window.IsShown(), "its button opens the Forever window")
+local frame = ForeverSettingsFrame
+local moved = false
+frame.StopMovingOrSizing = function() moved = true end
+frame.GetPoint = function() return "TOPLEFT", UIParent, "TOPLEFT", 40, -50 end
+frame:Fire("OnDragStop")
+check(moved and ns.db.window.x == 40 and ns.db.window.y == -50, "dragged: its place kept")
+local escapes = false
+for _, name in ipairs(UISpecialFrames) do if name == "ForeverSettingsFrame" then escapes = true end end
+check(escapes, "Escape closes it")
 ns:OpenSettings()
-eq(W.opened, ns.title, "no module: the Forever page")
+eq(ForeverCore.SettingsWindow.Current(), ns.title, "no module: the Forever page")
 ns:OpenSettings("MinimapButton")
-eq(W.opened, ns.title, "the Minimap Button opens on the Settings page (the top one)")
+eq(ForeverCore.SettingsWindow.Current(), ns.title, "the Minimap Button opens on the Settings page (the top one)")
 ns:OpenSettings("DungeonJournalSkin")
-eq(W.opened, L.CATEGORY_ADDONS, "an addon's tweak opens on Tweaks for Addons")
+eq(ForeverCore.SettingsWindow.Current(), L.CATEGORY_ADDONS, "an addon's tweak opens on Tweaks for Addons")
 
-local page = W.categories[ns.member.short].frame
+local page = ForeverCore.SettingsWindow.Page(ns.member.short).frame
+ForeverCore.SettingsWindow.Open(ns.member.short) -- the window shows one page at a time
 local function shownText(text)
     return #under(page, function(f) return f._text == text and f:IsVisible() end) > 0
 end
@@ -165,10 +183,13 @@ for _, name in ipairs(ns.order) do
     end
 end
 check(shownText(ns:CategoryLabel("bags")), "a label per category")
+check(shownText(ns.L.GROUP_FISHING), "related modules under their group's heading")
+-- Grouped modules sit together after their category's ungrouped ones.
+check(listRow(ns.modules.Fishing.title) ~= nil and listRow(ns.modules.GatherMap.title) ~= nil, "both groups listed")
 eq(listRow(ns.modules.MinimapButton.title), nil, "the Settings page's modules aren't listed")
 eq(listRow(ns.modules.DungeonJournalSkin.title), nil, "nor Tweaks for Addons' modules")
 -- The Settings page draws every module of the "settings" category, by category.
-local settingsPage = W.categories[ns.title].frame
+local settingsPage = ForeverCore.SettingsWindow.Page(ns.title).frame
 for _, name in ipairs(ns.order) do
     local mod = ns.modules[name]
     if ns:CategoryOf(mod) == "settings" then
@@ -178,7 +199,7 @@ end
 
 -- Opening a module selects it: its options on the right, and only its.
 ns:OpenSettings("Performance")
-eq(W.opened, ns.member.short, "a module opens on the Forever Tweaks page")
+eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "a module opens on the Forever Tweaks page")
 check(listRow(ns.modules.Performance.title).isSelected(), "selected in the list")
 check(shownText(L.PERF_LATENCY), "its options show")
 eq(shownText(L.FULL_COINS), false, "another module's don't")
@@ -259,6 +280,6 @@ eq(items.db.markLeftover, false, "turned off as a whole (/ft): its features are 
 ns:SetEnabled("QuestItems", true)
 eq(items.db.markNeeded and items.db.markStarts and items.db.markLeftover and items.db.tooltip, true,
     "turned on with none ticked: its default features")
-C_SettingsUtil.OpenSettingsPanel(L.ABOUT)
-check(W.categories[L.ABOUT].frame:IsShown(), "the About page opens")
+ForeverCore.SettingsWindow.Open(L.ABOUT)
+check(ForeverCore.SettingsWindow.Page(L.ABOUT).frame:IsShown(), "the About page opens")
 finish()

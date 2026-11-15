@@ -7,8 +7,14 @@ refactoring; follow the rules when writing new code. CLAUDE.md has the short ver
 ## The suite
 
 Paths below are Forever Core's (`ForeverCore/Core/`, `UI/`, `Settings/`) unless they name a
-member's: `Core/OtherAddons.lua`, `Core/Migrations.lua`, `UI/BagButtons.lua`, `UI/ItemList.lua`,
-`Settings/Addons.lua` and `Modules/` are Forever Tweaks'; `Modules/Journal/` Forever Compendium's.
+member's: `Lib/OtherAddons.lua`, `Migrations.lua`, `UI/BagButtons.lua`, `UI/ItemList.lua`,
+`UI/Restyle.lua`, `Settings/Addons.lua` and `Modules/` are Forever Tweaks'; `Lib/Book.lua` and
+`Modules/Journal/` Forever Compendium's.
+
+- Every member is laid out the same way: `Part.lua`, `Locales/`, `Migrations.lua` at its root;
+  `Lib/` for the libraries several of its modules share (none a module itself); `UI/` for shared
+  on-screen pieces; `Modules/<Category>/` with one folder per category in its `Part.lua`, each
+  module's helper files beside it. Forever Core keeps `Core/` for the runtime.
 
 - A member's namespace reads through to the core's (`Core/Members.lua`). Core code never reads a
   field a member sets on its own namespace (`ns.Book`, `ns.ToggleJournal`): what the core needs of
@@ -45,13 +51,16 @@ reintroducing the same findings.
 - Event handlers are local functions passed to `RegisterEvent` (it asserts a function).
 
 **Running callbacks (`Core/Core.lua`)**
-- `ns.Run(owner, source, fn, ...)` calls `fn(owner, ...)`; `ns.RunCall(owner, source, fn, ...)` calls
-  `fn(...)`. Both isolate errors and charge time to `owner`. Anything calling into a module (Edit
+- Three ways to call code safely, named for what they add: `ns.SafeCall(fn, ...)` only isolates
+  errors (startup, before anything is profiled); `ns.ChargedCall(owner, source, fn, ...)` also
+  charges the time to `owner` in the Profiler and calls `fn(...)`; `ns.ChargedHandler(owner, source,
+  fn, ...)` does the same and passes the owner first, `fn(owner, ...)`, as every event handler, hook
+  and timer gets it. (Renamed in 2.4.0 from `ns.Call`, `ns.RunCall` and `ns.Run`.) Anything calling into a module (Edit
   Mode, commands, notice buttons, Baganator, `OnInitialize`, `DebugLine`, widget clicks, tooltips
   and menu entries, `ItemList` callbacks via `opts.owner`, popup answers via `ns:Confirm(owner, ...)`
-  / `ns:Prompt(owner, ...)`) goes through one of them, never a bare `ns.Call` or `pcall`. Don't
-  write a new "drop the owner" adapter: that is what `ns.RunCall` is for.
-- To tell an error from a nil result, run `ns.RunCall(owner, source, ns.Succeeded, fn, ...)`: it
+  / `ns:Prompt(owner, ...)`) goes through one of them, never a bare `ns.SafeCall` or `pcall`. Don't
+  write a new "drop the owner" adapter: that is what `ns.ChargedCall` is for.
+- To tell an error from a nil result, run `ns.ChargedCall(owner, source, ns.Succeeded, fn, ...)`: it
   answers `true, results` or nothing.
 - Work for after combat: `ns:AfterCombat(owner, fn)`. Next-frame batching for code that isn't a
   module (the Settings pages): `ns:Soon(owner, fn)`; a module uses `M:Soon(fn)`.
@@ -71,10 +80,15 @@ reintroducing the same findings.
 **Other seams**
 - Module news for other addons: `ns:Announce(event, ...)` (Core/Core.lua). Modules never call
   into `API.lua`; it subscribes with `ns:OnNews`.
+- A module hears news and setting changes with `M:OnNews(fn)` / `M:OnChanged(fn)`: like its
+  events, they only reach it while it's on, so no handler checks `M.active` itself. The raw
+  `ns:OnNews(owner, fn)` / `ns:OnChanged(owner, fn)` is for code that isn't a module (API.lua, the
+  Settings pages) and for the rare module handler that must run while off (TooltipLines drops its
+  cache), which says so in a comment.
 - Baganator: `BagButtons.RegisterWidget(mod, opts)`. It registers once per id, answers true once
   Baganator accepted (false when Baganator is missing or refused, so a later call tries again),
-  never shows the widget while the module is off, and runs our callbacks through `ns.RunCall`.
-- The quest log: `ns.QuestLog` (Modules/Quests/QuestLog.lua). Call `QuestLog.Listen(mod, onChange)`
+  never shows the widget while the module is off, and runs our callbacks through `ns.ChargedCall`.
+- The quest log: `ns.QuestLog` (Lib/QuestLog.lua). Call `QuestLog.Listen(mod, onChange)`
   from `OnEnable`; it owns clearing its cache.
 - On-screen displays: give the anchor once, to `Widgets.DisplayDefaults(defaults, anchor)`;
   `Widgets.AddDisplay` finds it.
@@ -85,20 +99,41 @@ reintroducing the same findings.
 - Don't `pcall` or nil-check anything `docs/forever-api.md` lists as present (`OpenAllBags`,
   `C_MerchantFrame`, `C_TooltipInfo`, ...). Call other addons' APIs (Auctionator, Baganator,
   LibDBIcon, QuestieDB, Forever++) only through `ns.OtherAddons.Call(owner, label, fn, ...)`, which
-  pcalls and logs to the owner's `Debug`. What several modules ask of one addon is a function in
-  `Core/OtherAddons.lua` (Baganator's in `UI/BagButtons.lua`), not a lookup in each module.
+  pcalls and logs to the owner's `Debug`. Other addons' code calling into ours follows the same
+  rule: the API's callbacks run through `OtherAddons.Call` (an error in them is theirs, logged,
+  not reported as ours). What several modules ask of one addon is a function in
+  `Lib/OtherAddons.lua` (Baganator's in `UI/BagButtons.lua`), not a lookup in each module.
 - `PLAYER_REGEN_DISABLED` fires before `InCombatLockdown()` turns true: track combat from the event
   name (see Gathering Session's Hide in Combat).
+
+**Chat**
+- A module says something by itself with `M:Print(...)` (silent while its Chat Messages option is
+  off or Mute All Chat Messages is on). It answers the player (a command, a button's result) with
+  `M:Reply(...)`, always shown since they asked. Code that isn't a module prints with
+  `ns:Print(...)` under its addon's name.
 
 **Files**
 - Split a file by responsibility when it grows past ~500 lines, never by trimming lines to get under
   a threshold. (Core.lua was trimmed twice and grew back before it was split into Core.lua and
   Module.lua.)
-- `Modules/<Category>/` folders follow each module's `category`. A module's helper file sits beside
-  it (`FullBagsPlan.lua`, `FishingOutfit.lua`); a library several modules share gets its own file
-  (`QuestLog.lua`) and an `assert` where it's captured, so load order fails loudly. What several
-  modules ask of another addon (Auctionator's prices) is in `Core/OtherAddons.lua`, not in one
-  module's helper. A module file is named after its key (`GatherSession.lua` for `GatherSession`).
+- `Modules/<Category>/` folders follow each module's `category`. A module file is named after its
+  key (`GatherSession.lua` for `GatherSession`). What several modules ask of another addon
+  (Auctionator's prices) is in `Lib/OtherAddons.lua`, not in one module's helper.
+- A module split into files uses one of two shapes, and only these:
+  - **A part** (loads after the module; most of them: `ItemPrices.lua`, `ProfessionObjects.lua`,
+    `TooltipsFriends.lua`, `VendorButton.lua`): it gets its module with
+    `local M = assert(ns.modules.X, "<file> loads after X.lua")` and joins it with `M:AddPart({
+    Enable, Disable, Changed })`. What it needs from the module's file comes from one table that
+    file names `ns.<Module>Shared`, captured as `local Shared = assert(ns.<Module>Shared, ...)`:
+    functions and constants only, never state (each file keeps its own).
+  - **A helper the module uses** (loads before it: `FullBagsPlan.lua`, `FishingState.lua`,
+    `QuestNameplatesRead.lua`): plain functions on `ns.<Name>`, captured by the module with an
+    `assert`.
+- A library several modules share lives in the addon's `Lib/` (Tweaks' `QuestLog.lua`,
+  Compendium's `Book.lua`); `Lib/` loads before every module, so it's captured bare. A table
+  captured from another file under `Modules/` (Compendium's `ns.JournalKit`, `ns.JournalText`,
+  `ns.Journal`, by the journal's pages, the quest pins and the badges page) is captured with an
+  `assert`, one per line, so a wrong TOC order fails loudly instead of indexing nil.
 - Locale keys use a prefix unique to one module that isn't a category's name (`BUTTONBAG_`, not
   `BAG_`; `FULL_`, `MMB_` and `PERF_` are short but name one module each).
 - Docs and comments follow a move in the same change (README layout, CLAUDE.md load order, file
@@ -120,12 +155,12 @@ Reviewers flagged each of these; each was checked and kept on purpose.
 |---|---|
 | `LAYER_CHANGED` doesn't fire for the first layer read in a session | Public, append-only API; the layer scenario tests it; documented in the `API.lua` header (call `GetLayer` for the first). |
 | `api.GetOption` returns a module's data tables (copied) | Public, append-only API; the header promises tables are copied and the api scenario reads `ButtonBag.ignored` through it. |
-| The "settings"-category modules stay in their topic's folder (`Map/MinimapButton.lua`, `Interface/Updates.lua`) | A `Modules/Settings/` folder would be confused with `Settings/`. The Settings page finds them by category (`Section.ModulesIn`), so where they sit doesn't matter to it. Documented in the README layout. |
-| `Changelog.lua` at the repo root | Every release edits it. Documented in the README layout. |
-| `UI/BagButtons.lua` in `UI/`, not `Modules/Bags/` | `UI/` is the home of on-screen pieces several modules share. |
-| Helper files beside their module, no per-feature subfolders | A few helpers (FullBagsPlan.lua, VendorButton.lua, FishingState.lua, FishingOutfit.lua, FishingZones.lua, DungeonJournalPages.lua, QuestNameplatesRead.lua), each named for its module; subfolders add depth for no gain. |
+| Forever Core's two modules are in `ForeverCore/Modules/Settings/`, beside `ForeverCore/Settings/` | Since the suite split the core's modules (Minimap Button, Update Notice) are its only ones, in its one category, `settings`; the folder follows the category like every member's. `Settings/` holds pages, `Modules/Settings/` modules. (Before the split they sat in Tweaks' Map/ and Interface/ folders.) |
+| The suite's release notes in `ForeverCore/Changelog.lua`; each member's own `Changelog.lua` is pre-suite history | One suite version, one list of releases (the Changelog page shows both). |
+| Forever Tweaks' `UI/BagButtons.lua` in `UI/`, not `Modules/Bags/` | `UI/` is the home of on-screen pieces several modules share. |
+| Helper files beside their module, no per-feature subfolders | A few helpers (FullBagsPlan.lua, VendorButton.lua, FishingState.lua, FishingZones.lua, DungeonJournalPages.lua, QuestNameplatesRead.lua), each named for its module; subfolders add depth for no gain. |
 | `ns:On(event, owner, fn)` vs `ns:After(owner, ...)` argument order | Key-first registrars (`On`, `Off`) vs owner-first ones (`After`, `OnChanged`, `OnNews`) is a consistent rule; reordering 36 call sites is churn. |
-| Features other addons also have (Repair & Sell Junk, Durability Warning, Gathering Tracking; more to come) | Reverses 1.6.0's "remove what other addons do": Forever Tweaks should work for players with only it. Each such feature lists its `covers` and asks `OtherAddons.CoveredBy` when it acts, so it stays idle while Forever++/WilduTools/Plumber's own is on. Module names of removed modules (`Durability`, `CastBar`, `FiveSecondRule`, `RangeIndicator`, `ErrorMessages`, `NameplateQuests`, `GatherTracking`, ...) aren't reused: the `removed` scenario checks their old settings stay gone. |
+| Features other addons also have (Repair & Sell Junk, Durability Warning, Gathering Tracking; more to come) | Reverses 1.6.0's "remove what other addons do": Forever Tweaks should work for players with only it. Each such feature lists its `covers` and asks `OtherAddons.CoveredBy` when it acts, so it stays idle while Forever++/WilduTools/Plumber's own is on. Module names of removed modules (`Durability`, `CastBar`, `FiveSecondRule`, `RangeIndicator`, `ErrorMessages`, `NameplateQuests`, `GatherTracking`, ...) aren't reused: the `removed` scenario checks their old settings stay gone. Their successors' files are named after the new keys (`DurabilityWarning.lua`, `GatheringTracking.lua`). |
 | desloppify ignores `orphaned::*` and `test_coverage::*` | The game loads every file from the `.toc`, so no file has "importers", and `tests/wow.lua` loads every file into all scenarios. Both detectors are wrong for a WoW addon. (Costs about 0.1 strict.) |
 
 ## Still open
@@ -134,7 +169,8 @@ Reviewers flagged each of these; each was checked and kept on purpose.
   raise the subjective scores. Round 4 scores: type safety 86, logic clarity 86, API coherence 87,
   authorization 87, high-level elegance 87; everything else 88-94.
 - `luacheck` has never run: it isn't installed locally or in CI, so desloppify's lint detector was
-  skipped. Installing it may surface new mechanical findings.
+  skipped. The `lint` scenario (tests/scenarios/core/lint.lua) covers the checks that mattered:
+  unused header locals, locale keys defined twice, stray `issecretvalue`, and file headers.
 
 ## Score history
 

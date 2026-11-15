@@ -19,7 +19,7 @@ local L = ns.L
 
 -- Calls one of a frame's callbacks (info.moveTo, info.size.set, ...) as its module's code:
 -- isolated, and charged to the module (info.owner) by the Profiler.
-local function callFor(info, fn, ...) return ns.RunCall(info.owner, "Edit Mode", fn, ...) end
+local function callFor(info, fn, ...) return ns.ChargedCall(info.owner, "Edit Mode", fn, ...) end
 
 local EditMode = {}
 ns.EditMode = EditMode
@@ -403,7 +403,7 @@ function pick(frame)
     selected = frame
     -- One selection at a time, so Blizzard's own goes. Never in combat: ClearSelectedSystem only
     -- runs through a secure delegate out of combat (Forever++'s finding, EditModeManager.lua).
-    -- pcall, not ns.Call: `selecting` must be put back even if Blizzard's code errors.
+    -- pcall, not ns.SafeCall: `selecting` must be put back even if Blizzard's code errors.
     if not InCombatLockdown() then
         selecting = true
         local ok, err = pcall(EditModeManagerFrame.ClearSelectedSystem, EditModeManagerFrame)

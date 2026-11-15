@@ -6,7 +6,7 @@
     asked for, and players you target, mouse over or see a nameplate of. A player is known by
     their first name (on Forever the part after a "-" is a surname, not a realm); one unseen for
     MAX_AGE is forgotten at login.
-    Blizzard builds the name link itself, so the finished line is rewritten (Core/Chat.lua's
+    Blizzard builds the name link itself, so the finished line is rewritten (Lib/Chat.lua's
     Transform) a frame after it arrives; turning this off takes the levels out again. Secret lines
     and values are left alone. Left to Forever++'s Chat Levels while that's on. Adapted from
     Forever++ by xIGBClutchIx (MIT License).

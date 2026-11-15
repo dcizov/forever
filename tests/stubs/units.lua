@@ -4,7 +4,8 @@
     tests/wow.lua after the other stubs (it replaces their simpler unit functions; a unit without
     W.unitInfo answers as those did: W.units' GUIDs, W.unitExists, the one creature name).
       W.unitInfo[unit] = { guid, name, level, classification, creatureType, family, reaction,
-                           player, controlled }: what the unit functions answer for `unit`
+                           player, controlled, tapped, connected, class }: what the unit
+                           functions answer for `unit`
       W.place           = { map, x, y }: the player's place (nil: no map, as in an instance)
       W.subzone         = the subzone's name
       W.questWindow     = { questID, title }: the quest window open now (QUEST_DETAIL and so on)
@@ -47,6 +48,12 @@ function UnitIsPlayer(unit)
     return simplePlayer(unit)
 end
 UnitPlayerControlled = field("controlled", false)
+UnitIsTapDenied = field("tapped", false)
+UnitIsConnected = field("connected", true)
+-- Threat: W.threat = { isTanking, status, scaledPercent, rawPercent } on the target (nil: none).
+function UnitDetailedThreatSituation() if W.threat then return unpack(W.threat) end end
+-- Blizzard's unit frames call it when a frame's unit changes; Class Colors hooks it.
+function UnitFrame_Update(frame) return frame end
 function UnitReaction(unit) local u = info(unit); return u and u.reaction or nil end
 
 -- Makes a creature unit: W.Creature("target", 3296, "Grunt", { level = 12 }).
@@ -70,10 +77,21 @@ function GetSubZoneText() return W.subzone end
 function GetQuestID() return W.questWindow and W.questWindow.questID or 0 end
 function GetTitleText() return W.questWindow and W.questWindow.title or "" end
 W.gossip = { available = {}, active = {} }
+-- What a gossip or quest window was asked to do goes in W.chosen, in order ({ call, arg }).
+W.chosen = {}
+local function chose(call) return function(arg) W.chosen[#W.chosen + 1] = { call, arg } end end
 C_GossipInfo = {
     GetAvailableQuests = function() return W.gossip.available end,
     GetActiveQuests = function() return W.gossip.active end,
+    GetOptions = function() return W.gossip.options or {} end,
+    SelectAvailableQuest = chose("SelectAvailableQuest"),
+    SelectActiveQuest = chose("SelectActiveQuest"),
+    SelectOptionByIndex = chose("SelectOptionByIndex"),
+    CloseGossip = chose("CloseGossip"),
 }
+SelectAvailableQuest, SelectActiveQuest, CloseQuest = chose("greetAvailable"), chose("greetActive"), chose("CloseQuest")
+W.bindingKeys = {} -- binding -> its key
+function GetBindingKey(binding) return W.bindingKeys[binding] end
 W.greeting = { available = {}, active = {} }
 function GetNumAvailableQuests() return #W.greeting.available end
 function GetAvailableQuestInfo(i) return false, 0, false, false, W.greeting.available[i].questID end

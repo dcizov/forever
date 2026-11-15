@@ -71,7 +71,7 @@ function Badges.Describe(key, count) return format(L["BADGE_" .. key:upper() .. 
 function Badges.TierName(key, tier) return Badges.Name(key) .. (tier and tier > 0 and (" " .. NUMERALS[tier]) or "") end
 
 function Badges.CountText(key, count)
-    if BY_KEY[key].money then return C_CurrencyInfo.GetCoinTextureString(count) end
+    if BY_KEY[key].money then return ns.MoneyText(count) end
     return BreakUpLargeNumbers(count)
 end
 
@@ -238,8 +238,8 @@ end
 local CHANGES = { CREATURE_NEW = true, LOOT_NEW = true, CREATURE_LEARNED = true, QUEST_PLACE = true, QUEST_TITLE = true,
     BOOK_MERGED = true }
 
-ns:OnNews(M, function(_, event)
-    if M.active and CHANGES[event] then M:Soon(check) end
+M:OnNews(function(_, event)
+    if CHANGES[event] then M:Soon(check) end
 end)
 
 function M:OnEnable()

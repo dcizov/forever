@@ -29,7 +29,7 @@ function ns:DebugInfo()
         end
         if mod.active and mod.DebugLine then
             -- One module's error doesn't stop the report.
-            local ok, line = ns.RunCall(mod, "DebugLine", ns.Succeeded, mod.DebugLine, mod)
+            local ok, line = ns.ChargedCall(mod, "DebugLine", ns.Succeeded, mod.DebugLine, mod)
             add("      ", ok and line or "(DebugLine failed: see the log)")
         end
     end

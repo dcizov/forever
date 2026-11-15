@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Tooltips: the friends list
+    Forever Tweaks - Modules/Tooltips/TooltipsFriends.lua
+    Tooltips: the friends list
     A friend's tooltip in the friends list colored the way unit tooltips are: their name by class,
     the level against yours, the class name and the side. Forever's friends list is the Social
     window's, whose cards build a plain GameTooltip with no tooltip data (the account name, then a
@@ -13,8 +14,9 @@ local _, ns = ...
 local type, format, find = type, string.format, string.find
 local GameTooltip = GameTooltip
 local Kit, Plain = ns.TooltipKit, ns.Plain
-local Shared = ns.TooltipsParts
-local M, colorMatch, levelColor = Shared.module, Shared.ColorMatch, Shared.LevelColor
+local Shared = assert(ns.TooltipsShared, "TooltipsFriends.lua loads after Tooltips.lua")
+local M = assert(ns.modules.Tooltips, "TooltipsFriends.lua loads after Tooltips.lua")
+local colorMatch, levelColor = Shared.ColorMatch, Shared.LevelColor
 local leftLine = Kit.LeftLine
 
 -- Friends list tooltips ----------------------------------------------------------------------

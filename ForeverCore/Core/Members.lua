@@ -9,7 +9,7 @@
         ForeverCore:NewMember(name, ns, {
             title = "Forever Tweaks", short = "Tweaks",              -- chat name, Settings page name
             saved = "ForeverTweaksDB", charSaved = "ForeverTweaksCharDB", -- its saved variables
-            layout = 9, charLayout = 1,                               -- their versions (Core/Store.lua)
+            layout = 11, charLayout = 1,                               -- their versions (Core/Store.lua)
             slash = { "/ft", "/forevertweaks" },                     -- its slash commands
             categories = { "interface", "chat", ... },               -- its modules' categories, in order
             open = function() ... end,                               -- optional: what a bare slash and

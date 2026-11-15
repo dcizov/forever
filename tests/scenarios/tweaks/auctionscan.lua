@@ -19,7 +19,7 @@ AuctionHouseFrame = W.NewFrame("Frame", "AuctionHouseFrame", UIParent)
 function AuctionHouseFrame:GetDisplayMode() return AuctionHouseFrameDisplayMode.Buy end
 local ns = W.LoadAddon(root, "ForeverTweaks")
 login()
-local House = ns.ItemTooltipParts.House
+local House = ns.AuctionPrices.House
 
 local function page(itemID, price) return { { itemKey = { itemID = itemID }, minPrice = price, totalQuantity = 1 } } end
 
@@ -51,7 +51,7 @@ eq(W.ah.more, 4, "and once more")
 W.Advance(8)
 eq(W.ah.more, 4, "then it gives up")
 check(House().scannedAt > 0, "and the scan counts as done")
-eq(ns.ItemTooltipParts.AuctionPrice(2589), 40, "with the prices it saw")
+eq(ns.AuctionPrices.Price(2589), 40, "with the prices it saw")
 
 -- Back soon after: no scan.
 W.Fire("AUCTION_HOUSE_CLOSED")
@@ -65,5 +65,5 @@ eq(W.ah.queries, 2, "/ft scan starts a scan")
 C_AuctionHouse.SearchForFavorites()
 W.Fire("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
 eq(W.ah.more, 4, "another search stops it: no more pages asked")
-eq(ns.ItemTooltipParts.AuctionPrice(2589), 40, "the prices seen are kept")
+eq(ns.AuctionPrices.Price(2589), 40, "the prices seen are kept")
 finish()

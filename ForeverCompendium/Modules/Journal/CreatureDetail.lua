@@ -6,10 +6,10 @@
       * At the left, the model (ModelWithZoomTemplate: drag or Blizzard's turning buttons to
         turn it, the wheel zooms) on the Mount Journal's backdrop, cropped to fit; from the look
         the Recorder read, else from its creature ID, with arrows through its looks when it has
-        several. The favourite star (pinned: shown on the map, first in the list) and, while
-        Sharing is on, Share at its top right.
-      * At the right, its portrait, name, title, kind and home over the column of what's known
-        of it (CreatureOverview.lua).
+        several. The favourite star (pinned: shown on the map, first in the list), your note
+        (CreatureNotes.lua) and, while Sharing is on, Share at its top right.
+      * At the right, its portrait, name, title and home over the column of what's known of it
+        (CreatureOverview.lua, which opens with what it is).
 ]]
 
 local _, ns = ...
@@ -17,8 +17,11 @@ local L = ns.L
 
 local pairs, format, table, math = pairs, string.format, table, math
 local CreateFrame = CreateFrame
-local Book, Text, J = ns.Book, ns.JournalText, ns.JournalKit
+local Book = ns.Book
+local Text = assert(ns.JournalText, "CreatureDetail.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "CreatureDetail.lua loads after JournalKit.lua")
 local Overview = assert(ns.CreatureOverview, "CreatureDetail.lua loads after CreatureOverview.lua")
+local Notes = assert(ns.CreatureNotes, "CreatureDetail.lua loads after CreatureNotes.lua")
 
 local STAGE_WIDTH = 330 -- the model's share of the display; what's known of it gets the rest
 
@@ -131,7 +134,9 @@ local function buildStage(box)
     pane.share = J.IconButton(controls, 22, "Interface\\Icons\\INV_Letter_15", L.CDETAIL_SHARE, L.CDETAIL_SHARE_TIP, function()
         if ns.ShareCreature then ns.ShareCreature(pane.npcID) end
     end)
-    pane.share:SetPoint("TOP", pane.pin, "BOTTOM", 0, -8)
+    local note = Notes.Build(controls, stage)
+    note:SetPoint("TOP", pane.pin, "BOTTOM", 0, -8)
+    pane.share:SetPoint("TOP", note, "BOTTOM", 0, -8)
     local left, right = rotateButton(controls, model, 1), rotateButton(controls, model, -1)
     left:SetPoint("BOTTOMRIGHT", controls, "BOTTOM", -2, 10)
     right:SetPoint("BOTTOMLEFT", controls, "BOTTOM", 2, 10)
@@ -150,7 +155,7 @@ local function buildStage(box)
 end
 
 -- The display: an inset with the stage at its left and, right of it, the creature's portrait,
--- name, what it is and where it lives over the column of what's known (CreatureOverview.lua).
+-- name, title and where it lives over the column of what's known (CreatureOverview.lua).
 local function buildDisplay(parent, height)
     local box = J.Inset(parent)
     box:SetPoint("TOPLEFT")
@@ -179,7 +184,7 @@ local function buildDisplay(parent, height)
     pane.where:SetJustifyH("LEFT")
     pane.where:SetWordWrap(false)
     Overview.Build(info)
-    Overview.lines.scroll:SetPoint("TOPLEFT", pane.portrait, "BOTTOMLEFT", 0, -14)
+    Overview.lines.scroll:SetPoint("TOPLEFT", pane.portrait, "BOTTOMLEFT", 0, -12)
     Overview.lines.scroll:SetPoint("BOTTOMRIGHT", -16, 0)
     return box
 end
@@ -207,14 +212,14 @@ function Detail:Show(npcID)
     showLook(rec, npcID)
     self.portrait:SetCreature(rec)
     self.name:SetText(rec.name or "?")
-    local r, g, b = Text.ReactionColor(rec.reaction)
-    local kind = Text.Kind(rec) .. "  " .. Text.Color(r, g, b) .. Text.Reaction(rec.reaction) .. "|r"
-    self.kind:SetText(rec.title and ("<" .. rec.title .. ">\n" .. kind) or kind)
+    self.name:SetTextColor(Text.ReactionColor(rec.reaction))
+    self.kind:SetText(rec.title and ("<" .. rec.title .. ">") or "")
     self.where:SetText(Text.Where(rec))
     self.pin.icon:SetDesaturated(not rec.pinned)
     self.pin.icon:SetAlpha(rec.pinned and 1 or 0.45)
     self.pin.title = rec.pinned and L.CDETAIL_UNPIN or L.CDETAIL_PIN
     self.share:SetShown(ns.ShareCreature ~= nil and ns.CanShare())
     self.sharedMark:SetText(rec.shared and format(L.CDETAIL_SHARED_BY, rec.sharedBy or "?") or "")
+    Notes.Show(npcID)
     Overview.Fill(rec, npcID)
 end

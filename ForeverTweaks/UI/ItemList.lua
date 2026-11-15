@@ -11,7 +11,7 @@
     beside it; then Add (or Enter).
 
       ns.ItemList.Add(stack, opts) -> refresh()
-        opts: owner (the module: its functions below run as its code, ns.RunCall), get() -> { [itemID] = amount (or true) }, add(itemID, amount), remove(itemID),
+        opts: owner (the module: its functions below run as its code, ns.ChargedCall), get() -> { [itemID] = amount (or true) }, add(itemID, amount), remove(itemID),
               setCount(itemID, n) (a list with amounts), defaultCount (the Amount box's start),
               have(itemID) -> count in the bags (shown red below the amount, green at or above it),
               isOn(itemID) and setOn(itemID, on) (a checkbox per row, to pause an item),
@@ -202,20 +202,20 @@ function ItemList.Add(stack, opts)
     local refresh
     local actions = {
         remove = function(id)
-            ns.RunCall(opts.owner, "item list", opts.remove, id)
+            ns.ChargedCall(opts.owner, "item list", opts.remove, id)
             refresh()
         end,
         setCount = opts.setCount and function(id, n)
-            ns.RunCall(opts.owner, "item list", opts.setCount, id, n)
+            ns.ChargedCall(opts.owner, "item list", opts.setCount, id, n)
             refresh()
         end,
         setOn = opts.setOn and function(id, on)
-            ns.RunCall(opts.owner, "item list", opts.setOn, id, on)
+            ns.ChargedCall(opts.owner, "item list", opts.setOn, id, on)
             refresh()
         end,
     }
     local top = newAddRow(list, opts, function(id, n)
-        ns.RunCall(opts.owner, "item list", opts.add, id, n)
+        ns.ChargedCall(opts.owner, "item list", opts.add, id, n)
         refresh()
     end)
     local empty = list:CreateFontString(nil, "OVERLAY", "GameFontDisable")
@@ -226,7 +226,7 @@ function ItemList.Add(stack, opts)
 
     -- The module's readers, run as its code too: one that errors reads as nothing (the list
     -- still lays out).
-    local function read(fn, ...) return ns.RunCall(opts.owner, "item list", fn, ...) end
+    local function read(fn, ...) return ns.ChargedCall(opts.owner, "item list", fn, ...) end
     function refresh()
         local values = read(opts.get) or {}
         local ids = {}

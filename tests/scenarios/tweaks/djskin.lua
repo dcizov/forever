@@ -8,7 +8,7 @@
 ]]
 
 local T = ...
-local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
+local check, eq, login, finish, root, under = T.check, T.eq, T.login, T.finish, T.root, T.under
 
 W.Strict()
 
@@ -89,19 +89,17 @@ local function lootRow(item)
     row.item = item
     return row
 end
--- What the skin adds to a row after its icon and name: the row art (an atlas) and the border.
-local function added(row, wantAtlas)
-    for i = 3, #(row._children or {}) do
-        local child = row._children[i]
-        if child._kind == "Texture" and (child._atlas ~= nil) == wantAtlas then return child end
-    end
-end
+-- What the skin adds to a row, found by what it is (never by its place among the row's
+-- children): the row art (the pet list's row atlas) and the icon border.
+local ROW_ART = "PetList-ButtonBackground"
 local function borderOf(row)
     for _, child in ipairs(row._children or {}) do
         if child._texture == "Interface\\Common\\WhiteIconFrame" then return child end
     end
 end
-local function artOf(row) return added(row, true) end
+local function artOf(row)
+    return under(row, function(child) return child._kind == "Texture" and child._atlas == ROW_ART end)[1]
+end
 local first = lootRow({ 101 })
 -- The hover each row is given (the stand-in keeps no highlight of its own).
 for _, row in ipairs({ first, bossRow }) do
@@ -141,7 +139,7 @@ eq(border and border._layout, "ButtonFrameTemplateNoPortrait", "the metal frame 
 eq(frame.mainTitle:GetParent(), border, "the title sits in the title bar")
 
 -- Row art and the search box
-eq(artOf(first) and artOf(first)._atlas, "PetList-ButtonBackground", "a row gets the pet list's row art")
+check(artOf(first) ~= nil, "a row gets the pet list's row art")
 eq(frame.searchEditBox.backdropInfo, nil, "the search box loses its backdrop")
 
 -- Picked and hovered look different: a picked boss has the Select frame over a gold tint, a

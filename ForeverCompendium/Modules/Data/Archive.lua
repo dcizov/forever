@@ -25,7 +25,7 @@ local AUTO_WAIT = 15 -- seconds after login before the weekly backup is taken
 
 local M = ns:NewModule("Archive", {
     title = L.ARCHIVE_TITLE,
-    category = "journal",
+    category = "data",
     description = L.ARCHIVE_DESC,
     added = "2.4.0",
     defaults = {
@@ -68,11 +68,15 @@ function Archive.Export(npcID)
     return part and Codec.Armor(Codec.Encode(part))
 end
 
--- An export read back: its tables, or nil when the text isn't one (cut short, changed, or
--- something else entirely).
+-- An export read back: its tables; or nil and why: "header" (not a Compendium export at all),
+-- "damaged" (cut short or changed on the way), "version" (from a newer Forever Compendium).
 function Archive.Read(text)
-    local data = Codec.Decode(Codec.Unarmor(text))
-    if not (data and data.v == 1 and type(data.creatures) == "table") then return nil end
+    local plain, why = Codec.Unarmor(text)
+    if not plain then return nil, why end
+    local data = Codec.Decode(plain)
+    if type(data) ~= "table" then return nil, "damaged" end
+    if data.v ~= 1 then return nil, "version" end
+    if type(data.creatures) ~= "table" then return nil, "damaged" end
     data.quests = type(data.quests) == "table" and data.quests or {}
     data.items = type(data.items) == "table" and data.items or {}
     return data
@@ -96,8 +100,7 @@ function Archive.Import(data)
     end
     for questID, quest in pairs(data.quests) do Book.MergeQuest(questID, quest) end
     for itemID, item in pairs(data.items) do Book.MergeItem(itemID, item) end
-    Book.Changed()
-    ns:Announce("BOOK_MERGED")
+    Book.Merged()
     return count
 end
 
@@ -124,7 +127,7 @@ function Archive.Restore(index)
     if not data then return false end
     Archive.Backup()
     Book.Replace(data)
-    ns:Announce("BOOK_MERGED")
+    Book.Merged()
     return true
 end
 
@@ -153,12 +156,13 @@ function Archive.ShowExport(npcID)
 end
 
 local importWindow
+local BAD_TEXT = { header = L.ARCHIVE_NOT_EXPORT, damaged = L.ARCHIVE_DAMAGED, version = L.ARCHIVE_NEWER }
 
 local function tryImport()
     local text = importWindow.edit:GetText()
-    local data = Archive.Read(text)
+    local data, why = Archive.Read(text)
     if not data then
-        importWindow.status:SetText(L.ARCHIVE_BAD)
+        importWindow.status:SetText(BAD_TEXT[why])
         return
     end
     local creatures, new, quests, items = Archive.Count(data)
@@ -166,7 +170,7 @@ local function tryImport()
     ns:Confirm(M, "FC_IMPORT", L.ARCHIVE_CONFIRM, function()
         local count = Archive.Import(data)
         importWindow:Hide()
-        ns.Print(M, format(L.ARCHIVE_IMPORTED, count))
+        M:Reply(format(L.ARCHIVE_IMPORTED, count))
     end, format(L.ARCHIVE_HOLDS, creatures, new, quests, items))
 end
 
@@ -199,7 +203,7 @@ local function confirmRestore(index)
     local backup = M.db.backups[index]
     if not backup then return end
     ns:Confirm(M, "FC_RESTORE", L.ARCHIVE_RESTORE_CONFIRM, function()
-        if Archive.Restore(index) then ns.Print(M, L.ARCHIVE_RESTORED) end
+        if Archive.Restore(index) then M:Reply(L.ARCHIVE_RESTORED) end
     end, Archive.BackupLabel(backup))
 end
 
@@ -213,7 +217,7 @@ function Archive.FillMenu(root, npcID)
     root:CreateDivider()
     root:CreateButton(L.ARCHIVE_BACKUP_NOW, function()
         Archive.Backup()
-        ns.Print(M, L.ARCHIVE_BACKED_UP)
+        M:Reply(L.ARCHIVE_BACKED_UP)
     end)
     local list = root:CreateButton(L.ARCHIVE_RESTORE)
     if #M.db.backups == 0 then list:CreateTitle(L.ARCHIVE_NO_BACKUPS) end
@@ -226,7 +230,7 @@ M:AddCommand("export", nil, L.CMD_EXPORT, function() Archive.ShowExport() end)
 M:AddCommand("paste", nil, L.CMD_PASTE, Archive.ShowImport)
 M:AddCommand("backup", nil, L.CMD_BACKUP, function()
     Archive.Backup()
-    ns.Print(M, L.ARCHIVE_BACKED_UP)
+    M:Reply(L.ARCHIVE_BACKED_UP)
 end)
 
 function M:OnEnable() self:After(AUTO_WAIT, autoBackup) end

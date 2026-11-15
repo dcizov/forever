@@ -24,12 +24,19 @@ eq(ns.modules.ButtonBag.db.ignored.Test, nil, "tables come back as copies")
 eq(api.GetPerformance(), 58.4, "API performance numbers")
 eq(api.RegisterCallback("NO_SUCH_EVENT", function() end), nil, "an event the API doesn't have is refused")
 
+-- The suite's modules, each with the Forever addon it belongs to.
+local addonOf = {}
+for _, row in ipairs(api.GetModules()) do addonOf[row.name] = row.addon end
+eq(addonOf.Performance, "ForeverTweaks", "a Tweaks module says it's Forever Tweaks'")
+eq(addonOf.MinimapButton, "ForeverCore", "a core module is in the list too, as Forever Core's")
+
 local heard = {}
-api.RegisterCallback("OPTION_CHANGED", function(_, name, key, value) heard[#heard + 1] = { name, key, value } end)
+api.RegisterCallback("OPTION_CHANGED", function(_, name, key, value, addon) heard[#heard + 1] = { name, key, value, addon } end)
 api.RegisterCallback("MODULE_TOGGLED", function(_, name, on) heard[#heard + 1] = { name, "toggled", on } end)
 ns:SetOption("Performance", "colors", false)
 eq(heard[1] and heard[1][2], "colors", "OPTION_CHANGED")
 eq(heard[1] and heard[1][3], false, "with the new value")
+eq(heard[1] and heard[1][4], "ForeverTweaks", "and the addon the module belongs to")
 ns:SetEnabled("LayerInfo", false)
 eq(heard[2] and heard[2][1], "LayerInfo", "MODULE_TOGGLED")
 eq(heard[2] and heard[2][3], false, "off")
@@ -56,6 +63,15 @@ eq(late, 0, "a callback added while firing waits for the next event")
 ns:SetOption("Performance", "colors", true)
 eq(late, 1, "and hears the next one")
 
+-- An error in another addon's callback is theirs: logged, not reported, and the rest still run.
+local after = 0
+api.RegisterCallback("MODULE_TOGGLED", function() error("their bug") end)
+api.RegisterCallback("MODULE_TOGGLED", function() after = after + 1 end)
+ns:SetEnabled("LayerInfo", false)
+eq(#W.errors, 0, "a callback's error isn't reported as ours")
+eq(after, 1, "and the other callbacks still hear it")
+ns:SetEnabled("LayerInfo", true)
+
 -- An error of ours gives the caller nil and is reported like any other.
 local real = ns.modules.Performance.GetNumbers
 ns.modules.Performance.GetNumbers = function() error("our bug") end
@@ -68,7 +84,7 @@ ns.modules.Performance.GetNumbers = real
 ns.Profiler.Start()
 W.Fire("PLAYER_TARGET_CHANGED")
 W.RunTimers()
-local results = { ns.Run({ name = "Test" }, "test", function() return 1, 2, 3, 4, 5, 6 end) }
+local results = { ns.ChargedHandler({ name = "Test" }, "test", function() return 1, 2, 3, 4, 5, 6 end) }
 -- A popup's answer is the asker's code.
 ns:Confirm({ name = "Asker" }, "TEST", "Sure?", function() end)
 W.Accept()

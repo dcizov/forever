@@ -60,17 +60,21 @@ for _, o in ipairs(others) do
     rec.looted, rec.loot = o[4], { [769] = o[3] }
 end
 local item = W.ItemTooltip(769)
-eq(item[1] and item[1].text, string.format(L.TIPS_DROPS_FROM, "Mottled Boar", 75), "the likeliest source first")
-eq(item[2] and item[2].text, string.format(L.TIPS_DROPS_FROM, "Boar B", 50), "then the next")
-eq(#item, 4, "three sources and how many more")
-eq(item[4] and item[4].text, string.format(L.TIPS_MORE, 1), "how many more")
+eq(item[1] and item[1].text, L.TIPS_DROP_CHANCE, "a Drop Chance header")
+eq(item[2] and item[2].text, string.format(L.TIPS_SOURCE, "Mottled Boar"), "the likeliest source first")
+eq(item[2] and item[2].right, "75% |cff999999(3/4)|r", "its chance, with the counts it comes from")
+eq(item[3] and item[3].text, string.format(L.TIPS_SOURCE, "Boar B"), "then the next")
+eq(#item, 5, "the header, three sources and how many more")
+eq(item[5] and item[5].text, string.format(L.TIPS_MORE, 1), "how many more")
+eq(ns.modules.TooltipLines.RateText({ rate = 0.004, dropped = 1, looted = 250 }), "<1% |cff999999(1/250)|r",
+    "under 1%: <1%")
 
 -- New loot: the index is made again.
 local fresh = Book.Meet(3104, "Boar D")
 fresh.looted, fresh.loot = 1, { [118] = 1 }
 eq(#W.ItemTooltip(118), 0, "not in the index yet")
 ns:Announce("LOOT_NEW", 3104, 118)
-eq(#W.ItemTooltip(118), 1, "after the Recorder's news")
+eq(#W.ItemTooltip(118), 2, "after the Recorder's news: the header and its source")
 
 -- Each checkbox, and off.
 ns:SetOption("TooltipLines", "quests", false)

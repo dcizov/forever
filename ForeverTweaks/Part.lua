@@ -11,8 +11,8 @@ ForeverCore:NewMember(addonName, ns, {
     short = "Tweaks",
     saved = "ForeverTweaksDB",
     charSaved = "ForeverTweaksCharDB",
-    layout = 11,     -- Core/Migrations.lua has the steps up to it
-    charLayout = 1,
+    layout = 13,     -- Migrations.lua has the steps up to it
+    charLayout = 2,
     slash = { "/ft", "/forevertweaks" },
     -- The Modules page lists them in this order; "addons" has a page of its own (Settings/Addons.lua).
     categories = { "interface", "chat", "tooltips", "quests", "bags", "merchant", "gathering", "map", "addons" },

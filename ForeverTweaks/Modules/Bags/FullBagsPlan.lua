@@ -1,7 +1,8 @@
 --[[
-    Forever Tweaks - Full Bags: the plan
+    Forever Tweaks - Modules/Bags/FullBagsPlan.lua
+    Full Bags: the plan
     What Full Bags (Modules/Bags/FullBags.lua) suggests: every loot item and every bag item
-    valued at its price (Auctionator's auction price when chosen and known, Core/OtherAddons.lua,
+    valued at its price (Auctionator's auction price when chosen and known, Lib/OtherAddons.lua,
     else what a vendor pays) times how many there are, then the most valuable loot paired with the cheapest bag items
     it's worth more than. The keep rules decide which bag items can never be picked. Reads the
     game and the module's settings; draws nothing. Full Bags reads ns.FullBagsPlan.

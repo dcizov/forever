@@ -11,7 +11,7 @@
                   has no Use: spell (an item a quest gives you to use somewhere has one, so it's
                   never called a leftover).
 
-    What each item is comes from ns.QuestLog (Modules/Quests/QuestLog.lua), which Full Bags asks
+    What each item is comes from ns.QuestLog (Lib/QuestLog.lua), which Full Bags asks
     too. This module shows it as a quest "!" on bag items, gray on leftovers, in Blizzard's bags and
     Baganator's. Needed items and quest starters get no tooltip line: Questie names the quest an
     item is for and Plumber marks quest starters. Questie says nothing on a leftover (it only
@@ -41,6 +41,7 @@ local BagButtons = assert(ns.BagButtons, "QuestItems.lua loads after UI/BagButto
 local M = ns:NewModule("QuestItems", {
     title = L.QUESTITEMS_TITLE,
     category = "quests",
+    group = L.GROUP_QUEST_ITEMS,
     description = L.QUESTITEMS_DESC,
     added = "1.4.0",
     defaults = {

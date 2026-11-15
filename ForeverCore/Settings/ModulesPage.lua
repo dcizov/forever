@@ -9,6 +9,9 @@
     and options, lighting up the matching option rows) and a Defaults button for the selected
     module.
 
+    Inside a category, modules that share a `group` (a label: Fishing, Gathering, Combat) sit
+    together under a small heading of that name, after the category's ungrouped modules.
+
     ModulesPage.Index(mod) adds a module to what the search looks through; ModulesPage.New(member)
     makes a page's controller: Group() (false when the member has no module for it), Frame(),
     Select(name) and Changed(name).
@@ -38,6 +41,46 @@ function ModulesPage.Index(mod)
 end
 
 -- A member's Modules page.
+-- A category's label in the list, with how many of its modules are on; shown while any of
+-- its modules matches the search (matches(name)).
+local function addGroupHeader(list, group, first, matches)
+    local header = CreateFrame("Frame", nil, list)
+    header:SetSize(LIST_WIDTH, 22)
+    local label = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("BOTTOMLEFT", 4, 3)
+    label:SetText(group.label)
+    local count = header:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    count:SetPoint("BOTTOMRIGHT", -4, 3)
+    function group.Refresh()
+        local on = 0
+        for _, name in ipairs(group.names) do
+            if ns.modules[name].db.enabled then on = on + 1 end
+        end
+        count:SetText(format("%d/%d", on, #group.names))
+    end
+    Kit.AddEntry(list, header, function()
+        for _, name in ipairs(group.names) do
+            if matches(name) then return true end
+        end
+        return false
+    end, first and 0 or 10)
+end
+
+-- A group's small heading inside its category, indented; shown while any of its modules matches.
+local function addSubHeader(list, label, names, matches)
+    local header = CreateFrame("Frame", nil, list)
+    header:SetSize(LIST_WIDTH, 18)
+    local text = header:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    text:SetPoint("BOTTOMLEFT", 10, 2)
+    text:SetText(label)
+    Kit.AddEntry(list, header, function()
+        for _, name in ipairs(names) do
+            if matches(name) then return true end
+        end
+        return false
+    end, 4)
+end
+
 function ModulesPage.New(member)
     local redraws = {}      -- module name -> functions that redraw it from what's saved
     local groups = {}       -- { key, label, names } per category with modules, in order
@@ -86,6 +129,12 @@ function ModulesPage.New(member)
         Kit.Layout(view)
     end
 
+    -- Module `name`'s pane drawn again from what's saved, and laid out again.
+    local function refreshView(name)
+        redraw(name)
+        relayoutView(name)
+    end
+
     -- Scrolls to option `key`'s row in section `view` and lights it for a moment (a conflict's button).
     local function goToOption(section, key)
         local entry = section.optionRows[key]
@@ -100,10 +149,7 @@ function ModulesPage.New(member)
     -- What a section asks of the page it's on (see Settings/Section.lua).
     local sectionPage = {
         GoTo = goToOption,
-        Refresh = function(name)
-            redraw(name)
-            relayoutView(name)
-        end,
+        Refresh = refreshView,
     }
 
     local function buildView(name)
@@ -117,7 +163,7 @@ function ModulesPage.New(member)
         local mod = ns.modules[name]
         if mod.BuildPage then
             -- The module's own part of its page, under its options.
-            local ok, redrawExtra = ns.RunCall(mod, "settings page", ns.Succeeded, mod.BuildPage, mod, view, split.paneWidth)
+            local ok, redrawExtra = ns.ChargedCall(mod, "settings page", ns.Succeeded, mod.BuildPage, mod, view, split.paneWidth)
             if ok and redrawExtra then addRedraw(name, redrawExtra) end
         end
         -- Seen: its NEW labels go the next time the page is built.
@@ -134,8 +180,7 @@ function ModulesPage.New(member)
         view:Show()
         page.split.pane:SetScrollChild(view)
         page.split.pane:SetVerticalScroll(0)
-        redraw(name)
-        relayoutView(name)
+        refreshView(name)
     end
 
     ---------------------------------------------------------------------------
@@ -185,30 +230,6 @@ function ModulesPage.New(member)
         Kit.AddEntry(list, row, function() return matches(name) end)
     end
 
-    -- A category's label in the list, with how many of its modules are on.
-    local function addGroupHeader(list, group, first)
-        local header = CreateFrame("Frame", nil, list)
-        header:SetSize(LIST_WIDTH, 22)
-        local label = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        label:SetPoint("BOTTOMLEFT", 4, 3)
-        label:SetText(group.label)
-        local count = header:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        count:SetPoint("BOTTOMRIGHT", -4, 3)
-        function group.Refresh()
-            local on = 0
-            for _, name in ipairs(group.names) do
-                if ns.modules[name].db.enabled then on = on + 1 end
-            end
-            count:SetText(format("%d/%d", on, #group.names))
-        end
-        Kit.AddEntry(list, header, function()
-            for _, name in ipairs(group.names) do
-                if matches(name) then return true end
-            end
-            return false
-        end, first and 0 or 10)
-    end
-
     local function buildPage(frame)
         page = { rows = {}, views = {}, sections = {} }
         Kit.AddPageTitle(frame, member.title)
@@ -233,8 +254,20 @@ function ModulesPage.New(member)
         page.empty = Kit.NewEmptyRow(list, LIST_WIDTH)
         Kit.AddEntry(list, page.empty, function() return firstMatch() == nil end)
         for i, group in ipairs(groups) do
-            addGroupHeader(list, group, i == 1)
-            for _, name in ipairs(group.names) do addModuleRow(list, name) end
+            addGroupHeader(list, group, i == 1, matches)
+            local current
+            for _, name in ipairs(group.names) do
+                local label = ns.modules[name].group
+                if label and label ~= current then
+                    local members = {}
+                    for _, other in ipairs(group.names) do
+                        if ns.modules[other].group == label then members[#members + 1] = other end
+                    end
+                    addSubHeader(list, label, members, matches)
+                end
+                current = label
+                addModuleRow(list, name)
+            end
         end
         refreshList()
         show(selected or firstMatch())
@@ -247,10 +280,7 @@ function ModulesPage.New(member)
         local names = waiting
         waiting = {}
         for name in pairs(names) do
-            if page.views[name] then
-                redraw(name)
-                relayoutView(name)
-            end
+            if page.views[name] then refreshView(name) end
         end
         refreshList()
     end
@@ -274,6 +304,9 @@ function ModulesPage.New(member)
             local ma, mb = ns.modules[a], ns.modules[b]
             local ra, rb = ns:CategoryRank(ma), ns:CategoryRank(mb)
             if ra ~= rb then return ra < rb end
+            -- Ungrouped first, then each group by its label.
+            local ga, gb = ma.group or "", mb.group or ""
+            if ga ~= gb then return ga < gb end
             return strlower(ma.title) < strlower(mb.title)
         end)
         local byKey = {}
@@ -292,10 +325,7 @@ function ModulesPage.New(member)
         local frame = Kit.CanvasFrame(buildPage)
         frame:HookScript("OnShow", function()
             refreshList()
-            if selected then
-                redraw(selected)
-                relayoutView(selected)
-            end
+            if selected then refreshView(selected) end
         end)
         return frame
     end

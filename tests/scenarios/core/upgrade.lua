@@ -66,7 +66,7 @@ eq(ns.member.db.seenModules.FullBags, nil, "Full Bags (1.3.0) not seen yet")
 openEverything(ns)
 local function hasNewLabel(page, title)
     -- (Its title is there twice: its row in the list and its pane's header.)
-    local titles = under(W.categories[page].frame, function(f) return f._kind == "FontString" and f._text == title end)
+    local titles = under(ForeverCore.SettingsWindow.Page(page).frame, function(f) return f._kind == "FontString" and f._text == title end)
     if #titles == 0 then return nil end
     for _, text in ipairs(titles) do
         for _, sibling in ipairs({ text:GetParent():GetChildren() }) do

@@ -29,7 +29,7 @@ end
 ---------------------------------------------------------------------------
 
 W.EVENTS = {}
-for _, e in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
+for _, e in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "CVAR_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
     "ADDON_ACTION_BLOCKED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT",
     "NAME_PLATE_UNIT_ADDED", "ZONE_CHANGED_NEW_AREA", "GROUP_ROSTER_UPDATE", "ZONE_CHANGED", "LOOT_OPENED",
     "LOOT_SLOT_CLEARED", "LOOT_CLOSED", "BAG_UPDATE_DELAYED", "GET_ITEM_INFO_RECEIVED", "QUEST_LOG_UPDATE",
@@ -44,7 +44,8 @@ for _, e in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "P
     "GUILD_ROSTER_UPDATE", "FRIENDLIST_UPDATE", "WHO_LIST_UPDATE", "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED",
     "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY",
     "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED",
-    "LOOT_READY", "MODIFIER_STATE_CHANGED", "ZONE_CHANGED_INDOORS" }) do
+    "LOOT_READY", "MODIFIER_STATE_CHANGED", "ZONE_CHANGED_INDOORS", "GOSSIP_CLOSED", "QUEST_FINISHED", "TRAINER_SHOW",
+    "TRAINER_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED" }) do
     W.EVENTS[e] = true
 end
 function W.validEvent(e) return W.EVENTS[e] or false end
@@ -178,6 +179,7 @@ Settings = {
 }
 SettingsPanel = W.NewFrame("Frame", "SettingsPanel")
 SettingsPanel._shown = false
+function HideUIPanel(frame) frame:Hide() end
 C_SettingsUtil = {
     OpenSettingsPanel = function(id)
         W.opened = id
@@ -264,7 +266,7 @@ function GetCursorPosition() return W.cursor[1], W.cursor[2] end
 -- What the mouse holds: W.held = { "item", itemID, link } (an item picked up from the bags), or nil.
 function GetCursorInfo() if W.held then return unpack(W.held) end end
 function ClearCursor() W.held = nil end
-function IsControlKeyDown() return false end
+function IsControlKeyDown() return W.ctrl or false end
 W.shift = false
 function IsShiftKeyDown() return W.shift end
 W.alt = false
@@ -283,7 +285,10 @@ function UnitCastingInfo() return W.casting end
 function UnitChannelInfo() return nil end
 W.realm = "Kazran"
 function GetRealmName() return W.realm end
-function PlaySound() end
+-- Sounds played, in order: { id = kit ID or file ID, file = true for PlaySoundFile, channel }.
+W.sounds = {}
+function PlaySound(id, channel) W.sounds[#W.sounds + 1] = { id = id, channel = channel } end
+function PlaySoundFile(id, channel) W.sounds[#W.sounds + 1] = { id = id, file = true, channel = channel } end
 function ReloadUI() W.reloaded = true end
 function Screenshot() end
 date, time = os.date, os.time
@@ -317,7 +322,11 @@ function LibStub() end
 SOUNDKIT = { IG_MAINMENU_OPTION_CHECKBOX_ON = 1, IG_MAINMENU_OPTION_CHECKBOX_OFF = 2, RAID_WARNING = 8959 }
 YES, NO, ACCEPT, CANCEL, CLOSE, SETTINGS_DEFAULTS = "Yes", "No", "Accept", "Cancel", "Close", "Defaults"
 NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0, GetRGB = function() return 1, 0.82, 0 end }
+function CreateColor(r, g, b, a)
+    return { r = r, g = g, b = b, a = a or 1, GetRGB = function(self) return self.r, self.g, self.b end }
+end
 UISpecialFrames = {}
+UIPanelWindows = {} -- the panel manager's windows: name -> { area, pushable }
 -- Blizzard_SharedXML/Mainline/SharedUIPanelTemplates.lua: a ButtonFrameTemplate window without its portrait.
 function ButtonFrameTemplate_HidePortrait() end
 -- Blizzard_Colors/Shared/MaterialColors.lua: a material's text and title colours.
@@ -397,7 +406,7 @@ end
 -- name only once it's a real method on this client (docs/forever-api.md).
 W.METHODS = {
     AddMaskTexture = true, SetHorizTile = true, SetVertTile = true, SetNormalAtlas = true, SetPushedAtlas = true,
-    SetSpacing = true, SetRotation = true,
+    SetSpacing = true, SetRotation = true, GetNumLines = true, EnableGamePadButton = true, SetLooping = true, IsUserPlaced = true, SetUserPlaced = true, IsMovable = true,
     SetMaxLines = true, SetChecked = true, GetChecked = true, SetCustomOnMouseUpHandler = true,
     SetTabSelectedCallback = true, AddTab = true, SetTabVisuallySelected = true, GetTabButton = true,
     UpdateTabText = true, UpdateTabWidth = true, MarkDirty = true, SetTab = true,
@@ -417,13 +426,13 @@ W.METHODS = {
     SetMovable = true, SetMultiLine = true, SetNormalAtlas = true, SetPushedAtlas = true,
     SetScrollChild = true, SetShadowOffset = true, SetSize = true, SetTexCoord = true, SetTextColor = true,
     SetTexture = true, SetVertexColor = true, SetVerticalScroll = true, SetWidth = true, SetWordWrap = true,
-    StartMoving = true, StopMovingOrSizing = true, SetItemByID = true, SetScale = true, SetNumeric = true,
+    StartMoving = true, StopMovingOrSizing = true, SetItemByID = true, SetHyperlink = true, SetScale = true, SetNumeric = true,
     IsMouseOver = true, SetPushedTexture = true, SetHorizTile = true, SetVertTile = true, SetIgnoreParentAlpha = true, SetTitle = true, GetScale = true,
     SetIgnoreParentScale = true, SetStatusBarTexture = true, GetStatusBarTexture = true, SetMinMaxValues = true,
     SetBlendMode = true, CreateMaskTexture = true, AddMaskTexture = true, RemoveMaskTexture = true, GetDrawLayer = true,
     GetThumbTexture = true, SetPortraitToAsset = true, SetToplevel = true, SetID = true, GetID = true, GetObjectType = true,
     SetSelectionText = true, SetIsDefaultCallback = true, SetDefaultCallback = true, ValidateResetState = true, SetStatusBarColor = true,
-    SetSpellByID = true, SetDisplayInfo = true, SetCreature = true, HasFocus = true, IsForbidden = true, SetFontHeight = true, GetStringWidth = true, CreateAnimationGroup = true, CreateAnimation = true, Play = true, Stop = true, SetDuration = true, SetOffset = true, IsPlaying = true, SetSpacing = true, GetVerticalScroll = true,
+    SetSpellByID = true, SetDisplayInfo = true, SetCreature = true, HasFocus = true, IsForbidden = true, SetFontHeight = true, GetStringWidth = true, CreateAnimationGroup = true, CreateAnimation = true, SetFromAlpha = true, SetToAlpha = true, SetToFinalAlpha = true, Play = true, Stop = true, SetDuration = true, SetOffset = true, IsPlaying = true, SetSpacing = true, GetVerticalScroll = true,
 }
 -- Methods the addon checks for before using (Blizzard's may lack them): absent here, so the
 -- path without them is what runs.
@@ -432,7 +441,12 @@ W.missing = {}
 W.OPTIONAL = { ForeverPlusPlusAPI = true, PlumberDB = true, WilduToolsDB = true, Auctionator = true, Baganator = true, ForeverTweaksDB = true, ForeverTweaksCharDB = true,
     ForeverCoreDB = true, ForeverCoreCharDB = true, ForeverCompendiumDB = true, ForeverCompendiumCharDB = true, NWB_CurrentLayer = true, LibQuestieDB = true,
     BAGANATOR_CONFIG = true, BAGANATOR_CURRENT_PROFILE = true,
-    MinimapBackdrop = true, ForeverBestiaryDB = true, ForeverBestiaryCharDB = true, WorldMapFrame = true, GMChatFrame = true, CommunitiesFrame = true, AuctionHouseFrame = true }
+    QuestScrollFrame = true, QuestLogQuests_Update = true, GossipFrame = true, QuestFrameGreetingPanel = true,
+    QuestFrameGreetingPanel_OnShow = true, QuestInfo_Display = true, QuestFrameProgressPanel_OnShow = true, QuestInfoFrame = true,
+    QuestInfoTitleHeader = true, QuestProgressTitleText = true, QuestObjectiveTracker = true, CampaignQuestObjectiveTracker = true,
+    GOSSIP_BUTTON_TYPE_ACTIVE_QUEST = true, GOSSIP_BUTTON_TYPE_AVAILABLE_QUEST = true, GOSSIP_BUTTON_TYPE_OPTION = true,
+    QuestFrameAcceptButton = true, QuestFrameCompleteButton = true, QuestFrameCompleteQuestButton = true, QuestInfoItem_OnClick = true,
+    MinimapBackdrop = true, GetMinimapShape = true, OpenMapAPI = true, PlayerFrame = true, TargetFrame = true, FocusFrame = true, PartyFrame = true, ForeverBestiaryDB = true, ForeverBestiaryCharDB = true, WorldMapFrame = true, GMChatFrame = true, CommunitiesFrame = true, AuctionHouseFrame = true }
 function W.Strict()
     W.strict = true
     setmetatable(_G, { __index = function(_, key)

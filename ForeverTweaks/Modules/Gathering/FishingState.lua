@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Fishing's state (Modules/Gathering/Fishing.lua and its Fishing Outfit use it):
+    Forever Tweaks - Modules/Gathering/FishingState.lua
+    Fishing's state (Modules/Gathering/Fishing.lua and Fishing Cast use it):
     what the game says about your fishing, read when asked and never kept. Whether a fishing pole
     is in your main hand, your Fishing skill, the lure on it and in your bags, and the skill the
     zone you're in needs (from ns.FishingZones, Modules/Gathering/FishingZones.lua).

@@ -4,6 +4,7 @@
     profession and auction house calls Forever Tweaks' Tooltips category uses, loaded by
     tests/wow.lua after the other stubs.
       W.knownSpells[spellID] = true: a spell the player knows (Pick Lock)
+      W.compare, W.cannotUse, W.compared, W.itemStats: see below
 ]]
 
 QuestDifficultyColors = {
@@ -24,6 +25,8 @@ LOCALIZED_CLASS_NAMES_MALE, LOCALIZED_CLASS_NAMES_FEMALE = { MAGE = "Mage" }, { 
 function GetMoneyString(copper) return copper .. "c" end
 SELL_PRICE, ITEM_MIN_SKILL, ITEM_SPELL_TRIGGER_ONEQUIP = "Sell Price:", "Requires %s (%d)", "Equip:"
 ITEM_MOD_SPIRIT_SHORT, ITEM_MOD_SPIRIT = "Spirit", "%c%s Spirit"
+ITEM_MOD_HIT_RATING_SHORT = "Hit Rating" -- no long string: Forever words the Equip: line as a spell's
+FRIENDS_LEVEL_TEMPLATE, FACTION_HORDE, FACTION_ALLIANCE, WOW_PROJECT_ID = "Level %d %s", "Horde", "Alliance", 1
 
 -- Tooltip data processing: the calls a module adds, and W.ItemTooltip/W.UnitTooltip run them.
 TooltipDataProcessor.AllTypes = "all"
@@ -50,13 +53,16 @@ function UnitClass(unit)
     local u = W.unitInfo[unit]
     if u and u.class then return u.class, u.class end
 end
-function IsModifiedClick() return false end
+-- W.compare: Shift held for Compare Items; W.cannotUse[itemID]: gear the player can't use;
+-- W.compared: the links C_TooltipComparison.CompareItem was asked to compare.
+W.cannotUse, W.compared = {}, {}
+function IsModifiedClick(action) return action == "COMPAREITEMS" and W.compare == true end
 C_CVar.GetCVarBool = function() return false end
-C_PlayerInfo = { CanUseItem = function() return true end }
-C_TooltipComparison = { CompareItem = function() end }
+C_PlayerInfo = { CanUseItem = function(id) return not W.cannotUse[id] end }
+C_TooltipComparison = { CompareItem = function(item) W.compared[#W.compared + 1] = item.hyperlink end }
 function GameTooltip_ShowCompareItem() end
 function GameTooltip_SetDefaultAnchor() end
-FriendsListSocialCardMixin = {}
+FriendsListSocialCardMixin = { BuildTooltip = function() end }
 GameTooltip.StatusBar = W.NewFrame("StatusBar", nil, GameTooltip)
 GameTooltip.NineSlice = W.NewFrame("Frame", nil, GameTooltip)
 GameTooltip.IsEmbedded = false -- a field on the game's tooltips (true on ones inside another)
@@ -67,7 +73,8 @@ function GameTooltip:RefreshData() end
 
 -- Items, bags and the bank (item info, counts and qualities are the loot and merchant stubs').
 C_Item.RequestLoadItemDataByID = function() end
-C_Item.GetItemStats = function() return nil end
+W.itemStats = {} -- link -> C_Item.GetItemStats' table
+C_Item.GetItemStats = function(link) return W.itemStats[link] end
 BankFrame = W.NewFrame("Frame", "BankFrame", UIParent)
 BankFrame:Hide()
 

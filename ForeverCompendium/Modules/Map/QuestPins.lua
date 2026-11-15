@@ -1,6 +1,6 @@
 --[[
     Forever Compendium - Quest Pins
-    Where your quests are, from what the Recorder learned (Modules/Journal/Book.lua), on the
+    Where your quests are, from what the Recorder learned (Lib/Book.lua), on the
     world map and the minimap (Forever Core's UI/MapPins.lua), drawn the way Questie draws them:
       * Givers: a quest you were offered and haven't taken or done, at the one who offered it
         (a yellow "!", blue for a daily).
@@ -19,7 +19,8 @@ local _, ns = ...
 local L = ns.L
 
 local pairs, ipairs, format, sort = pairs, ipairs, string.format, table.sort
-local Book, Places, Text = ns.Book, ns.Places, ns.JournalText
+local Book, Places = ns.Book, ns.Places
+local Text = assert(ns.JournalText, "QuestPins.lua loads after JournalText.lua")
 
 local OBJECTIVE_PLACES = 4 -- an objective's busiest places shown, at most
 local ATLAS = { giver = "QuestNormal", daily = "QuestDaily", ender = "QuestTurnin", objective = "QuestObjective" }
@@ -60,12 +61,7 @@ local M = ns:NewModule("QuestPins", {
 -- The quests in the log: questID -> its objectives (C_QuestLog.GetQuestObjectives).
 local function questsInLog()
     local list = {}
-    for i = 1, C_QuestLog.GetNumQuestLogEntries() do
-        local info = C_QuestLog.GetInfo(i)
-        if info and not info.isHeader and info.questID then
-            list[info.questID] = C_QuestLog.GetQuestObjectives(info.questID) or {}
-        end
-    end
+    ns.EachLogQuest(function(questID) list[questID] = C_QuestLog.GetQuestObjectives(questID) or {} end)
     return list
 end
 
@@ -204,32 +200,22 @@ local function tooltip(owner, pin)
     GameTooltip:Show()
 end
 
-local world = ns.MapPins.World(M, {
+local pins = ns.MapPins.Both(M, {
     specs = pinsOn,
-    shown = function() return M.db.worldMap end,
-    size = function() return M.db.size end,
     tooltip = tooltip,
     click = function(_, pin) ns.ShowQuest(pin.entries[1].questID) end,
-    level = 20,
-})
-local minimap = ns.MapPins.Minimap(M, {
-    specs = pinsOn,
-    shown = function() return M.db.minimap end,
-    size = function() return M.db.minimapSize end,
-    tooltip = tooltip,
-    level = 2,
+    world = { shown = function() return M.db.worldMap end, size = function() return M.db.size end, level = 20 },
+    minimap = { shown = function() return M.db.minimap end, size = function() return M.db.minimapSize end, level = 2 },
 })
 
-local function refresh()
-    world.Refresh()
-    minimap.Refresh()
-end
+
+local refresh = pins.Refresh
 
 local function refreshSoon() M:Soon(refresh) end
 
 -- What the Recorder learns of a quest's place or title shows at once.
-ns:OnNews(M, function(_, event)
-    if M.active and (event == "QUEST_PLACE" or event == "QUEST_TITLE" or event == "BOOK_MERGED") then refreshSoon() end
+M:OnNews(function(_, event)
+    if event == "QUEST_PLACE" or event == "QUEST_TITLE" or event == "BOOK_MERGED" then refreshSoon() end
 end)
 
 function M:OnEnable()

@@ -22,6 +22,7 @@ local MELEE_REACH = 5 -- yards: a melee ability's range
 local M = ns:NewModule("MeleeRange", {
     title = L.MELEE_TITLE,
     category = "interface",
+    group = L.GROUP_COMBAT,
     description = L.MELEE_DESC,
     added = "1.9.3",
     defaults = ns.Widgets.DisplayDefaults({ enabled = false, combatOnly = false, size = 18 },

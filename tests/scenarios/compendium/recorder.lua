@@ -57,6 +57,23 @@ local count = #news
 W.Fire("UPDATE_MOUSEOVER_UNIT")
 eq(#news, count, "no news for a creature already known")
 
+-- Seen somewhere new: news of its locations, once.
+local function learned(npc, what)
+    local n = 0
+    for _, item in ipairs(news) do
+        if item[1] == "CREATURE_LEARNED" and item[2] == npc and item[3] == what then n = n + 1 end
+    end
+    return n
+end
+W.subzone = "Far Watch Post"
+W.Advance(6)
+W.Fire("UPDATE_MOUSEOVER_UNIT")
+eq(learned(3296, "locations"), 1, "a new subzone: its locations learned")
+W.Advance(6)
+W.Fire("UPDATE_MOUSEOVER_UNIT")
+eq(learned(3296, "locations"), 1, "the same place again: no news")
+W.subzone = "The Crossroads"
+
 -- Not creatures: players, pets, and secret names.
 W.unitInfo.target = { guid = "Player-4618-0ABC", name = "Somebody", player = true }
 W.Fire("PLAYER_TARGET_CHANGED")
@@ -116,6 +133,17 @@ eq(q100.giver.map, 1413, "where")
 eq(q101.ender.npc, 3337, "an active quest: its ender")
 check(Book.Creature(3337).starts[100] and Book.Creature(3337).ends[101], "the NPC knows them")
 eq(lastNews(), "QUEST_PLACE", "news of a quest's place")
+local questNews = 0
+for _, item in ipairs(news) do
+    if item[1] == "CREATURE_LEARNED" and item[2] == 3337 and item[3] == "quests" then questNews = questNews + 1 end
+end
+eq(questNews, 2, "the NPC's quests learned: one for the quest it gives, one for the one it takes in")
+W.Fire("GOSSIP_SHOW")
+local again = 0
+for _, item in ipairs(news) do
+    if item[1] == "CREATURE_LEARNED" and item[2] == 3337 and item[3] == "quests" then again = again + 1 end
+end
+eq(again, 2, "and not again for the same quests")
 W.questWindow = { questID = 102, title = "Fungal Spores" }
 W.Fire("QUEST_DETAIL")
 eq(Book.Quest(102).giver.npc, 3337, "a quest window's giver")

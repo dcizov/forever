@@ -15,7 +15,7 @@ ForeverCore:NewMember(addonName, ns, {
     layout = 2,      -- Migrations.lua has the steps up to it
     charLayout = 1,
     slash = { "/fc", "/forevercompendium" },
-    categories = { "journal", "map", "tooltips", "social", "notifications" },
+    categories = { "recorder", "journal", "data", "map", "tooltips", "social", "notifications" },
     open = function() ns.ToggleJournal() end,
     openLabel = "JOURNAL_TITLE", -- the locale key naming what open opens
 })

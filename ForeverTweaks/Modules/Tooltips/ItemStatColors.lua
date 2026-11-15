@@ -1,7 +1,8 @@
 --[[
-    Forever Tweaks - Item Tooltips: Stat Colors and Compare Crafted Gear
+    Forever Tweaks - Modules/Tooltips/ItemStatColors.lua
+    Item Tooltips: Stat Colors and Compare Crafted Gear
       * Stat Colors: each stat line in an item's tooltip ("+6 Spirit", "Equip: Increases your hit
-        by 1%.") drawn again in its stat's color (Core/ItemStats.lua), so the stats an item has read
+        by 1%.") drawn again in its stat's color (Lib/ItemStats.lua), so the stats an item has read
         at a glance; an Equip: line keeps "Equip:" in Blizzard's green. A line with right text is
         the damage line, never a stat.
       * Compare Crafted Gear: a recipe in your bags that makes gear shows Blizzard's comparison
@@ -19,8 +20,8 @@ local _, ns = ...
 local type, setmetatable = type, setmetatable
 local ItemTooltip, Kit, Plain, ItemStats = ns.ItemTooltip, ns.TooltipKit, ns.Plain, ns.ItemStats
 local Professions = ns.Professions
-local Parts = ns.ItemTooltipParts
-local M = Parts.module
+local Shared = assert(ns.ItemTooltipsShared, "ItemStatColors.lua loads after ItemTooltips.lua")
+local M = assert(ns.modules.ItemTooltips, "ItemStatColors.lua loads after ItemTooltips.lua")
 
 ---------------------------------------------------------------------------
 -- Stat Colors
@@ -52,7 +53,7 @@ end
 
 -- Draws a stat line again in its stat's color, and says so, so Blizzard's is skipped.
 local function colorLine(tooltip, data, lineData)
-    if not Parts.On("statColors") or lineData.type ~= PLAIN then return end
+    if not Shared.IsShown("statColors") or lineData.type ~= PLAIN then return end
     local text = Plain(lineData.leftText)
     if type(text) ~= "string" or text == "" or type(Plain(lineData.rightText)) == "string" then return end
     local plain = Kit.StripCodes(text)
@@ -95,7 +96,7 @@ local function craftedGear(data)
 end
 
 local function onShowCompare(_, tooltip, anchorFrame)
-    if not Parts.On("craftedCompare") then return end
+    if not Shared.IsShown("craftedCompare") then return end
     -- Only when the client compares at all: Shift (the Compare Items modifier) or Always Compare.
     if not (IsModifiedClick("COMPAREITEMS") or C_CVar.GetCVarBool("alwaysCompareItems")) then return end
     tooltip = tooltip or GameTooltip
@@ -104,9 +105,9 @@ local function onShowCompare(_, tooltip, anchorFrame)
     if link then C_TooltipComparison.CompareItem({ hyperlink = link }, tooltip, anchorFrame) end
 end
 
-Parts.Add({
+M:AddPart({
     Enable = function()
-        ItemTooltip.ReplaceLine(colorLine, M)
+        ItemTooltip.ReplaceLine(M, colorLine)
         M:Hook("GameTooltip_ShowCompareItem", onShowCompare)
         M:RegisterEvent("SKILL_LINES_CHANGED", Professions.Forget)
     end,

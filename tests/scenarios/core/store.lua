@@ -29,7 +29,7 @@ eq(db.version, 4, "layout stays at the last step that worked")
 check(db.settings.StatusText ~= nil, "later steps didn't run")
 check(W.errors[1] and W.errors[1]:find("step 4.5 broke", 1, true) ~= nil, "the failure was reported")
 W.errors = {}
-eq(ns.modules.Fishing.db.state.wearing, nil, "another profession's outfit isn't taken for Fishing's")
+eq((ForeverTweaksCharDB.data.Fishing or {}).state, nil, "another profession's outfit isn't taken for Fishing's")
 local perf = ns.modules.Performance
 eq(perf.db.latency, "world", "a dropdown value that isn't a choice is dropped")
 eq(perf.db.size, 12, "a setting of the wrong type is dropped")

@@ -32,6 +32,7 @@ local TICKS = { [5143] = 5, [689] = 5, [1120] = 5, [5138] = 5, [15407] = 3, [10]
 local M = ns:NewModule("PlayerCastBar", {
     title = L.CASTBAR_TITLE,
     category = "interface",
+    group = L.GROUP_COMBAT,
     description = L.CASTBAR_DESC,
     added = "1.9.3",
     defaults = { timerInside = false, simple = false, ticks = false },

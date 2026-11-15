@@ -14,7 +14,7 @@ local L = ns.L
 
 -- fn(owner, name, key) when a module turns on or off (key "enabled") or one of its settings
 -- changes. Only settings go through here: a module's other news has its own channel. Listeners
--- run like event handlers (ns.Run): isolated, and charged to owner by the Profiler.
+-- run like event handlers (ns.ChargedHandler): isolated, and charged to owner by the Profiler.
 local changeListeners = {} -- { owner, fn }
 function ns:OnChanged(owner, fn)
     changeListeners[#changeListeners + 1] = { owner, fn }
@@ -22,7 +22,7 @@ end
 function ns:NotifyChanged(name, key)
     for i = 1, #changeListeners do
         local listener = changeListeners[i]
-        ns.Run(listener[1], "OnChanged", listener[2], name, key)
+        ns.ChargedHandler(listener[1], "OnChanged", listener[2], name, key)
     end
 end
 
@@ -151,8 +151,13 @@ function Options.SliderText(option, value)
 end
 
 -- A value as text, as /forever shows it: On or Off, the slider's label, or the choice's label.
-function Options.ValueText(option, value)
-    if option.type == "checkbox" then return ns:StateText(value) end
+-- `onOff` ({ on text, off text }, optional) words a checkbox's instead (the Settings page says
+-- Checked or Unchecked, as Blizzard's own undo arrows do).
+function Options.ValueText(option, value, onOff)
+    if option.type == "checkbox" then
+        if onOff then return value and onOff[1] or onOff[2] end
+        return ns:StateText(value)
+    end
     if option.type == "slider" then return Options.SliderText(option, value) end
     return Options.ChoiceLabel(option, value)
 end

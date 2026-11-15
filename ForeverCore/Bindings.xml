@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="FOREVER_SETTINGS" header="FOREVER" category="ADDONS">
+		ForeverCore.RunBinding("FOREVER_SETTINGS")
+	</Binding>
+</Bindings>

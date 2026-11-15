@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Tooltips: where they show and what they leave out
+    Forever Tweaks - Modules/Tooltips/TooltipsBehavior.lua
+    Tooltips: where they show and what they leave out
       * Anchor to Cursor: after Blizzard places a tooltip at its default spot, it moves to the mouse.
       * Hide Health Bar: the bar under unit tooltips is faded, leaving all of it to Blizzard
         (nothing reads, hooks or runs it).
@@ -13,8 +14,9 @@ local _, ns = ...
 
 local ipairs = ipairs
 local GameTooltip = GameTooltip
-local Shared = ns.TooltipsParts
-local M, guarded, inCharge = Shared.module, Shared.Guarded, Shared.InCharge
+local Shared = assert(ns.TooltipsShared, "TooltipsBehavior.lua loads after Tooltips.lua")
+local M = assert(ns.modules.Tooltips, "TooltipsBehavior.lua loads after Tooltips.lua")
+local guarded, inCharge = Shared.Guarded, Shared.InCharge
 
 -- Anchor to Cursor: after Blizzard places a tooltip at its default spot (bottom right), move it
 -- to the mouse instead.

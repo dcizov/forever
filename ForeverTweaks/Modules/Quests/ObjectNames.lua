@@ -26,6 +26,7 @@ local YELLOW, GRAY = { 1, 0.82, 0 }, { 0.6, 0.6, 0.6 }
 local M = ns:NewModule("ObjectNames", {
     title = L.OBJNAMES_TITLE,
     category = "quests",
+    group = L.GROUP_NAMEPLATES,
     description = L.OBJNAMES_DESC,
     added = "1.9.1",
     defaults = { objectives = true },

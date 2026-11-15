@@ -1,12 +1,13 @@
 --[[
-    Forever Tweaks - Profession Tooltips: world objects and minimap pins
+    Forever Tweaks - Modules/Tooltips/ProfessionObjects.lua
+    Profession Tooltips: world objects and minimap pins
     Profession Tooltips' line on a herb, vein or locked chest under the mouse, and in a minimap
     pin's tooltip. A world object's tooltip has its name alone on the first line, and the skill
     line goes right under it, before quest objectives (its data is kept from the pre call, and the
     line added once the first line is drawn); Blizzard's own requirement line, or a bare "Mining"
     line under a vein, is recolored or replaced instead. A minimap pin's first line holds every
     pin under the mouse on lines of its own, so the skill line goes into that text under its
-    node's name. Blizzard's requirement lines teach Core/Professions.lua what a node needs.
+    node's name. Blizzard's requirement lines teach Lib/Professions.lua what a node needs.
     Adapted from Forever++'s Profession Tooltips by xIGBClutchIx (MIT License).
 ]]
 
@@ -15,8 +16,10 @@ local _, ns = ...
 local type, setmetatable = type, setmetatable
 local gsub, gmatch, match, find, concat = string.gsub, string.gmatch, string.match, string.find, table.concat
 local Professions, Kit, Plain = ns.Professions, ns.TooltipKit, ns.Plain
-local Shared = ns.ProfessionTooltipParts
-local M, inCharge, restyling, NODES, clean = Shared.module, Shared.InCharge, Shared.restyling, Shared.NODES, Shared.Clean
+local Shared = assert(ns.ProfessionTooltipsShared, "ProfessionObjects.lua loads after ProfessionTooltips.lua")
+local M = assert(ns.modules.ProfessionTooltips, "ProfessionObjects.lua loads after ProfessionTooltips.lua")
+local inCharge, NODES, clean = Shared.InCharge, Shared.NODES, Shared.Clean
+local restyling = setmetatable({}, { __mode = "k" }) -- tooltip -> the restyle job for its post call
 local findRequires, findNameLine, restyle = Shared.FindRequires, Shared.FindNameLine, Shared.Restyle
 local nodeLine, requiresColor, yourSkill, isProfessionName = Shared.NodeLine, Shared.RequiresColor, Shared.YourSkill, Shared.IsProfessionName
 local addLine, REQUIRES, leftLine = Shared.AddLine, Shared.REQUIRES, Kit.LeftLine

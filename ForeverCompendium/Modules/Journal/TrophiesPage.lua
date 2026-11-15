@@ -17,7 +17,11 @@ local L = ns.L
 
 local ipairs, pairs, next, format, math, table = ipairs, pairs, next, string.format, math, table
 local CreateFrame = CreateFrame
-local Book, Text, J, Journal, Filter = ns.Book, ns.JournalText, ns.JournalKit, ns.Journal, ns.CreatureFilter
+local Book = ns.Book
+local Text = assert(ns.JournalText, "TrophiesPage.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "TrophiesPage.lua loads after JournalKit.lua")
+local Journal = assert(ns.Journal, "TrophiesPage.lua loads after Journal.lua")
+local Filter = assert(ns.CreatureFilter, "TrophiesPage.lua loads after CreatureFilter.lua")
 
 local CARD_W, CARD_H, GAP, HEAD_H = 196, 60, 6, 30
 local TILES_H = 74

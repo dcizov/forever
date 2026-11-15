@@ -60,8 +60,9 @@ FACTION_STANDING_INCREASED = "Your %s reputation has increased by %d."
 FACTION_STANDING_DECREASED = "Your %s reputation has decreased by %d."
 for q = 0, 7 do _G["ITEM_QUALITY" .. q .. "_DESC"] = "Quality " .. q end
 SOUNDKIT.IG_CHARACTER_INFO_TAB = 841
-SOUNDKIT.IG_CHARACTER_INFO_OPEN = 839
-SOUNDKIT.IG_CHARACTER_INFO_CLOSE = 840
+SOUNDKIT.IG_SPELLBOOK_OPEN = 829
+SOUNDKIT.IG_SPELLBOOK_CLOSE = 830
+SOUNDKIT.IG_MAINMENU_OPTION = 852
 
 -- Blizzard_SharedXML's tab functions: the selected tab kept on the holder.
 function PanelTemplates_TabResize() end

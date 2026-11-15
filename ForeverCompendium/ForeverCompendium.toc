@@ -2,7 +2,7 @@
 ## Title: |cffd4a017Forever|r Compendium
 ## Notes: A journal of the creatures you meet, their loot, and where your quests are. Part of the Forever suite. /fc
 ## Author: wtFAQ
-## Version: 2.4.0
+## Version: 2.9.0
 ## Dependencies: ForeverCore
 ## SavedVariables: ForeverCompendiumDB
 ## SavedVariablesPerCharacter: ForeverCompendiumCharDB
@@ -16,17 +16,20 @@ Migrations.lua
 
 Changelog.lua
 
-# Modules: one line per file, grouped by category (each folder is a category; Data holds the
-# journal's merging, text, Bestiary Import and Archive, in the Journal category)
-Modules\Journal\Places.lua
-Modules\Journal\Book.lua
-Modules\Data\BookMerge.lua
-Modules\Data\Codec.lua
-Modules\Journal\RecorderLoot.lua
-Modules\Journal\RecorderQuests.lua
-Modules\Journal\RecorderCombat.lua
-Modules\Journal\RecorderNpcs.lua
-Modules\Journal\Recorder.lua
+# The libraries several modules share: where things were seen, the journal's sounds, the book of what was learned
+# and its merging, tables as text, and addon messages
+Lib\Places.lua
+Lib\Sound.lua
+Lib\Book.lua
+Lib\BookMerge.lua
+Lib\Codec.lua
+Lib\Transport.lua
+# Modules: one line per file, grouped by category (each folder is a category)
+Modules\Recorder\RecorderLoot.lua
+Modules\Recorder\RecorderQuests.lua
+Modules\Recorder\RecorderCombat.lua
+Modules\Recorder\RecorderNpcs.lua
+Modules\Recorder\Recorder.lua
 Modules\Data\ImportCreatures.lua
 Modules\Data\ImportQuests.lua
 Modules\Data\Import.lua
@@ -37,9 +40,11 @@ Modules\Journal\JournalLists.lua
 Modules\Journal\CreatureFilter.lua
 Modules\Journal\Journal.lua
 Modules\Journal\CreatureOverview.lua
+Modules\Journal\CreatureNotes.lua
 Modules\Journal\CreatureDetail.lua
-Modules\Journal\CreatureQuestTab.lua
-Modules\Journal\CreatureTabs.lua
+Modules\Journal\CreatureLootBox.lua
+Modules\Journal\CreatureQuestBox.lua
+Modules\Journal\CreatureBoxes.lua
 Modules\Journal\CreaturesPage.lua
 Modules\Journal\ItemsPage.lua
 Modules\Journal\TrophiesPage.lua
@@ -47,9 +52,7 @@ Modules\Map\QuestPins.lua
 Modules\Map\RarePins.lua
 Modules\Map\CreatureAreas.lua
 Modules\Tooltips\TooltipLines.lua
-Modules\Social\Transport.lua
 Modules\Social\Sharing.lua
 Modules\Social\Badges.lua
 Modules\Social\BadgesPage.lua
 Modules\Notifications\Banner.lua
-

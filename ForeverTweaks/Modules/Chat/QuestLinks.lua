@@ -4,7 +4,7 @@
     Blizzard's own quest links, [[34] A Grim Task], which shows the quest when clicked. Questie
     links a quest as its own hyperlink, which the server turns into plain text for everyone else,
     so only players with Questie could click it; the ID in it is all a quest link needs, so no
-    quest database is needed. A line is rewritten (Core/Chat.lua's Transform) a frame after it
+    quest database is needed. A line is rewritten (Lib/Chat.lua's Transform) a frame after it
     arrives; text already inside a link (Questie's own, when it's loaded) and secret lines are left
     alone, and turning this off puts the plain text back. Left to Forever++'s Quest Links while
     that's on. Adapted from Forever++ by xIGBClutchIx (MIT License).

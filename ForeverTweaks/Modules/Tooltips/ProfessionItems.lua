@@ -1,9 +1,10 @@
 --[[
-    Forever Tweaks - Profession Tooltips: items
+    Forever Tweaks - Modules/Tooltips/ProfessionItems.lua
+    Profession Tooltips: items
     Profession Tooltips' lines on items: a lockbox's Lockpicking (Blizzard's own "Requires
     Lockpicking (25)" line drawn again in the difficulty color, and learned for the box), what a
     skeleton key opens, and the skill that gathers a herb, ore or stone. Placed with the other item
-    tooltip lines (Core/ItemTooltip.lua). Adapted from Forever++'s Profession Tooltips by
+    tooltip lines (Lib/ItemTooltip.lua). Adapted from Forever++'s Profession Tooltips by
     xIGBClutchIx (MIT License).
 ]]
 
@@ -12,8 +13,9 @@ local L = ns.L
 
 local type, select, format = type, select, string.format
 local Professions, ItemTooltip = ns.Professions, ns.ItemTooltip
-local Shared = ns.ProfessionTooltipParts
-local M, inCharge, skillLine, lockRank, addLine = Shared.module, Shared.InCharge, Shared.SkillLine, Shared.LockRank, Shared.AddLine
+local Shared = assert(ns.ProfessionTooltipsShared, "ProfessionItems.lua loads after ProfessionTooltips.lua")
+local M = assert(ns.modules.ProfessionTooltips, "ProfessionItems.lua loads after ProfessionTooltips.lua")
+local inCharge, skillLine, lockRank, addLine = Shared.InCharge, Shared.SkillLine, Shared.LockRank, Shared.AddLine
 local isProfessionName, KEY_SKILL = Shared.IsProfessionName, Shared.KEY_SKILL
 local LOCK = Professions.LOCKPICKING
 
@@ -108,7 +110,7 @@ end
 
 M:AddPart({
     Enable = function()
-        ItemTooltip.OnInfo(onItem, M)
-        ItemTooltip.ReplaceLine(onItemLine, M)
+        ItemTooltip.OnInfo(M, onItem)
+        ItemTooltip.ReplaceLine(M, onItemLine)
     end,
 })

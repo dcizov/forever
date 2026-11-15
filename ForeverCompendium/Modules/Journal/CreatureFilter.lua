@@ -18,7 +18,8 @@ local _, ns = ...
 local L = ns.L
 
 local pairs, ipairs, table, type = pairs, ipairs, table, type
-local Book, Text = ns.Book, ns.JournalText
+local Book = ns.Book
+local Text = assert(ns.JournalText, "CreatureFilter.lua loads after JournalText.lua")
 
 local Filter = {}
 ns.CreatureFilter = Filter

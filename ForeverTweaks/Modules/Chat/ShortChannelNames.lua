@@ -2,7 +2,7 @@
     Forever Tweaks - Short Channel Names
     [1. General] becomes [1], [G], [1. G] or another short form in chat (Style), and with Guild,
     Party & Raid, [Guild], [Party], [Raid] and the like become [GD], [P], [R]. Blizzard builds the
-    channel link from the channel's full name, so the finished line is rewritten (Core/Chat.lua's
+    channel link from the channel's full name, so the finished line is rewritten (Lib/Chat.lua's
     Transform; it stays a working link); the chat box's header while you type ("[2. Trade]: ")
     gets the same short form, after Blizzard's UpdateHeader, its text insets shrunk by the width
     saved. Secret lines are left alone; turning it off gives the names back. Left to Forever++'s

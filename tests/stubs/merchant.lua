@@ -118,6 +118,8 @@ function GetInventoryItemLink(_, slot) return W.durability[slot] and ("[Item " .
 -- makes SetTracking error, as the game refusing an addon would.
 W.tracking = {}
 C_Minimap = {
+    -- Yards from the minimap's centre to its edge: zoom 0, outdoors or in (W.viewRadius overrides).
+    GetViewRadius = function() return W.viewRadius or (W.indoors and 150 or 233.33) end,
     GetNumTrackingTypes = function() return #W.tracking end,
     GetTrackingInfo = function(i)
         local t = W.tracking[i]

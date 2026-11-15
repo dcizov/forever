@@ -44,6 +44,8 @@ function Frame:SetShadowOffset(x, y) self._shadowOffset = { x, y } end
 function Frame:SetShadowColor() end
 function Frame:GetScale() return self._scale or 1 end
 function Frame:SetFontObject(font) self._fontObject = font end
+function Frame:SetDesaturated(on) self._desaturated = on and true or false end
+function Frame:SetHyperlink(link) self._hyperlink = link end
 function Frame:GetText() return self._text end
 function Frame:SetText(text) self._text = text end
 function Frame:GetChecked() return self._checked end
@@ -119,11 +121,34 @@ function Frame:GetFont() return self._fontFile or "Fonts\\FRIZQT__.TTF", self._f
 function Frame:SetFont(file, size, flags) self._fontFile, self._fontSize, self._fontFlags = file, size, flags end
 function Frame:SetValue(v) self._value = v end
 function Frame:SetTextColor(r, g, b) self._textColor = { r, g, b } end
+function Frame:GetTextColor()
+    local c = self._textColor or { 1, 0.82, 0 }
+    return c[1], c[2], c[3], 1
+end
+-- Status bars' and textures' tints, kept to be read back (Class Colors puts Blizzard's back).
+function Frame:SetStatusBarColor(r, g, b, a) self._barColor = { r, g, b, a } end
+function Frame:GetStatusBarColor()
+    local c = self._barColor or { 0, 1, 0 }
+    return c[1], c[2], c[3], c[4] or 1
+end
+function Frame:SetStatusBarDesaturated(on) self._barDesaturated = on and true or false end
+function Frame:IsStatusBarDesaturated() return self._barDesaturated or false end
+function Frame:SetVertexColor(r, g, b, a) self._vertexColor = { r, g, b, a } end
+function Frame:GetVertexColor()
+    local c = self._vertexColor or { 1, 1, 1 }
+    return c[1], c[2], c[3], c[4] or 1
+end
 function Frame:GetScript(name) return self._scripts[name] end
 function Frame:SetScript(name, fn) self._scripts[name] = fn end
 function Frame:HookScript(name, fn)
     local old = self._scripts[name]
     self._scripts[name] = old and function(...) old(...) fn(...) end or fn
+end
+function Frame:Click(mouse) return self:Fire("OnClick", mouse or "LeftButton") end
+-- Whether a key the frame hears goes on to the game (Dialogue Keys).
+function Frame:SetPropagateKeyboardInput(on)
+    if InCombatLockdown() then W.errors[#W.errors + 1] = "SetPropagateKeyboardInput in combat" end
+    self._propagate = on
 end
 function Frame:Fire(name, ...)
     local fn = self._scripts[name]

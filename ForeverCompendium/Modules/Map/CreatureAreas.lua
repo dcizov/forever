@@ -1,7 +1,7 @@
 --[[
     Forever Compendium - Creature Areas
     Where creatures live, drawn on the world map and the minimap as soft patches in a colour of
-    each creature's own: every spot of the map's grid it was seen in (Modules/Journal/Places.lua),
+    each creature's own: every spot of the map's grid it was seen in (Lib/Places.lua),
     deeper where it was seen more. Which creatures:
       * Pinned ones (the journal's star, or right-click in its list).
       * Wanted ones: those a quest in your log has you kill, loot or speak to.
@@ -94,24 +94,16 @@ local function tooltip(owner, pin)
     GameTooltip:Show()
 end
 
-local world = ns.MapPins.World(M, {
+local pins = ns.MapPins.Both(M, {
     specs = specsOn,
-    shown = function() return M.db.worldMap end,
-    size = function() return 16 end,
     tooltip = tooltip,
     click = function(_, spec) ns.ShowCreature(spec.npc) end,
-})
-local minimap = ns.MapPins.Minimap(M, {
-    specs = specsOn,
-    shown = function() return M.db.minimap end,
-    size = function() return 16 end,
-    tooltip = tooltip,
+    world = { shown = function() return M.db.worldMap end, size = function() return 16 end },
+    minimap = { shown = function() return M.db.minimap end, size = function() return 16 end },
 })
 
-local function refresh()
-    world.Refresh()
-    minimap.Refresh()
-end
+
+local refresh = pins.Refresh
 
 local function refreshSoon() M:Soon(refresh) end
 
@@ -121,8 +113,8 @@ function ns.FocusCreature(npcID)
     if M.active then refresh() end
 end
 
-ns:OnNews(M, function(_, event)
-    if M.active and (event == "CREATURE_PINNED" or event == "BOOK_MERGED" or event == "QUEST_PLACE") then refreshSoon() end
+M:OnNews(function(_, event)
+    if event == "CREATURE_PINNED" or event == "BOOK_MERGED" or event == "QUEST_PLACE" then refreshSoon() end
 end)
 
 function M:OnEnable()

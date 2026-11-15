@@ -7,7 +7,7 @@
     or always (red without it); Lockpicking only for characters who can pick locks (a rogue's, or
     with Blacksmithing, what the best skeleton key you can make opens). Blizzard's own "Requires
     Herbalism (75)" line is recolored in place instead of repeated, and taught to
-    Core/Professions.lua, so any language and Forever's changes fill in. The lines on items are
+    Lib/Professions.lua, so any language and Forever's changes fill in. The lines on items are
     ProfessionItems.lua's, on creatures (Skinning) ProfessionCreatures.lua's, on herbs, veins,
     chests and minimap pins ProfessionObjects.lua's; this file has the module, its data and what
     they share. Lines go right under the
@@ -36,7 +36,7 @@ local M = ns:NewModule("ProfessionTooltips", {
     defaults = {
         show = "known", herbalism = true, mining = true, skinning = true, lockpicking = true,
         blacksmithing = true, items = true,
-        learned = {}, -- data: what the game taught, { nodes, lockboxes } (Core/Professions.lua)
+        learned = {}, -- data: what the game taught, { nodes, lockboxes } (Lib/Professions.lua)
     },
     options = {
         { key = "show", type = "dropdown", label = L.PROFTOOLTIPS_SHOW, tooltip = L.PROFTOOLTIPS_SHOW_TIP, section = GATHERING,
@@ -266,13 +266,13 @@ local function restyle(tooltip, job)
     end
 end
 
-local restyling = setmetatable({}, { __mode = "k" }) -- tooltip -> job for its post call
-
--- What ProfessionObjects.lua, ProfessionCreatures.lua and ProfessionItems.lua share with this file.
-ns.ProfessionTooltipParts = {
-    module = M, InCharge = inCharge, SkillLine = skillLine, LockRank = lockRank, AddLine = addLine,
+-- What ProfessionObjects.lua, ProfessionCreatures.lua and ProfessionItems.lua need from this file:
+-- functions and constants only, no state (each keeps its own). Each reaches the module itself
+-- with assert(ns.modules.ProfessionTooltips) and joins it with M:AddPart.
+ns.ProfessionTooltipsShared = {
+    InCharge = inCharge, SkillLine = skillLine, LockRank = lockRank, AddLine = addLine,
     IsProfessionName = isProfessionName, KEY_SKILL = KEY_SKILL, FindRequires = findRequires,
-    FindNameLine = findNameLine, Restyle = restyle, restyling = restyling, NODES = NODES, Clean = clean,
+    FindNameLine = findNameLine, Restyle = restyle, NODES = NODES, Clean = clean,
     NodeLine = nodeLine, RequiresColor = requiresColor, YourSkill = yourSkill, REQUIRES = REQUIRES,
 }
 

@@ -27,7 +27,7 @@
     type for its default, or not one of its dropdown's choices, is dropped when it loads.
 
     Each member adds its own steps (ns:Migrate from its own files: Forever Tweaks' are in its
-    Core/Migrations.lua). A step reads only the saved tables and what it's written with, never
+    Migrations.lua). A step reads only the saved tables and what it's written with, never
     the modules as they are now: it must do the same thing in every later release. A step that
     fails stops the ones after it, and the layout stays at the last one that worked, so it's
     tried again next time.
@@ -44,7 +44,8 @@ local Store = {}
 ns.Store = Store
 
 -- Adds a step, fn(db, coreDB), that runs once for the calling member's account file older than
--- `version` (its layout). coreDB is Forever Core's account table, loaded before any member's.
+-- `version` (its layout). coreDB is Forever Core's account table, loaded before any member's;
+-- settings a step moves into it are checked against Core's modules like any saved setting.
 function ns:Migrate(version, fn)
     local steps = self.member.steps
     steps[#steps + 1] = { version = version, fn = fn }
@@ -124,7 +125,7 @@ local function migrate(db, list, latest, extra)
     for _, step in ipairs(list) do
         if version < step.version then
             -- A failed step is reported (with its stack) and stops here; the next login tries it again.
-            if not ns.RunCall(owner, "migration", ns.Succeeded, step.fn, db, extra) then return version end
+            if not ns.ChargedCall(owner, "migration", ns.Succeeded, step.fn, db, extra) then return version end
             version = step.version
         end
     end
@@ -155,7 +156,13 @@ function Store.Init(member)
     if freshChar then charDB.version = member.charLayout end
     -- Files from before there were versions: the account's is layout 1, the character's 0.
     db.version, charDB.version = db.version or 1, charDB.version or 0
+    local before = db.version
     db.version = migrate(db, member.steps, member.layout, ns.db or db)
+    -- A member's step may move settings into Forever Core's file, whose modules were attached
+    -- (and their settings checked) before this member loaded: check theirs again.
+    if db.version ~= before and member ~= ns.member then
+        for _, name in ipairs(ns.member.order) do dropUnfit(ns.modules[name], ns.modules[name].settings) end
+    end
     charDB.version = migrate(charDB, member.charSteps, member.charLayout)
 
     db.settings, db.data, db.seenModules = db.settings or {}, db.data or {}, db.seenModules or {}
@@ -178,5 +185,5 @@ function Store.Attach(mod)
     local settings = child(db.settings, name)
     dropUnfit(mod, settings)
     mod.db = newModuleDB(mod, settings, child(db.data, name), child(charDB.data, name))
-    if mod.OnInitialize then ns.Run(mod, "OnInitialize", mod.OnInitialize) end
+    if mod.OnInitialize then ns.ChargedHandler(mod, "OnInitialize", mod.OnInitialize) end
 end

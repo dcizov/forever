@@ -10,7 +10,8 @@
     IsFishingLoot catches, items count when they reach your bags, and they're worth Auctionator's
     price when it has one, else a vendor's (as Full Bags prices them). Skill-ups are CHAT_MSG_SKILL.
     The clock starts at your first gather and stops while paused. Point at it for the items;
-    right-click it to pause or start again. /ft session says the same in chat.
+    right-click it to pause, start again or open the Gathering window (GatherWindow.lua, a part
+    of this module). /ft session says the same in chat.
 ]]
 
 local _, ns = ...
@@ -25,6 +26,7 @@ local MIN_RATE_TIME = 60 -- seconds of gathering before a per-hour figure means 
 local M = ns:NewModule("GatherSession", {
     title = L.GATHERSESSION_TITLE,
     category = "gathering",
+    group = L.GROUP_HERBS,
     description = L.GATHERSESSION_DESC,
     added = "1.5.0",
     defaults = ns.Widgets.DisplayDefaults({
@@ -64,7 +66,7 @@ local function clockText(seconds)
     return format("%d:%02d", seconds / 60, seconds % 60)
 end
 
-local function money(copper) return C_CurrencyInfo.GetCoinTextureString(floor(copper)) end
+local money = ns.MoneyText
 
 -- What the session made an hour, or nil before there's enough of it to say.
 local function perHour()
@@ -87,6 +89,7 @@ local function updateDisplay()
         display:SetLine(head .. "\n" .. table.concat(parts, "   "))
     end
     display:SetShown(show)
+    if M.window then M.window.Refresh() end
 end
 
 -- The clock ticks once a second while the session runs and the panel shows.
@@ -119,6 +122,9 @@ local function togglePause()
     syncClock()
     updateDisplay()
 end
+
+-- Its key binding (Bindings.xml, Forever Core's Core/Bindings.lua).
+ns:AddBinding(M, "FOREVERTWEAKS_SESSION_PAUSE", togglePause)
 
 -- Something was gathered: the session starts (or carries on after a pause).
 local function gathered()
@@ -208,17 +214,28 @@ display = ns.Widgets.AddDisplay(M, { name = "ForeverTweaksGatherSession", relati
     menu = function(add)
         add(pausedAt and L.GATHERSESSION_RESUME or L.GATHERSESSION_PAUSE, togglePause)
         add(L.GATHERSESSION_RESET, startAgain)
+        if M.window then add(L.GATHERWINDOW_OPEN, M.window.Toggle) end
     end })
+
+-- What the Gathering window (GatherWindow.lua) reads and does: functions only.
+ns.GatherSessionShared = {
+    Session = function() return session end,
+    Started = function() return started ~= nil end,
+    Paused = function() return pausedAt ~= nil end,
+    Elapsed = elapsed, ClockText = clockText, PerHour = perHour, ItemsByCount = itemsByCount,
+    TogglePause = togglePause, StartAgain = startAgain,
+}
 
 -- /ft session: the session in chat; /ft session reset starts again.
 M:AddCommand("session", L.GATHERSESSION_CMD_USAGE, L.GATHERSESSION_CMD_DESC, function(args)
+    if (args or ""):lower() == "window" and M.window then return M.window.Toggle() end
     if (args or ""):lower() == "reset" then
         startAgain()
-        ns:Print(L.GATHERSESSION_RESET_DONE)
+        M:Reply(L.GATHERSESSION_RESET_DONE)
         return
     end
-    if not started then return ns:Print(L.GATHERSESSION_NONE) end
-    ns:Print(format(L.GATHERSESSION_SUMMARY, clockText(elapsed()), session.nodes, session.items, money(session.value)))
+    if not started then return M:Reply(L.GATHERSESSION_NONE) end
+    M:Reply(format(L.GATHERSESSION_SUMMARY, clockText(elapsed()), session.nodes, session.items, money(session.value)))
     for _, link in ipairs(itemsByCount()) do ns:PrintLine(format("  %d x %s", session.byItem[link], link)) end
 end)
 

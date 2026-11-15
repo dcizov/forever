@@ -65,6 +65,21 @@ eq(enders[1] and enders[1].spec.gray, true, "grey until ready")
 eq(#ofKind("objective"), 2, "the unfinished objective's places, not the finished one's")
 eq(#ofKind("giver"), 1, "a taken quest's giver isn't shown")
 
+-- OpenMap: above its stitched art, and drawn again as its view moves.
+local heard = {}
+OpenMapAPI = { ArtTopLevel = function() return 5000 end,
+    RegisterCallback = function(owner, event, fn) heard[event] = fn end }
+ns:SetOption("QuestPins", "size", 21)
+W.RunTimers()
+check(givers[1]:GetParent():GetFrameLevel() > 5000, "OpenMap: the pins over its stitched art")
+check(heard.OpenMap_ViewChanged ~= nil and heard.OpenMap_StitchedChanged ~= nil, "listening to its view and map")
+heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 2)
+W.RunTimers()
+eq(#ofKind("giver"), 1, "drawn again as the view moves")
+OpenMapAPI = nil
+ns:SetOption("QuestPins", "size", 20)
+W.RunTimers()
+
 -- Ready: the turn-in goes yellow once the log says so.
 W.questsReady[4] = true
 W.Fire("QUEST_LOG_UPDATE")
@@ -170,6 +185,15 @@ for _, f in ipairs(W.frames) do
 end
 eq(#patches, 2, "a patch for each place it was seen")
 check(patches[1] and patches[1]:GetParent():GetFrameLevel() < anyPin:GetParent():GetFrameLevel(), "under the quest pins")
+W.place = { map = MAP, x = 0.5, y = 0.5 }
+W.Fire("ZONE_CHANGED")
+W.RunTimers()
+local cut
+for _, f in ipairs(W.frames) do
+    local spec = rawget(f, "spec")
+    if spec and spec.span and f._kind == "Frame" and f:IsShown() then cut = rawget(f, "masked") and rawget(f, "maskShape") end
+end
+eq(cut, "Interface\\CharacterFrame\\TempPortraitAlphaMask", "on the minimap, an area is cut to its round edge")
 ns:SetOption("CreatureAreas", "pinned", false)
 W.RunTimers()
 local left = 0

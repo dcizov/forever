@@ -1,7 +1,7 @@
 --[[
     Forever Core - Core/Module.lua
     Modules: ns:NewModule, and what every module can do (events, hooks, timers and
-    parts), all of it stopped when the module turns off. Builds on the event frame and ns.Run in
+    parts), all of it stopped when the module turns off. Builds on the event frame and ns.ChargedHandler in
     Core/Core.lua; loaded right after it, before anything that defines a module.
 ]]
 
@@ -12,7 +12,7 @@ local setmetatable, strlower = setmetatable, string.lower
 local C_Timer, hooksecurefunc = C_Timer, hooksecurefunc
 
 local L = ns.L
-local call, run = ns.Call, ns.Run
+local call, run = ns.SafeCall, ns.ChargedHandler
 
 local Module = {}
 Module.__index = Module
@@ -96,7 +96,7 @@ end
 
 local function runParts(mod, method, ...)
     for _, part in ipairs(mod.parts) do
-        if part[method] then ns.RunCall(mod, method, part[method], part, ...) end
+        if part[method] then ns.ChargedCall(mod, method, part[method], part, ...) end
     end
 end
 
@@ -146,10 +146,31 @@ function Module:HookScript(frame, script, fn)
     return hookOnce(self, frame, script, fn, function(hook) frame:HookScript(script, hook) end)
 end
 
+-- The suite's news (ns:Announce) and setting changes (ns:NotifyChanged), heard only while the
+-- module is on, like its events: fn(self, event, ...) and fn(self, name, key). Something that must
+-- hear them while the module is off (a cache to throw away) uses ns:OnNews / ns:OnChanged.
+function Module:OnNews(fn)
+    ns:OnNews(self, function(owner, ...)
+        if owner.active then return fn(owner, ...) end
+    end)
+end
+
+function Module:OnChanged(fn)
+    ns:OnChanged(self, function(owner, ...)
+        if owner.active then return fn(owner, ...) end
+    end)
+end
+
 -- Says something in chat by itself: only while its Chat Messages option (ns.ChatOption) is on and
 -- Mute All Chat Messages (ns.db.quiet, the Settings page) is off.
 function Module:Print(...)
     if self.db.chat == false or (ns.db and ns.db.quiet) then return end
+    ns.Print(self, ...) -- under its member's name
+end
+
+-- Answers the player (a command's reply, a button's result): always shown, chat muted or not,
+-- since they asked. What a module says unprompted goes through Print.
+function Module:Reply(...)
     ns.Print(self, ...) -- under its member's name
 end
 
@@ -165,7 +186,7 @@ function Module:SetActive(state)
     self:Debug(state and "on" or "off")
     if state then
         runParts(self, "Enable")
-        if self.OnEnable and not ns.RunCall(self, "OnEnable", ns.Succeeded, self.OnEnable, self) then
+        if self.OnEnable and not ns.ChargedCall(self, "OnEnable", ns.Succeeded, self.OnEnable, self) then
             self:Debug("OnEnable failed: turned off again")
             return self:SetActive(false)
         end

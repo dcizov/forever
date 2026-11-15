@@ -1,6 +1,6 @@
 --[[
     Forever Compendium - Rare Pins
-    The rare creatures you've met (Modules/Journal/Book.lua: a rare or rare elite), at the spot
+    The rare creatures you've met (Lib/Book.lua: a rare or rare elite), at the spot
     on each map where you saw them most, on the world map and the minimap (Forever Core's
     UI/MapPins.lua). Point at one for what it is and when you last saw it; right-click it on the
     world map to open the journal on it. Drawn again when the Recorder meets a new creature.
@@ -62,27 +62,17 @@ local function tooltip(owner, pin)
     GameTooltip:Show()
 end
 
-local world = ns.MapPins.World(M, {
+local pins = ns.MapPins.Both(M, {
     specs = pinsOn,
-    shown = function() return M.db.worldMap end,
-    size = function() return M.db.size end,
     tooltip = tooltip,
     click = function(_, pin) ns.ShowCreature(pin.npc) end,
-    level = 10,
-})
-local minimap = ns.MapPins.Minimap(M, {
-    specs = pinsOn,
-    shown = function() return M.db.minimap end,
-    size = function() return M.db.minimapSize end,
-    tooltip = tooltip,
-    level = 1,
+    world = { shown = function() return M.db.worldMap end, size = function() return M.db.size end, level = 10 },
+    minimap = { shown = function() return M.db.minimap end, size = function() return M.db.minimapSize end, level = 1 },
 })
 
-local function refresh()
-    world.Refresh()
-    minimap.Refresh()
-end
 
-ns:OnNews(M, function(_, event)
-    if M.active and (event == "CREATURE_NEW" or event == "BOOK_MERGED") then M:Soon(refresh) end
+local refresh = pins.Refresh
+
+M:OnNews(function(_, event)
+    if event == "CREATURE_NEW" or event == "BOOK_MERGED" then M:Soon(refresh) end
 end)

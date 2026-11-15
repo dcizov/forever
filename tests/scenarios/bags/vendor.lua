@@ -106,8 +106,8 @@ check(W.ChatHas("1000 x [Rough Arrow]"), "/ft autobuy lists what's kept")
 
 -- Its Settings pane: the Autobuy list, edited without a merchant.
 ns:OpenSettings("Vendor")
-eq(W.opened, ns.member.short, "Vendor's pane on the Forever Tweaks page")
-local page = W.categories[ns.member.short].frame
+eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "Vendor's pane on the Forever Tweaks page")
+local page = ForeverCore.SettingsWindow.Page(ns.member.short).frame
 local function listed(text)
     return #under(page, function(f) return f._kind == "FontString" and f._text == text and f:IsShown() end) > 0
 end
@@ -193,7 +193,8 @@ ns:SetOption("Vendor", "ask", true)
 W.OpenMerchant()
 eq(#W.bought, 0, "Ask First: nothing bought before the answer")
 local asked = W.popups[#W.popups]
-check(asked and asked.text:find("400 x [Rough Arrow]", 1, true), "the question lists each item and how many")
+check(asked and asked.text:find("400 x [Rough Arrow] (you have 600, keeping 1000)", 1, true),
+    "the question lists each item, how many, and what it counted in the bags")
 check(asked.text:find(ns.L.VENDOR_ASK_TOTAL:format("200c"), 1, true), "and the total")
 W.Accept()
 eq(W.bought[1] and W.bought[1].units, 400, "Yes buys it")
@@ -230,7 +231,11 @@ eq(restock:IsShown(), false, "hidden on the buyback tab")
 W.MerchantTab(1)
 check(restock:IsShown(), "back on the merchant tab")
 restock:Fire("OnClick", "RightButton")
-eq(W.opened, ns.member.short, "right-click opens the Autobuy page")
+check(ns.modules.Vendor.WindowShown(), "right-click opens the Autobuy window")
+local autobuy = ForeverTweaksAutobuyWindow
+check(#under(autobuy, function(f) return f._text == ns.L.VENDOR_LIST_HEADER end) > 0, "the Autobuy list in it")
+restock:Fire("OnClick", "RightButton")
+check(not ns.modules.Vendor.WindowShown(), "right-click again closes it")
 ns:SetOption("Vendor", "button", false)
 eq(restock:IsShown(), false, "Restock Button off: gone")
 eq(select(4, MerchantSellAllJunkButton:GetPoint()), -148, "and Sell All Junk back in Blizzard's place")

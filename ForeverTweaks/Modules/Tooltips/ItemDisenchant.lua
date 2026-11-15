@@ -1,9 +1,10 @@
 --[[
-    Forever Tweaks - Item Tooltips: Disenchant
+    Forever Tweaks - Modules/Tooltips/ItemDisenchant.lua
+    Item Tooltips: Disenchant
     On a green, blue or purple weapon or armor piece, what disenchanting it gives on average,
     priced from the auction prices (AuctionPrices.lua) when every material has one, or else the
     material it most likely gives; Shift adds every outcome with its chance, in gray. The rules
-    are in Core/Disenchant.lua. An item whose bracket isn't known yet says so, and the player's own
+    are in Lib/Disenchant.lua. An item whose bracket isn't known yet says so, and the player's own
     disenchants teach it: a cast of Disenchant on the one disenchantable item locked in the bags,
     then loot that's only enchanting materials (Trade Goods, Enchanting), so a corpse's or chest's
     loot opened around it is never taken for one. Adapted from Forever++'s Item Tooltips by
@@ -14,9 +15,9 @@ local _, ns = ...
 local L = ns.L
 
 local pairs, ipairs, type, format, floor = pairs, ipairs, type, string.format, math.floor
-local ItemTooltip, Kit, Plain, Disenchant = ns.ItemTooltip, ns.TooltipKit, ns.Plain, ns.Disenchant
-local Parts = ns.ItemTooltipParts
-local M = Parts.module
+local ItemTooltip, Plain, Disenchant = ns.ItemTooltip, ns.Plain, ns.Disenchant
+local Shared = assert(ns.ItemTooltipsShared, "ItemDisenchant.lua loads after ItemTooltips.lua")
+local M = assert(ns.modules.ItemTooltips, "ItemDisenchant.lua loads after ItemTooltips.lua")
 
 -- A material's name, or a stand-in while the client hasn't cached it (asking loads it, so the
 -- next redraw has it).
@@ -55,7 +56,7 @@ local function outcomesFor(itemID)
 end
 
 local function addDisenchant(tooltip, data)
-    local itemID = Parts.On("disenchant") and ItemTooltip.ItemID(data)
+    local itemID = Shared.IsShown("disenchant") and ItemTooltip.ItemID(data)
     if not itemID then
         return
     end
@@ -69,9 +70,9 @@ local function addDisenchant(tooltip, data)
         ItemTooltip.AddInfo(tooltip, L.DISENCHANT_LINE, L.DISENCHANT_NOT_KNOWN, db.align, "gray")
         return
     end
-    local value, missing = Disenchant.Value(outcomes, Parts.AuctionPrice)
+    local value, missing = Disenchant.Value(outcomes, ns.AuctionPrices.Price)
     if missing == 0 and value > 0 then
-        ItemTooltip.AddInfo(tooltip, L.DISENCHANT_LINE, Kit.Money(floor(value + 0.5)), db.align, "white")
+        ItemTooltip.AddInfo(tooltip, L.DISENCHANT_LINE, ns.MoneyText(value), db.align, "white")
     else
         -- No prices for every outcome: what it most likely gives instead.
         ItemTooltip.AddInfo(tooltip, L.DISENCHANT_LINE, amountText(outcomes[1]), db.align, "white")
@@ -223,16 +224,16 @@ local LOOT_EVENTS = {
 -- Only while the line is on: nothing listens otherwise.
 local function update()
     for event, fn in pairs(LOOT_EVENTS) do
-        if Parts.On("disenchant") then M:RegisterEvent(event, fn) else M:UnregisterEvent(event) end
+        if Shared.IsShown("disenchant") then M:RegisterEvent(event, fn) else M:UnregisterEvent(event) end
     end
-    if not Parts.On("disenchant") then pending = nil end
+    if not Shared.IsShown("disenchant") then pending = nil end
 end
 
-Parts.Add({
+M:AddPart({
     Enable = function()
-        ItemTooltip.OnPrices(addDisenchant, M)
+        ItemTooltip.OnPrices(M, addDisenchant)
         update()
     end,
     Disable = function() pending = nil end,
-    Changed = function(key) if key == "disenchant" then update() end end,
+    Changed = function(_, key) if key == "disenchant" then update() end end,
 })

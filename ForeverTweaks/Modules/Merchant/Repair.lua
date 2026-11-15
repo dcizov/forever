@@ -8,7 +8,7 @@
       * Sell Junk: the merchant's own Sell All Junk (gray items, which go to its buyback list), and
         says what they sold for.
     Each is left to Forever++ (Auto Repair, Auto Sell Junk) or WilduTools (Auto Repair) while
-    theirs is on, so nothing is done twice (Core/OtherAddons.lua, CoveredBy).
+    theirs is on, so nothing is done twice (Lib/OtherAddons.lua, CoveredBy).
     Adapted from Forever++'s Auto Repair and Auto Sell Junk by xIGBClutchIx (MIT License).
 ]]
 
@@ -47,7 +47,7 @@ local M = ns:NewModule("Repair", {
 M.notice = OtherAddons.CoveredNotices(M, COVERS.repair, L.REPAIR_WHAT_REPAIR)
 OtherAddons.CoveredNotices(M, COVERS.sellJunk, L.REPAIR_WHAT_SELL, M.notice)
 
-local function money(copper) return C_CurrencyInfo.GetCoinTextureString(copper) end
+local money = ns.MoneyText
 
 -- Whether feature `key` is ours to do now: ticked, and no other addon doing it.
 local function ours(key)

@@ -1,6 +1,6 @@
 --[[
     Forever Compendium - Tooltip Lines
-    What the Recorder learned (Modules/Journal/Book.lua), under the game's own tooltips:
+    What the Recorder learned (Lib/Book.lua), under the game's own tooltips:
       * Creatures: how many you killed and looted.
       * Abilities: on a creature, the spells it was seen casting (the first few, by name).
       * Quests: on a creature, the quests in your log it counts for or takes in, and those it
@@ -35,13 +35,12 @@ local M = ns:NewModule("TooltipLines", {
     features = { "creatures", "abilities", "quests", "drops" },
 })
 
-local GRAY, GOLD = { 0.7, 0.7, 0.7 }, { 1, 0.82, 0 }
+local GRAY, GOLD, WHITE = { 0.7, 0.7, 0.7 }, { 1, 0.82, 0 }, { 1, 1, 1 }
+local COUNTS = "|cff999999%s|r" -- how many dropped of how many looted, gray beside the chance
 
 local function add(tooltip, text, color)
     tooltip:AddLine(text, color[1], color[2], color[3])
 end
-
-local function title(questID) return Book.QuestName(questID) end
 
 ---------------------------------------------------------------------------
 -- Creatures
@@ -49,14 +48,14 @@ local function title(questID) return Book.QuestName(questID) end
 
 local function questLines(tooltip, rec)
     for questID in pairs(rec.quests or {}) do
-        if C_QuestLog.IsOnQuest(questID) then add(tooltip, format(L.TIPS_FOR_QUEST, title(questID)), GOLD) end
+        if C_QuestLog.IsOnQuest(questID) then add(tooltip, format(L.TIPS_FOR_QUEST, Book.QuestName(questID)), GOLD) end
     end
     for questID in pairs(rec.ends or {}) do
-        if C_QuestLog.IsOnQuest(questID) then add(tooltip, format(L.TIPS_TAKES_IN, title(questID)), GOLD) end
+        if C_QuestLog.IsOnQuest(questID) then add(tooltip, format(L.TIPS_TAKES_IN, Book.QuestName(questID)), GOLD) end
     end
     for questID in pairs(rec.starts or {}) do
         if not C_QuestLog.IsOnQuest(questID) and not C_QuestLog.IsQuestFlaggedCompleted(questID) then
-            add(tooltip, format(L.TIPS_OFFERS, title(questID)), GOLD)
+            add(tooltip, format(L.TIPS_OFFERS, Book.QuestName(questID)), GOLD)
         end
     end
 end
@@ -109,6 +108,13 @@ local function index()
     end
 end
 
+-- "37% (12/32)": the chance, under 1% as "<1%", with the counts it comes from.
+function M.RateText(source)
+    local percent = floor(source.rate * 100 + 0.5)
+    local chance = percent < 1 and L.TIPS_RATE_LOW or format(L.TIPS_RATE, percent)
+    return chance .. " " .. format(COUNTS, format(L.TIPS_COUNTS, source.dropped, source.looted))
+end
+
 local function onItem(_, tooltip, data)
     if not M.db.drops then return end
     local itemID = Plain(data and data.id)
@@ -118,16 +124,24 @@ local function onItem(_, tooltip, data)
     for _, npc in ipairs(sources[itemID] or {}) do
         local rec = Book.Creature(npc)
         local rate = rec and Book.DropRate(rec, itemID)
-        if rate then list[#list + 1] = { name = rec.name, rate = rate } end
+        if rate then
+            list[#list + 1] = { name = rec.name, rate = rate, dropped = rec.loot[itemID], looted = rec.looted }
+        end
     end
     if #list == 0 then return end
     sort(list, function(a, b) return a.rate > b.rate end)
+    -- As loot addons show it: a "Drop Chance" header, then each creature with its chance.
+    add(tooltip, L.TIPS_DROP_CHANCE, GOLD)
     for i = 1, math.min(MAX_SOURCES, #list) do
-        add(tooltip, format(L.TIPS_DROPS_FROM, list[i].name, floor(list[i].rate * 100 + 0.5)), GRAY)
+        local source = list[i]
+        tooltip:AddDoubleLine(format(L.TIPS_SOURCE, source.name), M.RateText(source), WHITE[1], WHITE[2], WHITE[3],
+            WHITE[1], WHITE[2], WHITE[3])
     end
     if #list > MAX_SOURCES then add(tooltip, format(L.TIPS_MORE, #list - MAX_SOURCES), GRAY) end
 end
 
+-- Raw ns:OnNews, not M:OnNews: the cache must be dropped while the module is off too, or it
+-- comes back on with sources from before.
 ns:OnNews(M, function(_, event)
     if event == "LOOT_NEW" or event == "BOOK_MERGED" then sources = nil end
 end)

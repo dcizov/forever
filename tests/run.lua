@@ -11,12 +11,15 @@
 local root = (arg[0]:match("^(.*)/tests/[^/]*$")) or "."
 -- Scenarios by folder in tests/scenarios/, in the order they run: core/ checks the runtime,
 -- the suite (members alone and together), saved variables, settings pages and API; tweaks/
--- Forever Tweaks' features, one each; bags/ its bag features (Full Bags, Quest Items, Vendor)
+-- Forever Tweaks' features, one each, with its on-screen and unit ones in interface/ and its
+-- quest ones in quests/; bags/ its bag features (Full Bags, Quest Items, Vendor)
 -- and how they share Baganator; compendium/ Forever Compendium's.
 local GROUPS = {
-    { "core", { "suite", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api",
+    { "core", { "suite", "bindings", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api",
         "changelog", "hints", "updates", "lint" } },
-    { "tweaks", { "chatfeatures", "fpptooltips", "layer", "bag", "gathering", "djskin", "djcolors", "covered", "questplates", "fishingcast", "combathelpers", "gathermap", "fishing", "outfits", "chatfade", "performance", "auctionscan" } },
+    { "tweaks", { "chatfeatures", "fpptooltips", "bag", "gathering", "djskin", "djcolors", "covered", "fishingcast", "gathermap", "fishing", "chatfade", "auctionscan", "tooltiptext" } },
+    { "interface", { "layer", "combathelpers", "rotate", "classcolors", "threat", "windows", "performance" } },
+    { "quests", { "questplates", "marks", "dialogue" } },
     { "bags", { "fullbags", "questitems", "vendor", "baganator" } },
     { "compendium", { "recorder", "learning", "import", "journal", "archive", "social", "pins", "tooltips", "banner" } },
 }

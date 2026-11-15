@@ -115,22 +115,23 @@ Badges.ToggleShown("deaths")
 check(not Badges.IsShown("deaths"), "a badge not earned can't be shown")
 W.group = "party"
 W.addonMessages = {}
--- Badges' message queued, then Sharing (the first to start Transport) turned off before it goes
--- out: it still goes.
 W.Fire("GROUP_ROSTER_UPDATE")
 W.Advance(5)
-eq(#W.addonMessages, 0, "queued, not sent yet")
-ns:SetEnabled("Sharing", false)
-W.Advance(1)
-check(#W.addonMessages > 0, "shown badges sent to the group, with Sharing turned off meanwhile")
-ns:SetEnabled("Sharing", true)
+check(#W.addonMessages > 0, "shown badges sent to the group")
 deliver("Thrall")
 W.playersByGUID["Player-1-0001"] = "Thrall"
 local added = W.UnitTooltip("Player-1-0001", "target")
 local line = added[#added]
 check(line and line.text:find(ns.L.BADGE_KILLS, 1, true), "another player's badges on their tooltip")
 eq(ns.modules.Badges:DebugLine() ~= nil, true, "a debug line")
+-- A message queued, then Sharing (the first module to start Transport) turned off before it
+-- goes out: it still goes, and the caller's table is left as it was.
+W.addonMessages = {}
 local data = { shown = {} }
 Transport.Send(ns.modules.Badges, "badges", data, "PARTY")
 eq(data.kind, nil, "sending leaves the caller's table as it was")
+eq(#W.addonMessages, 0, "queued, not sent yet")
+ns:SetEnabled("Sharing", false)
+W.Advance(1)
+check(#W.addonMessages > 0, "sent, with Sharing turned off meanwhile")
 finish()

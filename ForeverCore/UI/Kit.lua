@@ -1,7 +1,7 @@
 --[[
     Forever Core - UI/Kit.lua
-    The addon's shared UI toolkit: the pieces our Settings pages are drawn from, and its windows
-    (the copy window). Blizzard's own templates and atlases (the Settings
+    The addon's shared UI toolkit: the pieces our Settings pages are drawn from (its windows are
+    in UI/Windows.lua). Blizzard's own templates and atlases (the Settings
     panel's title and divider, minimal checkboxes, sidebar highlight, search box), so a page
     looks like the game's own and none of Blizzard's pooled Settings rows are touched. It loads
     before the modules, so any of them may use it.
@@ -48,8 +48,13 @@ end
 -- aren't set up from our code.
 function Kit.Open(category)
     if not category then return end
+    Kit.OpenID(category:GetID())
+end
+
+-- The same by a category's ID (Settings.KEYBINDINGS_CATEGORY_ID: the game's Keybindings page).
+function Kit.OpenID(id)
     if InCombatLockdown() then ns:Print(ns.L.AFTER_COMBAT) end
-    ns:AfterCombat(Kit.owner, function() C_SettingsUtil.OpenSettingsPanel(category:GetID()) end)
+    ns:AfterCombat(Kit.owner, function() C_SettingsUtil.OpenSettingsPanel(id) end)
 end
 
 function Kit.AddPageTitle(frame, text)
@@ -427,68 +432,4 @@ function Kit.AddCopyRow(stack, label, text)
     box:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     return row
-end
-
----------------------------------------------------------------------------
--- Windows: a movable dialog that Escape closes, and a scrolling box of text to read or copy.
----------------------------------------------------------------------------
-
--- A movable window with a title, in front of the game's own, closed by Escape: Forever's own
--- window chrome (ButtonFrameTemplate, the metal frame of the gossip and quest windows), without
--- the portrait.
-function Kit.NewWindow(name, width, height)
-    local f = CreateFrame("Frame", name, UIParent, "ButtonFrameTemplate")
-    ButtonFrameTemplate_HidePortrait(f)
-    f:SetSize(width, height)
-    f:SetPoint("CENTER")
-    f:SetFrameStrata("DIALOG")
-    f:SetMovable(true)
-    f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetClampedToScreen(true)
-    tinsert(UISpecialFrames, name)
-    f:Hide()
-    return f
-end
-
--- A scrolling multi-line box in `window` (Escape in it closes the window), and a Select All
--- button for it. The caller places both.
-function Kit.NewTextBox(window, width)
-    local scroll = Kit.NewScroll(window)
-    local edit = CreateFrame("EditBox", nil, scroll)
-    edit:SetMultiLine(true)
-    edit:SetAutoFocus(false)
-    edit:SetFontObject(ChatFontNormal)
-    edit:SetWidth(width)
-    edit:SetScript("OnEscapePressed", function() window:Hide() end)
-    scroll:SetScrollChild(edit)
-    local selectAll = Kit.NewButton(window, ns.L.SELECT_ALL, 110, function()
-        edit:SetFocus()
-        edit:HighlightText()
-    end)
-    return scroll, edit, selectAll
-end
-
--- A window with text to copy, many lines (Debug's Copy Debug Info, the Profiler report); one
--- line in a popup is ns:ShowCopyText (UI/Popups.lua).
-local copyWindow
-
-function Kit.ShowCopyWindow(title, text)
-    if not copyWindow then
-        local f = Kit.NewWindow("ForeverCoreCopyWindow", 580, 420)
-        local scroll, edit, selectAll = Kit.NewTextBox(f, 520)
-        scroll:SetPoint("TOPLEFT", 14, -32)
-        scroll:SetPoint("BOTTOMRIGHT", -32, 42)
-        selectAll:SetPoint("BOTTOMLEFT", 12, 12)
-        Kit.NewButton(f, CLOSE, 110, function() f:Hide() end):SetPoint("BOTTOMRIGHT", -12, 12)
-        f.edit = edit
-        copyWindow = f
-    end
-    copyWindow:SetTitle(title)
-    copyWindow.edit:SetText(text)
-    copyWindow:Show()
-    copyWindow.edit:SetFocus()
-    copyWindow.edit:HighlightText()
 end

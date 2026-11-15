@@ -2,7 +2,7 @@
     Forever Tweaks - Click Timestamps
     The timestamp Blizzard puts on each chat line (when Timestamps are on in its chat settings)
     becomes a link: clicking it shows that line in a box, as plain text ready to copy. Blizzard adds
-    the stamp itself, so the finished line is rewritten (Core/Chat.lua's Transform) a frame after it
+    the stamp itself, so the finished line is rewritten (Lib/Chat.lua's Transform) a frame after it
     arrives; the link is the stamp's own text in the line's color, so nothing looks different. A
     click on an addon link goes to EventRegistry's "SetItemRef". Turned off, the stamps stay links
     (rewriting lines again would bring back every line that had faded) and a click does nothing.

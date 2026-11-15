@@ -12,6 +12,8 @@
         splash is easy to hear; your own volumes come back a moment after (and at the next login
         if a reload cut a cast short).
       * Combat Warning: a red line when combat starts with the pole still in hand.
+      * Cast Fishing, a key binding (Bindings.xml): a secure button that casts Fishing, made and
+        set up out of combat; the key is the game's to press, so it casts in combat too.
     Each is left to Forever++ while its own is on (Fishing Cast, Auto Weapon Buff).
     Adapted from Forever++'s Fishing Cast by xIGBClutchIx (MIT License).
 ]]
@@ -27,6 +29,7 @@ local State = assert(ns.FishingState, "FishingCast.lua loads after FishingState.
 local FISHING = 7620 -- Classic's Fishing (Mainline's isn't in Forever's data)
 local MAINHAND = State.MAINHAND
 local LURE_BUTTON = "ForeverTweaksLureButton"
+local CAST_BUTTON = "ForeverTweaksFishingButton" -- Bindings.xml's CLICK binding
 local COVERS = {
     cast = { { "ForeverPlusPlus", "FishingCast" } },
     applyLure = { { "ForeverPlusPlus", "AutoWeaponBuff" } },
@@ -35,6 +38,7 @@ local COVERS = {
 local M = ns:NewModule("FishingCast", {
     title = L.FCAST_TITLE,
     category = "gathering",
+    group = L.GROUP_FISHING,
     description = L.FCAST_DESC,
     added = "1.9.2",
     defaults = { speed = 400, applyLure = true, louderBobber = false, combatWarning = true,
@@ -194,8 +198,20 @@ local function onCombat()
     end
 end
 
+-- The Cast Fishing binding's button: made once, out of combat.
+local castButton
+local function makeCastButton()
+    if castButton then return end
+    local button = CreateFrame("Button", CAST_BUTTON, UIParent, "SecureActionButtonTemplate")
+    castButton = button
+    button:RegisterForClicks("AnyUp", "AnyDown")
+    button:SetAttribute("type", "spell")
+    button:SetAttribute("spell", C_Spell.GetSpellName(FISHING))
+end
+
 function M:OnEnable()
     restoreSound() -- not fishing now: anything saved is left from a reload mid-cast
+    ns:AfterCombat(M, makeCastButton)
     if not owner then
         owner = CreateFrame("Button", nil, UIParent, "SecureActionButtonTemplate")
         lureButton = CreateFrame("Button", LURE_BUTTON, UIParent, "SecureActionButtonTemplate")

@@ -3,10 +3,12 @@
     The journal's Items page: every item the Recorder saw (in loot, on vendors, as quest rewards),
     searched by name, filtered by quality and sorted by name, quality or how many sources it has.
     The chosen item, on the Collections page's background: its icon (shift-click links it), name,
-    kind, item level, required level, sell price and how many you have; its own tooltip docked at
-    the right (the Adventure Guide's way); and, beside it, who drops it (each with its portrait,
-    level, home and drop chance), who sells it and for how much, the quests that give it and the
-    quest it starts. Click a creature or quest to open it.
+    kind, item level and how many you have; under them its own tooltip docked at the left (the
+    Adventure Guide's way: required level, sell price and the rest), and right of it, filling the
+    page, who drops it (each with its portrait, level, home and drop chance), who sells it and for
+    how much, the quests that give it and the quest it starts. Click a creature or quest to open it.
+    An item you carry is found in your bags (Forever Core's UI/Bags.lua) with a click on its icon,
+    or a right-click on its row in the list.
 ]]
 
 local _, ns = ...
@@ -14,7 +16,12 @@ local L = ns.L
 
 local ipairs, pairs, next, format, table, math = ipairs, pairs, next, string.format, table, math
 local CreateFrame = CreateFrame
-local Book, Text, J, Journal = ns.Book, ns.JournalText, ns.JournalKit, ns.Journal
+local Book = ns.Book
+local Text = assert(ns.JournalText, "ItemsPage.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "ItemsPage.lua loads after JournalKit.lua")
+local Journal = assert(ns.Journal, "ItemsPage.lua loads after Journal.lua")
+local M = assert(ns.modules.Journal, "ItemsPage.lua loads after Journal.lua")
+local Bags = ns.Bags
 
 local QUALITIES = { 0, 1, 2, 3, 4, 5 }
 
@@ -136,26 +143,28 @@ local function creatureLine(lines, e, suffix)
         data = e, onEnter = creatureTip, onClick = function(line) ns.ShowCreature(line.data.npcID) end })
 end
 
--- "Item Level 12   Requires Level 7   Sells for 1s 20c   You have 3": what the game knows of it.
+-- "Item Level 12   You have 3": what the card doesn't already say (it gives the required level
+-- and sell price).
 local function itemFacts(itemID)
-    local _, _, _, itemLevel, minLevel, _, _, _, _, _, price = C_Item.GetItemInfo(itemID)
+    local _, _, _, itemLevel = C_Item.GetItemInfo(itemID)
     local facts = {}
     if itemLevel and itemLevel > 1 then facts[#facts + 1] = format(L.JITEMS_ITEM_LEVEL, itemLevel) end
-    if minLevel and minLevel > 1 then facts[#facts + 1] = format(L.JITEMS_REQUIRES, minLevel) end
-    if price and price > 0 then facts[#facts + 1] = format(L.JITEMS_SELLS, Text.Money(price)) end
     local owned = C_Item.GetItemCount(itemID, true)
     if owned and owned > 0 then facts[#facts + 1] = format(L.JITEMS_OWNED, owned) end
     return table.concat(facts, "    ")
 end
 
--- The item's own tooltip, docked at the page's right (the Adventure Guide shows loot so): the
--- lines of what it is and does, the way the game writes them. Returns how wide it came out.
+-- The item's own tooltip, docked at the page's left under its name (the Adventure Guide shows
+-- loot so): the lines of what it is and does, the way the game writes them, from the link it
+-- was last seen with (its random enchantment, "of the Bear", is only there). Returns how wide
+-- it came out.
 local function showCard(itemID)
     local card = view.card
     card:SetOwner(view.top, "ANCHOR_NONE")
     card:ClearAllPoints()
-    card:SetPoint("TOPRIGHT", view.top, "TOPRIGHT", -24, -96)
-    card:SetItemByID(itemID)
+    card:SetPoint("TOPLEFT", view.slot, "BOTTOMLEFT", -4, -14)
+    local item = Book.Item(itemID)
+    if item and item.link then card:SetHyperlink(item.link) else card:SetItemByID(itemID) end
     card:Show()
     card:SetFrameStrata(view.top:GetFrameStrata())
     card:SetFrameLevel(view.top:GetFrameLevel() + 10)
@@ -181,7 +190,7 @@ local function showItem(itemID)
     view.kind:SetText(itemKind(itemID))
     view.facts:SetText(itemFacts(itemID))
     local cardWidth = showCard(itemID)
-    view.lines.scroll:SetPoint("BOTTOMRIGHT", view.top, "BOTTOMRIGHT", -(24 + math.max(cardWidth, 200) + 30), 16)
+    view.lines.scroll:SetPoint("TOPLEFT", view.slot, "BOTTOMLEFT", math.max(cardWidth, 200) + 20, -14)
     local e = index[itemID] or { drops = {}, wares = {}, rewards = {}, starts = {} }
     local lines = view.lines
     lines:Begin()
@@ -197,7 +206,7 @@ local function showItem(itemID)
         lines:Head(L.JITEMS_SOLD_BY)
         for _, w in ipairs(e.wares) do
             local ware = w.rec.wares[itemID]
-            creatureLine(lines, w, "  " .. Text.Money(ware.price or 0) .. ((ware.stack or 1) > 1 and (" x" .. ware.stack) or ""))
+            creatureLine(lines, w, "  " .. ns.MoneyText(ware.price or 0) .. ((ware.stack or 1) > 1 and (" x" .. ware.stack) or ""))
         end
     end
     questLines(lines, L.JITEMS_REWARD_FROM, e.rewards)
@@ -221,7 +230,7 @@ function page.Refresh()
     showItem(selected)
 end
 
-function Journal.SelectItem(itemID)
+function page.Select(itemID)
     selected = itemID
     page.Refresh()
     for i, item in ipairs(list.items) do
@@ -257,7 +266,10 @@ local function buildItemView(parent)
     top:SetAllPoints()
     J.CollectionsBackground(top)
     view.top = top
-    view.slot = J.ItemSlot(top, 52)
+    -- The icon: a click finds the item in your bags; its tooltip says so when you have it.
+    view.slot = J.ItemSlot(top, 52, function(slot)
+        if Bags.Has(slot.itemID) then GameTooltip:AddLine(L.JITEMS_FIND_HINT, 0, 1, 0) end
+    end, function(slot) Bags.Find(M, slot.itemID) end)
     view.slot:SetPoint("TOPLEFT", 24, -28)
     view.name = top:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     view.name:SetPoint("TOPLEFT", view.slot, "TOPRIGHT", 14, -4)
@@ -270,9 +282,11 @@ local function buildItemView(parent)
     view.facts:SetPoint("RIGHT", -24, 0)
     view.facts:SetJustifyH("LEFT")
     view.card = CreateFrame("GameTooltip", "ForeverCompendiumItemCard", top, "GameTooltipTemplate")
+    -- Who has it: right of the card (showItem places its left edge once the card is drawn), to
+    -- the page's right and bottom.
     view.lines = J.NewLines(top, 300)
-    view.lines.scroll:SetPoint("TOPLEFT", view.slot, "BOTTOMLEFT", 0, -22)
-    view.lines.scroll:SetPoint("BOTTOMRIGHT", -280, 16)
+    view.lines.scroll:SetPoint("TOPLEFT", view.slot, "BOTTOMLEFT", 220, -14)
+    view.lines.scroll:SetPoint("BOTTOMRIGHT", -30, 16)
     view.empty = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableLarge")
     view.empty:SetPoint("CENTER")
     view.empty:SetText(L.JITEMS_EMPTY)
@@ -303,7 +317,11 @@ function page.Build(frame)
             end
         end,
         fill = fillItemEntry,
-        onClick = function(item)
+        onClick = function(item, button)
+            if button == "RightButton" then
+                Bags.Find(M, item.itemID)
+                return
+            end
             showItem(item.itemID)
             list:Refresh()
         end,

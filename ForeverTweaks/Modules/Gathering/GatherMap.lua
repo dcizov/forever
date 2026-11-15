@@ -30,6 +30,7 @@ local GROUP = { label = L.GMAP_KINDS, format = L.GMAP_KINDS_COUNT, tooltip = L.G
 local M = ns:NewModule("GatherMap", {
     title = L.GMAP_TITLE,
     category = "gathering",
+    group = L.GROUP_HERBS,
     description = L.GMAP_DESC,
     added = "1.10.0",
     defaults = {
@@ -80,29 +81,20 @@ local function tooltip(owner, spec)
     GameTooltip:Show()
 end
 
-local world = ns.MapPins.World(M, {
+local pins = ns.MapPins.Both(M, {
     specs = pinsOn,
-    shown = function() return M.db.worldMap and not covered() end,
-    size = function() return M.db.size end,
     tooltip = tooltip,
     click = function(_, spec)
         if not IsShiftKeyDown() then return end
         forget(spec.map, spec.node)
         M:Print(format(L.GMAP_FORGOTTEN, spec.node.name))
     end,
-})
-local minimap = ns.MapPins.Minimap(M, {
-    specs = pinsOn,
-    shown = function() return M.db.minimap and not covered() end,
-    size = function() return M.db.minimapSize end,
-    tooltip = tooltip,
+    world = { shown = function() return M.db.worldMap and not covered() end, size = function() return M.db.size end },
+    minimap = { shown = function() return M.db.minimap and not covered() end, size = function() return M.db.minimapSize end },
 })
 
 -- Something changed: the pins draw again.
-local function changed()
-    world.Refresh()
-    minimap.Refresh()
-end
+local changed = pins.Refresh
 
 ---------------------------------------------------------------------------
 -- Recording gathers

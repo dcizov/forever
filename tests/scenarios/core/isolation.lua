@@ -1,6 +1,7 @@
 --[[
     Forever Tweaks - tests/scenarios/core/isolation.lua
-    Errors in one handler, timer or hook don't stop the others; module timers, hooks and option checks.
+    Errors in one handler, timer or hook don't stop the others; module timers, hooks, news
+    and option checks.
     Run by tests/run.lua (lua5.1 tests/run.lua isolation), which passes its helpers in.
 ]]
 
@@ -29,6 +30,11 @@ ns.Store.Attach(mod)
 mod:SetActive(true)
 local ticks, hooked = 0, 0
 mod:NewTicker(1, function() ticks = ticks + 1 end)
+local heard, changed = 0, 0
+mod:OnNews(function(self, event) if self == mod and event == "TEST_NEWS" then heard = heard + 1 end end)
+mod:OnChanged(function(self, name) if self == mod and name == "Other" then changed = changed + 1 end end)
+ns:Announce("TEST_NEWS")
+ns:NotifyChanged("Other", "x")
 TestTarget = { Run = function() end }
 mod:Hook(TestTarget, "Run", function() hooked = hooked + 1 end)
 mod:Hook(TestTarget, "Run", function() hooked = hooked + 1 end)
@@ -41,6 +47,9 @@ W.RunTimers()
 TestTarget.Run()
 eq(ticks, 1, "ticker stopped")
 eq(hooked, 1, "hook idle while off")
+ns:Announce("TEST_NEWS")
+ns:NotifyChanged("Other", "x")
+eq(heard .. "/" .. changed, "1/1", "news and setting changes heard while on, not while off")
 -- A module whose OnEnable errors is turned off again: no events left, OnDisable run, error reported.
 do
     local broken = ns:NewModule("BrokenEnable", { defaults = { enabled = true } })
@@ -160,7 +169,7 @@ refused("NumberChoices", { defaults = { d = 1 }, options = { { key = "d", type =
     choices = { { 1, "One" }, { 2, "Two" } } } } }, "string values", "a dropdown's choices must be strings")
 refused("BadRange", { defaults = { n = 50 }, options = { { key = "n", type = "slider", label = "N", min = 1, max = 10 } } },
     "isn't one of its values", "a slider default out of range is refused")
--- A timer for code that isn't a module runs through ns.Run, with its owner.
+-- A timer for code that isn't a module runs through ns.ChargedHandler, with its owner.
 local owner, got = { name = "Page" }, nil
 ns:After(owner, 0, function(o) got = o end)
 W.RunTimers()

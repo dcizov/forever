@@ -66,6 +66,10 @@ eq(ForeverCoreDB.data.Updates.newest.version, nil, "one player's word: this sess
 local lines = #W.chat
 hear(next2, "PARTY", "Someone")
 eq(ForeverCoreDB.data.Updates.newest.version, nil, "the same player again doesn't count twice")
+local hidden = "SecretName"
+W.secrets[hidden] = true
+W.Fire("CHAT_MSG_ADDON", "ForeverTweaks", "v:" .. next2, "PARTY", hidden)
+eq(ForeverCoreDB.data.Updates.newest.version, nil, "a sender the game keeps secret doesn't count")
 hear(next2, "PARTY", "Another")
 eq(#W.chat, lines, "said once a session")
 eq(ForeverCoreDB.data.Updates.newest.version, next2, "two players: kept for the account, said again at the next login")

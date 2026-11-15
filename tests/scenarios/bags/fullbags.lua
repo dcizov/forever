@@ -391,7 +391,7 @@ W.loot = { { link = "[Gem]" } }
 W.OpenLoot()
 eq(marked()[1], "0:1", "looting: the fang is suggested")
 ns:OpenSettings("FullBags")
-local page = W.categories[ns.member.short].frame
+local page = ForeverCore.SettingsWindow.Page(ns.member.short).frame
 local itemBox = under(page, function(f) return f._kind == "EditBox" and (f:GetText() or "") == "" and f:IsVisible() end)[1]
 local addButton = under(page, function(f) return f._text == ns.L.ITEMLIST_ADD and f:IsVisible() end)[1]
 itemBox:SetText("9")

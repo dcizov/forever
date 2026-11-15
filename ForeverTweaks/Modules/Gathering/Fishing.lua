@@ -13,15 +13,12 @@
     temporary enchant). It warns when you cast without a lure while one is in your bags, once per
     zone when you cast where your skill is too low, and once when a lure is about to run out.
     Ideas from Fishing Buddy, CFC and FishFry; no code from them.
-
-    The Fishing Outfit (Modules/Gathering/FishingOutfit.lua, a part of this module) swaps your
-    fishing gear on and off.
 ]]
 
 local _, ns = ...
 local L = ns.L
 
-local format, floor, ipairs = string.format, math.floor, ipairs
+local format, floor = string.format, math.floor
 local C_Item, C_Spell = C_Item, C_Spell
 local State = assert(ns.FishingState, "Fishing.lua loads after FishingState.lua")
 local poleEquipped, fishingSkill, lureLeft, lureInBags, zoneSkill =
@@ -47,6 +44,7 @@ local ANCHOR = { "TOP", "BOTTOM", 0, -60 } -- under the minimap, below Gathering
 local M = ns:NewModule("Fishing", {
     title = L.FISHING_TITLE,
     category = "gathering",
+    group = L.GROUP_FISHING,
     description = L.FISHING_DESC,
     added = "1.8.0",
     defaults = ns.Widgets.DisplayDefaults({
@@ -57,10 +55,7 @@ local M = ns:NewModule("Fishing", {
         warnLureEnding = true,
         lureWarnAt = 30,
         sound = false,
-        combatWeapons = true,
-        state = {},
     }, ANCHOR),
-    perCharacter = { state = true },
     options = ns.Widgets.DisplayOptions({
         { key = "info", type = "checkbox", label = L.FISHING_INFO, tooltip = L.FISHING_INFO_TIP },
         { key = "zone", type = "checkbox", label = L.FISHING_ZONE, tooltip = L.FISHING_ZONE_TIP, added = "1.8.1" },
@@ -73,13 +68,8 @@ local M = ns:NewModule("Fishing", {
         { key = "lureWarnAt", type = "slider", label = L.FISHING_WARN_AT, min = 15, max = 120, step = 15,
           format = function(v) return format(L.FISHING_SECONDS, v) end, tooltip = L.FISHING_WARN_AT_TIP },
         { key = "sound", type = "checkbox", label = L.FISHING_SOUND, tooltip = L.FISHING_SOUND_TIP },
-        { key = "combatWeapons", type = "checkbox", label = L.OUTFITS_COMBAT, tooltip = L.OUTFITS_COMBAT_TIP,
-          section = L.OUTFITS_HEADER },
     }),
-    features = { "info", "warnNoLure", "warnZone", "warnLureEnding", "combatWeapons" },
-    notice = {
-        { requires = { { cvar = "equipmentManager", value = "1" } }, tooltip = L.OUTFITS_MANAGER_OFF_TIP },
-    },
+    features = { "info", "warnNoLure", "warnZone", "warnLureEnding" },
 })
 
 local display -- added below
@@ -200,21 +190,14 @@ local function fillTooltip(self)
     GameTooltip:AddLine(L.FISHING_TOOLTIP, 1, 1, 1, true)
 end
 
--- The line's menu: what its parts add (the Fishing Outfit's swap, part:AddMenuEntries(add)).
-local function addPartEntries(add)
-    for _, part in ipairs(M.parts) do
-        if part.AddMenuEntries then part:AddMenuEntries(add) end
-    end
-end
-
 display = ns.Widgets.AddDisplay(M, { name = "ForeverTweaksFishing", relativeTo = Minimap,
-    onEnter = fillTooltip, menu = addPartEntries,
+    onEnter = fillTooltip,
     sample = format(L.FISHING_SKILL_BONUS, L.FISHING_TITLE, 152, 25, 177) .. "   " .. format(L.FISHING_ZONE_NEEDS, 130)
         .. "   " .. format(L.FISHING_LURE, "7:32") })
 
 M:AddCommand("fishing", nil, L.FISHING_CMD_DESC, function()
     local text = infoText()
-    ns:Print(text or L.FISHING_UNTRAINED)
+    M:Reply(text or L.FISHING_UNTRAINED)
 end)
 
 function M:OnEnable()

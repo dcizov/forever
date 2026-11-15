@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - UI/List.lua
+    Forever Core - UI/List.lua
     A long scrolling list that stays cheap: a scroll frame (Kit.NewScroll: Blizzard's thin
     scroll bar and the mouse wheel) over a tall empty frame, with only as many row frames as fit,
     redrawn with the items in view whenever it scrolls or its items change.

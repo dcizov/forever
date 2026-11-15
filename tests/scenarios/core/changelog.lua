@@ -60,8 +60,8 @@ for _, name in ipairs(ns.order) do
 end
 
 -- The page: its search narrows the list of releases, and clearing it brings them all back.
-C_SettingsUtil.OpenSettingsPanel(ns.L.CHANGELOG)
-local frame = W.categories[ns.L.CHANGELOG].frame
+ForeverCore.SettingsWindow.Open(ns.L.CHANGELOG)
+local frame = ForeverCore.SettingsWindow.Page(ns.L.CHANGELOG).frame
 local search = under(frame, function(f) return f._template == "SearchBoxTemplate" end)[1]
 check(search ~= nil, "the page has a search box")
 -- Each release's row is the parent of the font string showing its version.

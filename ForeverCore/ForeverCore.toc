@@ -2,7 +2,7 @@
 ## Title: |cffd4a017Forever|r Core
 ## Notes: The shared core of the Forever addons (Forever Tweaks, Forever Compendium): their settings, slash commands and minimap button. Settings > AddOns > Forever, or /forever.
 ## Author: wtFAQ
-## Version: 2.4.0
+## Version: 2.9.0
 ## SavedVariables: ForeverCoreDB
 ## SavedVariablesPerCharacter: ForeverCoreCharDB
 ## IconTexture: Interface\AddOns\ForeverCore\Media\Icon
@@ -18,15 +18,17 @@ Core\Profiler.lua
 Core\DebugReport.lua
 Core\Slash.lua
 Core\Commands.lua
+Core\Bindings.lua
 
 # On-screen pieces modules share
 UI\Kit.lua
+UI\Windows.lua
 UI\Popups.lua
 UI\EditMode.lua
 UI\Widgets.lua
-UI\Restyle.lua
 UI\List.lua
 UI\MapPins.lua
+UI\Bags.lua
 
 Changelog.lua
 
@@ -38,6 +40,7 @@ Settings\ChangelogPage.lua
 Settings\About.lua
 Settings\General.lua
 Settings\ModulesPage.lua
+Settings\Window.lua
 Settings\Modules.lua
 
 # The core's own modules

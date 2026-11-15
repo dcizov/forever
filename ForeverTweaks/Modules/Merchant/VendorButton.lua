@@ -1,9 +1,10 @@
 --[[
-    Forever Tweaks - Vendor's Restock button
+    Forever Tweaks - Modules/Merchant/VendorButton.lua
+    Vendor's Restock button
     A round button in the merchant window's bottom row, right of Blizzard's Sell All Junk, made
     like it (Blizzard_UIPanels_Game/Mainline/MerchantFrame.xml: the empty slot behind a 36 px
     icon, the quick-slot pushed texture, the square highlight). Click buys what the Autobuy list is
-    short of; right-click opens the Autobuy page. Grayed out while there's nothing to buy, the way
+    short of; right-click opens the Autobuy window. Grayed out while there's nothing to buy, the way
     Sell All Junk is without junk. Shown on the merchant's own tab only, while Vendor and its
     Restock Button option are on.
 
@@ -33,7 +34,7 @@ end
 
 local function onClick(self, mouse)
     if mouse == "RightButton" then
-        ns:OpenSettings("Vendor")
+        M.ToggleWindow()
         return
     end
     M:Restock(false)

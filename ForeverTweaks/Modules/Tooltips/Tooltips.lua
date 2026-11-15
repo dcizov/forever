@@ -218,10 +218,7 @@ local function addTarget(tooltip, unit)
             YOU_COLOR[1], YOU_COLOR[2], YOU_COLOR[3])
         return
     end
-    local ok, r, g, b = unitColor(target, "class")
-    if not ok then
-        r, g, b = 1, 1, 1
-    end
+    local r, g, b = unitColor(target, "class")
     -- A secret name is left out: other addons reading the tooltip's lines would trip on it.
     local name = Plain(UnitName(target))
     if name then tooltip:AddDoubleLine(L.TOOLTIPS_TARGET_LINE, name, lr, lg, lb, r, g, b) end
@@ -263,17 +260,13 @@ local function onUnit(_, tooltip, data)
         addTitle(tooltip, data, unit)
     end
     if db.nameColor ~= "off" then
-        local ok, r, g, b = unitColor(unit, db.nameColor)
-        local line = ok and leftLine(tooltip, 1)
+        local line = leftLine(tooltip, 1)
         if line then
-            line:SetTextColor(r, g, b)
+            line:SetTextColor(unitColor(unit, db.nameColor))
         end
     end
     if db.border ~= "off" then
-        local ok, r, g, b = unitColor(unit, db.border)
-        if ok then
-            setBorder(tooltip, r, g, b)
-        end
+        setBorder(tooltip, unitColor(unit, db.border))
     end
     if lines then
         colorLevelLine(tooltip, data, unit, colorGuild(tooltip, data, unit))
@@ -331,5 +324,6 @@ function M:OnSettingChanged(key)
     if key == "hideInCombat" and not self.db.hideInCombat then unfade() end
 end
 
--- What TooltipsFriends.lua and TooltipsBehavior.lua share with this file.
-ns.TooltipsParts = { module = M, Guarded = guarded, InCharge = inCharge, ColorMatch = colorMatch, LevelColor = levelColor }
+-- What TooltipsFriends.lua and TooltipsBehavior.lua need from this file (each reaches the module
+-- itself with assert(ns.modules.Tooltips) and joins it with M:AddPart).
+ns.TooltipsShared = { Guarded = guarded, InCharge = inCharge, ColorMatch = colorMatch, LevelColor = levelColor }

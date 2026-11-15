@@ -15,7 +15,7 @@ ns.Widgets = Widgets
 -- Round minimap button: Blizzard's tracking border around an icon, laid out as LibDBIcon does on
 -- Mainline clients, at owner.db[angleKey] degrees around the minimap's edge and dragged along it.
 --   owner: the module it belongs to. Its clicks, tooltip and drags run as the owner's code
---   (ns.RunCall), and a drag saves its setting angleKey with ns:StoreOption.
+--   (ns.ChargedCall), and a drag saves its setting angleKey with ns:StoreOption.
 --   opts: name, icon, angleKey, onClick(self, mouse), onEnter(self) fills GameTooltip (the button
 --   shows it). Hiding it ends a drag.
 ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ function Widgets.MinimapButton(owner, opts)
 
     b:SetScript("OnMouseDown", function() icon:SetPoint("CENTER", 1, -1) end)
     b:SetScript("OnMouseUp", function() icon:SetPoint("CENTER") end)
-    b:SetScript("OnClick", function(self, mouse) ns.RunCall(owner, "minimap button click", opts.onClick, self, mouse) end)
+    b:SetScript("OnClick", function(self, mouse) ns.ChargedCall(owner, "minimap button click", opts.onClick, self, mouse) end)
     b:SetScript("OnDragStart", function(self)
         GameTooltip:Hide()
         self:SetScript("OnUpdate", drag)
@@ -78,7 +78,7 @@ function Widgets.MinimapButton(owner, opts)
     b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     b:SetScript("OnHide", function(self) self:SetScript("OnUpdate", nil) end)
     b:SetScript("OnEnter", function(self)
-        ns.RunCall(owner, "tooltip", opts.onEnter, self)
+        ns.ChargedCall(owner, "tooltip", opts.onEnter, self)
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", GameTooltip_Hide)
@@ -247,8 +247,8 @@ local function onMouseUp(f, mouse)
     MenuUtil.CreateContextMenu(f, function(_, root)
         root:CreateTitle(mod.title)
         if display.opts.menu then
-            ns.RunCall(mod, "menu", display.opts.menu, function(text, fn)
-                root:CreateButton(text, function() ns.RunCall(mod, "menu", fn) end)
+            ns.ChargedCall(mod, "menu", display.opts.menu, function(text, fn)
+                root:CreateButton(text, function() ns.ChargedCall(mod, "menu", fn) end)
             end)
         end
         root:CreateButton(L.EDITMODE_RESET_POSITION, function() display:ResetPosition() end)
@@ -259,7 +259,7 @@ end
 local function onEnter(f)
     local fill = f.display.opts.onEnter
     if not fill then return end
-    ns.RunCall(f.display.mod, "tooltip", fill, f)
+    ns.ChargedCall(f.display.mod, "tooltip", fill, f)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine(L.DISPLAY_HINT, 0.1, 1, 0.1, true)
     GameTooltip:Show()

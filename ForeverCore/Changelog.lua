@@ -13,6 +13,65 @@ local _, ns = ...
 
 ns.changelog = {
     {
+        version = "2.9.0",
+        date = "2026-11-14",
+        changes = {
+            { kind = "Changed", text = "Settings text reads the way the game's own options do: each module and option says what it does (\"Shows...\", \"Warns...\"), and colors and grays are spelled as the game spells them." },
+        },
+    },
+    {
+        version = "2.8.0",
+        date = "2026-11-14",
+        changes = {
+            { kind = "Changed", text = "Forever's settings have a window of their own, built like Blizzard's Collections window: every page down the left (Settings, Tweaks, Compendium, Tweaks for Addons, About, Debug, Changelog), a size, a Key Bindings button, and it stays where you leave it. /forever, the minimap button and the new key binding open it; Settings > AddOns > Forever has a button for it." },
+            { kind = "Changed", text = "Related modules sit together under a small heading in their category: Fishing; Herbs, Ore & Chests; Combat; Windows; Nameplates; Quest Log & Givers; Quest Items." },
+            { module = "Vendor", kind = "Added", text = "An Autobuy window: the Autobuy list without opening the settings. Right-click the Restock button, or type /ft autobuy window." },
+            { module = "GatherSession", kind = "Added", text = "A Gathering window: this session in full, your Fishing skill, the zone's water and your lure, and every item gathered, with Pause and Start Over. From the session line's right-click menu, /ft session window or a key binding." },
+            { module = "MovableWindows", kind = "Added", text = "Movable Windows: hold Shift and drag one of Blizzard's windows to move it; Ctrl+right-click puts it back. It stays there always, until logout or until it closes, as you pick. Off by default." },
+            { module = "KeepWindowsOpen", kind = "Added", text = "Keep Windows Open: the character, mail, merchant and other windows stay open when another one opens, until you close them. Off by default." },
+        },
+    },
+    {
+        version = "2.7.0",
+        date = "2026-11-14",
+        changes = {
+            { module = "ClassColors", kind = "Added", text = "Class Colors: players' health bars and names in their class color on the player, target, focus and party frames, and creatures' bars red, yellow or gray by how they stand toward you. Turning it off puts Blizzard's colors back." },
+            { module = "LootSparkle", kind = "Added", text = "Loot Sparkle: quest items lying in the world sparkle, and graphics presets can't turn it off. Off by default." },
+            { module = "ForeverMarks", kind = "Added", text = "New in Forever: the Forever medallion after quests that weren't in original Classic (quest log, tracker, quest givers, a quest's title), and \"New in WoW Forever\" on the tooltips of items that weren't." },
+            { module = "Threat", kind = "Added", text = "Threat: your threat on your target as a line you place in Edit Mode, in Blizzard's threat colors, and a hostile creature's aggro range on its tooltip." },
+            { module = "DialogueKeys", kind = "Added", text = "Dialogue Keys: 1 to 9 pick a quest, an option or a reward in Blizzard's gossip and quest windows (each row numbered), Space accepts, hands in or completes, Tab steps through rewards; the gamepad's d-pad, A and B work too." },
+            { module = "Journal", kind = "Added", text = "Click an item's icon on its page (or right-click it in the list) to find it in your bags: they open with it glowing, or Baganator flashes it." },
+            { kind = "Added", text = "Key bindings (Keybindings > AddOns): Open Forever Settings, Cast Fishing, Pause or Resume Gathering Session, and Rotate Minimap on or off." },
+            { kind = "Fixed", text = "Map pins show over OpenMap's stitched map and follow its view." },
+        },
+    },
+    {
+        version = "2.6.0",
+        date = "2026-11-14",
+        changes = {
+            { module = "QuestNameplates", kind = "Changed", text = "The icon and the progress are set apart: pick the icon (by objective type, the quest \"!\", or none) and its size, put the progress below, above or beside it at its own size, and place them left, right or above the name, moved with the offset sliders." },
+            { module = "QuestNameplates", kind = "Removed", text = "The green check on a creature whose part of a quest is done: it looked like the quest was ready to turn in. Such a creature now shows nothing." },
+            { module = "RotateMinimap", kind = "Added", text = "Rotate Minimap is back: the minimap turns with you, set again after every loading screen (Forever resets it at login). Off by default." },
+            { module = "Fishing", kind = "Removed", text = "The Fishing Outfit (/ft outfit and Combat Weapons). Your equipment sets stay as they are." },
+            { module = "Banner", kind = "Fixed", text = "Notification icons fill their slot: a full icon cut to its art as Blizzard's toasts draw it, with the quest \"!\" or \"?\" or the rare skull as a badge on its corner, instead of the small mark alone." },
+            { module = "TooltipLines", kind = "Changed", text = "An item's tooltip lists its Drop Chance from each creature, as loot addons show it: the creature, then its chance with the counts behind it, 37% (12/32)." },
+            { kind = "Fixed", text = "Map pins on the minimap sit where they belong at every zoom, indoors and out (placed by the minimap's own view radius), follow you smoothly as you move and turn, never spill past its edge (round or square: creature areas are cut at the edge), and a square minimap is understood." },
+        },
+    },
+    {
+        version = "2.5.0",
+        date = "2026-11-14",
+        changes = {
+            { module = "Banner", kind = "Changed", text = "Notifications work the way Forever Bestiary's did: one for each creature you meet for the first time (on by default; a rare says so), and one when the journal learns something new about a creature you know: its loot, abilities, places, defenses or quests (Creature Updates, each its own checkbox). What one creature teaches at once comes as one notification. They fade in and out, stay while the mouse is on them, and wait while you fight or talk to someone (Wait in Combat)." },
+            { module = "Journal", kind = "Added", text = "Sounds: the journal opens and closes like a book, its tabs and buttons click, pinning has its own sound, a notification its discovery sound and a badge one for its tier. Turn them all off with Sounds." },
+            { module = "Journal", kind = "Changed", text = "A creature's page opens with what it is (Identification: its level with its rank, its type and family, how it stands toward you; a mark says when the game keeps its type hidden inside an instance), its locations grouped into zones, dungeons and raids, and each line says on mouse over how the journal learns it." },
+            { module = "Journal", kind = "Changed", text = "Under a creature's model, its loot and its quests sit side by side instead of in tabs: the Loot box switches between Loot, Wares and Rewards from its header, and the Quests box (with a legend on its ?) shows when it has quests. Your note is a button on the model." },
+            { module = "Journal", kind = "Changed", text = "An item's page puts its tooltip under its name and who drops, sells or gives it beside, filling the page, and the tooltip shows the item as you saw it (its \"of the Bear\" and the like)." },
+            { module = "Recorder", kind = "Added", text = "The Recorder tells when a creature is seen somewhere new or turns out to have to do with another quest (for notifications)." },
+            { kind = "Changed", text = "Forever Compendium plays sounds now (Journal > Sounds turns them off); it still never writes in chat." },
+        },
+    },
+    {
         version = "2.4.0",
         date = "2026-11-14",
         changes = {
@@ -25,6 +84,8 @@ ns.changelog = {
             { module = "TooltipLines", kind = "Added", text = "A creature's tooltip names the abilities you've seen it use." },
             { module = "Banner", kind = "Added", text = "A banner when you defeat a rare or a boss for the first time (Trophies)." },
             { module = "SocialButton", kind = "Fixed", text = "Chat alerts (a voice chat notification, for one) no longer cause an error each time they move." },
+            { module = "QuestNameplates", kind = "Fixed", text = "Quest Nameplates shows again with a nameplate addon that draws its own plates (Platynator): the icon and count go beside the nameplate instead of on Blizzard's hidden one." },
+            { module = "Vendor", kind = "Changed", text = "Ask First's question says how many of each item you have and how many Autobuy keeps, beside how many it will buy." },
             { module = "Tooltips", kind = "Fixed", text = "A tooltip's border goes back to its own colour after a coloured one (it stayed in the last player's class colour), a tooltip hidden in combat comes back when combat ends, and a target whose name the game keeps hidden no longer adds a line other addons trip on." },
             { module = "ProfessionTooltips", kind = "Fixed", text = "A lockbox's Lockpicking line shows on every tooltip of it, not just where it was first seen." },
             { kind = "Changed", text = "Scroll bars across the suite are Blizzard's modern thin ones." },

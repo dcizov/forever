@@ -330,7 +330,7 @@ end
 -- A notice's button: fn as the module's code, then `refresh` a moment later, since what it fixed
 -- may be in the game's hands (a CVar) or another addon's.
 function Section.RunNotice(mod, fn, refresh)
-    ns.RunCall(mod, "notice", fn)
+    ns.ChargedCall(mod, "notice", fn)
     ns:After(Kit.owner, 0.2, refresh)
 end
 

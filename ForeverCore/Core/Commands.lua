@@ -125,7 +125,7 @@ ns:AddCommand("help", nil, L.CMD_HELP_DESC, function(_, member) help(member) end
 local function onSlash(member, msg)
     msg = strtrim(msg or "")
     if msg == "" then
-        if member.open then return ns.RunCall(commandsOwner, member.slash[1], member.open) end
+        if member.open then return ns.ChargedCall(commandsOwner, member.slash[1], member.open) end
         return ns:OpenMember(member)
     end
     local name, rest = msg:match("^(%S+)%s*(.-)$")
@@ -133,7 +133,7 @@ local function onSlash(member, msg)
     for _, command in ipairs(ns.commands) do
         if command.name == name then
             if available(command) then
-                return ns.RunCall(command.module or commandsOwner, member.slash[1] .. " " .. name, command.fn, rest, member)
+                return ns.ChargedCall(command.module or commandsOwner, member.slash[1] .. " " .. name, command.fn, rest, member)
             end
             local mod = command.module
             return ns.Print(member.ns, format(L.CMD_MODULE_OFF, mod.title, member.slash[1], strlower(mod.name)))

@@ -14,7 +14,7 @@ W.Strict()
 local ns = W.LoadAddon(root, "ForeverTweaks")
 login()
 local L = ns.L
-local Parts = ns.ItemTooltipParts
+local Prices = ns.AuctionPrices
 
 local function lineOf(lines, label)
     for _, line in ipairs(lines) do
@@ -58,9 +58,19 @@ W.items["[Green Boots]"] = { id = 9000, class = 4, quality = 2, level = 20, equi
 local de = lineOf(W.ItemTooltip(9000), L.DISENCHANT_LINE)
 check(de and de.right:find("10940", 1, true) ~= nil, "disenchant: the likeliest material (its name loading)")
 check(lineOf(W.ItemTooltip(2589), L.DISENCHANT_LINE) == nil, "nothing on cloth")
+-- What play shows: a material the rows don't give proves them wrong, and play's tally is used.
+local Disenchant = ns.Disenchant
+local bracket = Disenchant.Bracket(2, 20, false)
+check(not Disenchant.Learn(bracket, { { id = 99001, count = 0 } }), "a disenchant that doesn't read isn't counted")
+check(Disenchant.Learn(bracket, { { id = 99001, count = 2 } }), "a disenchant counted")
+check(Disenchant.Learn(bracket, { { id = 99001, count = 4 }, { id = 10940, count = 1 }, { id = 10940, count = 2 } }), "and another")
+local played = Disenchant.Outcomes(2, 20, false)
+eq(played[1].item, 99001, "play's material, most often first")
+eq(played[1].chance .. "/" .. played[1].min .. "/" .. played[1].max .. "/" .. played[1].seen, "1/2/4/2", "every time, 2 to 4, of 2")
+eq(played[2].chance .. "/" .. played[2].min, "0.5/3", "a material in two slots counts as one of 3")
 
 -- Auction Prices: a scanned price and its age.
-Parts.House().items[2589] = Parts.PackPrice(40, time() - 7200)
+Prices.House().items[2589] = Prices.Pack(40, time() - 7200)
 local price = lineOf(W.ItemTooltip(2589), L.AUCTIONPRICES_LINE)
 check(price and price.right == "40c", "auction price: the lowest buyout")
 local age = lineOf(W.ItemTooltip(2589), L.AUCTIONPRICES_SCAN_AGE_LINE)
@@ -71,7 +81,7 @@ check(lineOf(W.ItemTooltip(2589), L.AUCTIONPRICES_LINE) == nil, "Auction Prices 
 -- The scan keeps the lowest price from browse results.
 ns:SetOption("ItemTooltips", "auction", true)
 W.Fire("AUCTION_HOUSE_BROWSE_RESULTS_ADDED", { { itemKey = { itemID = 4306 }, minPrice = 99, totalQuantity = 3 } })
-eq(Parts.AuctionPrice(4306), 99, "a browse result's price is kept")
+eq(Prices.Price(4306), 99, "a browse result's price is kept")
 
 -- Profession Tooltips: a herb in the bags says the skill that gathers it.
 ns:SetOption("ProfessionTooltips", "show", "always")

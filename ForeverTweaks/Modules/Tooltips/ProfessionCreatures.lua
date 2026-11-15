@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Profession Tooltips: creatures
+    Forever Tweaks - Modules/Tooltips/ProfessionCreatures.lua
+    Profession Tooltips: creatures
     Profession Tooltips' Skinning line on a creature that can be skinned (a Beast or Dragonkin,
     dead or one you could fight; not players, pets or a friendly flight master's gryphon): the
     Skinning its level needs, colored against yours, or Blizzard's own requirement line recolored.
@@ -13,9 +14,11 @@ local L = ns.L
 
 local type, ipairs, setmetatable = type, ipairs, setmetatable
 local Professions, Plain = ns.Professions, ns.Plain
-local Shared = ns.ProfessionTooltipParts
-local M, inCharge, skillLine, addLine = Shared.module, Shared.InCharge, Shared.SkillLine, Shared.AddLine
-local findRequires, findNameLine, restyle, restyling = Shared.FindRequires, Shared.FindNameLine, Shared.Restyle, Shared.restyling
+local Shared = assert(ns.ProfessionTooltipsShared, "ProfessionCreatures.lua loads after ProfessionTooltips.lua")
+local M = assert(ns.modules.ProfessionTooltips, "ProfessionCreatures.lua loads after ProfessionTooltips.lua")
+local inCharge, skillLine, addLine = Shared.InCharge, Shared.SkillLine, Shared.AddLine
+local findRequires, findNameLine, restyle = Shared.FindRequires, Shared.FindNameLine, Shared.Restyle
+local restyling = setmetatable({}, { __mode = "k" }) -- tooltip -> the restyle job for its post call
 local SKIN = Professions.SKINNING
 
 -- Beast and Dragonkin, the creature types that can be skinned (UnitCreatureType's second value).
@@ -25,10 +28,10 @@ local SKINNABLE_NAMES = { [L.PROFTOOLTIPS_BEAST] = true, [L.PROFTOOLTIPS_DRAGONK
 -- Creatures ----------------------------------------------------------------------------------
 
 -- Unit state can be secret; then it counts as no.
-local function yes(value) return Plain(value) == true end
+local function surelyTrue(value) return Plain(value) == true end
 
 local function canSkin(unit)
-    if yes(UnitIsPlayer(unit)) or yes(UnitPlayerControlled(unit)) then
+    if surelyTrue(UnitIsPlayer(unit)) or surelyTrue(UnitPlayerControlled(unit)) then
         return false
     end
     -- Probe: the type's ID is a second value on Mainline; without it, the name the game shows.
@@ -42,7 +45,7 @@ local function canSkin(unit)
         return false
     end
     -- Dead ones, or ones you could fight: not a friendly flight master's gryphon.
-    return yes(UnitIsDead(unit)) or yes(UnitCanAttack("player", unit))
+    return surelyTrue(UnitIsDead(unit)) or surelyTrue(UnitCanAttack("player", unit))
 end
 
 local unitData = setmetatable({}, { __mode = "k" }) -- tooltip -> the unit's tooltip data

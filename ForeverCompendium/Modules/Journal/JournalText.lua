@@ -97,6 +97,12 @@ function Text.Classification(rec)
     return CLASSIFICATION[rec.classification]
 end
 
+-- "12-14 (Rare Elite)", "?? (Boss)": its level with its rank.
+function Text.LevelTagged(rec)
+    local tag = CLASSIFICATION[rec.classification] or (rec.skull and L.JOURNAL_BOSS)
+    return Text.LevelShort(rec) .. (tag and (" (" .. tag .. ")") or "")
+end
+
 -- "Level 12-14 Elite Beast (Boar)".
 function Text.Kind(rec)
     local kind = { Text.LevelText(rec) }
@@ -108,10 +114,6 @@ end
 
 function Text.Date(t) return t and date(L.JOURNAL_DATE_FORMAT, t) or L.JOURNAL_NEVER end
 
--- Copper as gold, silver and copper with their coin icons.
-function Text.Money(copper)
-    return C_CurrencyInfo.GetCoinTextureString(math.floor(copper + 0.5))
-end
 
 -- A map's name, by ID.
 function Text.MapName(mapID)
@@ -131,7 +133,8 @@ function Text.ZoneOf(mapID)
 end
 
 -- The places a creature was seen, by zone and name: { { mapID, name, subs = { sorted subzones },
--- seen = how often } }. Sightings on a continent or world map count only when it has no zone.
+-- seen = how often, dungeon = true for an instance's own map } }. Sightings on a continent or
+-- world map count only when it has no zone.
 function Text.Places(rec)
     local byZone, list = {}, {}
     for mapID, zone in pairs(rec.zones or {}) do
@@ -139,7 +142,9 @@ function Text.Places(rec)
         if zoneID then
             local place = byZone[zoneID]
             if not place then
-                place = { mapID = zoneID, name = Text.MapName(zoneID), subs = {}, seen = 0, subSet = {} }
+                local info = C_Map.GetMapInfo(zoneID)
+                place = { mapID = zoneID, name = Text.MapName(zoneID), subs = {}, seen = 0, subSet = {},
+                    dungeon = info ~= nil and info.mapType == 4 }
                 byZone[zoneID] = place
                 list[#list + 1] = place
             end

@@ -6,14 +6,13 @@
     the auction house, or Auctionator's prices); and Blizzard's comparison on a bag recipe for
     gear. This file has the module and the settings every line shares; each line is a part in a
     file of its own (ItemPrices.lua, ItemDisenchant.lua, ItemStatColors.lua, AuctionPrices.lua,
-    AuctionScan.lua), placed by Core/ItemTooltip.lua. Left to Forever++'s Item Tooltips while
+    AuctionScan.lua), placed by Lib/ItemTooltip.lua. Left to Forever++'s Item Tooltips while
     that's on. Adapted from Forever++ by xIGBClutchIx (MIT License).
 ]]
 
 local _, ns = ...
 local L = ns.L
 
-local ipairs = ipairs
 local OtherAddons = ns.OtherAddons
 
 local COVERS = { { "ForeverPlusPlus", "ItemTooltips" } }
@@ -35,7 +34,7 @@ local M = ns:NewModule("ItemTooltips", {
         scanOnOpen = true, auctionator = false, chat = true,
         -- Data: each character's bank ("Realm-Name" -> { [itemID] = count }), each auction house's
         -- prices ("Realm-Faction" -> { scannedAt, items = { [itemID] = "copper,minutes" } }), and
-        -- what disenchanting showed (Core/Disenchant.lua).
+        -- what disenchanting showed (Lib/Disenchant.lua).
         banks = {}, houses = {}, disenchanted = {},
     },
     options = {
@@ -80,27 +79,17 @@ local M = ns:NewModule("ItemTooltips", {
 
 M.notice = OtherAddons.CoveredNotices(M, COVERS, L.ITEMTOOLTIPS_WHAT)
 
--- What the part files share: the module, whether a line is on, and the parts themselves, each
--- { Enable(), Disable(), Changed(key) } (any of them), run with the module's.
-local Parts = { module = M, list = {} }
-ns.ItemTooltipParts = Parts
+-- What the part files (ItemPrices, ItemDisenchant, ItemStatColors, AuctionPrices, AuctionScan)
+-- need from this file. Each reaches the module with assert(ns.modules.ItemTooltips) and joins
+-- it with M:AddPart (Core/Module.lua), so it turns on, off and changes with the module.
+local Shared = {}
+ns.ItemTooltipsShared = Shared
 
 -- Whether line `key` is drawn now: the module on, its checkbox ticked (a dropdown not "off"), and
 -- Forever++'s own not on.
-function Parts.On(key)
+function Shared.IsShown(key)
     local value = M.db[key]
     return M.active and value and value ~= "off" and not OtherAddons.CoveredBy(M, COVERS) or false
 end
 
-function Parts.Add(part) Parts.list[#Parts.list + 1] = part end
-
-local function each(method, ...)
-    for _, part in ipairs(Parts.list) do
-        if part[method] then ns.RunCall(M, method, part[method], ...) end
-    end
-end
-
 function M:OnInitialize() ns.Disenchant.Attach(self.db.disenchanted) end
-function M:OnEnable() each("Enable") end
-function M:OnDisable() each("Disable") end
-function M:OnSettingChanged(key) each("Changed", key) end

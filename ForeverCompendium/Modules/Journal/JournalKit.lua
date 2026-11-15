@@ -31,6 +31,21 @@ function J.Inset(parent)
     return CreateFrame("Frame", nil, parent, "InsetFrameTemplate")
 end
 
+-- An inset with Blizzard's divider under a header strip HEADER_INSET high (the caller fills
+-- it), and box.content for what it holds below.
+J.HEADER_INSET = 34
+function J.HeaderInset(parent)
+    local box = J.Inset(parent)
+    local line = box:CreateTexture(nil, "ARTWORK")
+    line:SetAtlas("Options_HorizontalDivider", true)
+    line:SetPoint("TOPLEFT", 8, -J.HEADER_INSET)
+    line:SetPoint("TOPRIGHT", -8, -J.HEADER_INSET)
+    box.content = CreateFrame("Frame", nil, box)
+    box.content:SetPoint("TOPLEFT", 12, -J.HEADER_INSET - 8)
+    box.content:SetPoint("BOTTOMRIGHT", -8, 8)
+    return box
+end
+
 -- The Collections window's count box ("Creatures   213"): label at its left, number at its right.
 -- Returns it; box.Count:SetText(...) sets the number.
 function J.CountBox(parent, label)
@@ -247,7 +262,7 @@ function J.SideTabs(window, onSelect)
                 end
                 tab:SetCustomOnMouseUpHandler(function(self, button, upInside)
                     if button == "LeftButton" and upInside then
-                        PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB)
+                        ns.Sound("tab")
                         holder.Select(self:GetID())
                         onSelect(self:GetID())
                     end

@@ -90,6 +90,51 @@ for _, f in ipairs(W.frames) do
 end
 eq(near, 2, "the two near veins on the minimap, not the one 350 yards off")
 
+-- Kept inside the minimap's edge, round or square, turned with it, and placed by the game's
+-- view radius (233.33 yards outdoors at zoom 0 here: on the stand-in's 100 px minimap, 50 px
+-- from centre to edge, 0.214 px a yard; a 12 px icon may come 45.2 px out).
+local function mini(name)
+    for _, f in ipairs(W.frames) do
+        local spec = rawget(f, "spec")
+        if spec and spec.node.name == name and f._kind == "Frame" and f:IsShown() then return f end
+    end
+end
+local PER_YARD = 50 / 233.33
+local list = mod.db.nodes[MAP]
+for i = #list, 1, -1 do list[i] = nil end
+W.place = { map = MAP, x = 0.5, y = 0.5 }
+list[1] = { name = "East Vein", kind = "ore", x = 0.7, y = 0.5, count = 1, last = 0 } -- 200 yd east: 42.9 px
+list[2] = { name = "Rim Vein", kind = "ore", x = 0.72, y = 0.5, count = 1, last = 0 } -- 47.1 px: on the rim
+list[3] = { name = "Corner Vein", kind = "ore", x = 0.66, y = 0.66, count = 1, last = 0 } -- 34.3 px each way
+W.Fire("ZONE_CHANGED")
+W.Advance(0.1)
+local east = mini("East Vein")
+local _
+local x, y = 0, 0
+if east then _, _, _, x, y = east:GetPoint(1) end
+check(east and math.abs(x - 200 * PER_YARD) < 0.01 and math.abs(y) < 0.01, "200 yards east: right of the centre")
+eq(mini("Rim Vein"), nil, "an icon that would cross the rim isn't drawn")
+eq(mini("Corner Vein"), nil, "a round minimap: the corner is outside")
+GetMinimapShape = function() return "SQUARE" end
+W.Advance(0.1)
+check(mini("Corner Vein") ~= nil, "a square minimap: its corner is inside")
+GetMinimapShape = nil
+W.cvars.rotateMinimap, W.facing = "1", math.pi / 2 -- facing west: east is behind you
+W.Advance(0.1)
+_, _, _, x, y = mini("East Vein"):GetPoint(1)
+check(math.abs(x) < 0.01 and math.abs(y + 200 * PER_YARD) < 0.01, "Rotate Minimap: what's behind you is below the centre")
+W.cvars.rotateMinimap, W.facing = "0", nil
+W.viewRadius = 400 -- zoomed out: 0.125 px a yard
+W.Advance(0.1)
+_, _, _, x = mini("East Vein"):GetPoint(1)
+check(math.abs(x - 25) < 0.01, "zoomed out: closer to the centre")
+check(mini("Rim Vein") ~= nil, "and the rim vein comes in")
+W.viewRadius = nil
+W.place = { map = MAP, x = 0, y = 0 }
+W.Advance(0.1)
+eq(mini("East Vein"), nil, "the game doesn't know where you are (0, 0): nothing")
+W.place = { map = MAP, x = 0.5, y = 0.5 }
+
 -- Forever++'s Gathering Map on: ours records and draws nothing.
 W.loaded.ForeverPlusPlus = true
 ForeverPlusPlusAPI = { v1 = { IsModuleEnabled = function(name) return name == "GatheringMap" end } }

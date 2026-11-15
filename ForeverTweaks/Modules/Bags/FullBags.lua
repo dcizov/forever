@@ -334,7 +334,7 @@ end
 
 local function setKeep(itemID, keep, link)
     M.db.keep[itemID] = keep or nil
-    ns:Print(format(keep and L.FULL_KEPT or L.FULL_UNKEPT, link or ("item:" .. itemID)))
+    M:Reply(format(keep and L.FULL_KEPT or L.FULL_UNKEPT, link or ("item:" .. itemID)))
     keepChanged()
 end
 
@@ -355,18 +355,18 @@ local function keepCommand(keep, args)
     local text = args or ""
     if keep and (text == "" or text:lower() == "list") then
         if next(M.db.keep) == nil then
-            ns:Print(L.FULL_KEEP_NONE)
+            M:Reply(L.FULL_KEEP_NONE)
             return
         end
-        ns:Print(L.FULL_KEEP_LIST)
+        M:Reply(L.FULL_KEEP_LIST)
         for itemID in pairs(M.db.keep) do
-            ns:Print("  " .. (select(2, C_Item.GetItemInfo(itemID)) or ("item:" .. itemID)))
+            M:Reply("  " .. (select(2, C_Item.GetItemInfo(itemID)) or ("item:" .. itemID)))
         end
         return
     end
     local itemID = C_Item.GetItemInfoInstant(text)
     if not itemID then
-        ns:Print(L.FULL_KEEP_USAGE)
+        M:Reply(L.FULL_KEEP_USAGE)
         return
     end
     setKeep(itemID, keep, text:match("|H.-|h.-|h") and text or nil)

@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Dungeon Journal Skin's page pieces (Modules/Addons/DungeonJournalSkin.lua uses
+    Forever Tweaks - Modules/Addons/DungeonJournalPages.lua
+    Dungeon Journal Skin's page pieces (Modules/Addons/DungeonJournalSkin.lua uses
     them): two parts of DungeonJournal's window that need more than a cleared backdrop.
 
       * The quest page, made like Blizzard's quest window (Blizzard_UIPanels_Game/Mainline/

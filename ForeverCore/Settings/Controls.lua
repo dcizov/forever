@@ -168,12 +168,10 @@ function Controls.GroupDropdown(parent, mod, options, width)
     return dropdown
 end
 
--- The default as the undo arrow's tooltip says it.
+-- The default as the undo arrow's tooltip says it (what it means is Options.ValueText's).
+local CHECKBOX_WORDS = { L.CHECKED, L.UNCHECKED }
 function Controls.DefaultText(mod, option)
-    local value = mod.defaults[option.key]
-    if option.type == "slider" then return sliderText(option, value) end
-    if option.type == "dropdown" then return ns.Options.ChoiceLabel(option, value) end
-    return value and L.CHECKED or L.UNCHECKED
+    return Options.ValueText(option, mod.defaults[option.key], CHECKBOX_WORDS)
 end
 
 -- How wide a slider is: narrower with a value box, leaving `beside` for what's left of it.

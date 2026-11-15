@@ -12,8 +12,8 @@
       * Group Sync (off unless ticked): while you're in a group, each creature you learn
         something new of goes to the group's other Compendium players with Group Sync on too, a
         few seconds after, and theirs come to you without asking.
-    Merging is Book.MergeCreature's (Modules/Data/BookMerge.lua): the same corpses are never
-    counted twice, and your own counts never grow. Messages go through Modules/Social/Transport.lua.
+    Merging is Book.MergeCreature's (Lib/BookMerge.lua): the same corpses are never
+    counted twice, and your own counts never grow. Messages go through Lib/Transport.lua.
 ]]
 
 local _, ns = ...
@@ -23,9 +23,6 @@ local pairs, ipairs, type, format = pairs, ipairs, type, string.format
 local Book, Transport = ns.Book, ns.Transport
 
 local SYNC_WAIT = 5 -- seconds learned creatures gather before Group Sync sends them
-local SHARED_FIELDS = { "name", "title", "minLevel", "maxLevel", "skull", "classification", "creatureType", "family",
-    "reaction", "display" }
-local SHARED_SETS = { "displays", "abilities", "defenses", "instances", "starts", "ends" }
 
 local M = ns:NewModule("Sharing", {
     title = L.SHARING_TITLE,
@@ -60,7 +57,11 @@ end
 local function itemsOf(rec)
     local items = {}
     for _, field in ipairs({ "loot", "wares" }) do
-        for itemID in pairs(rec[field] or {}) do items[itemID] = copy(Book.Item(itemID)) end
+        for itemID in pairs(rec[field] or {}) do
+            local item = Book.Item(itemID)
+            -- Name, quality and icon (all Book.MergeItem keeps): no link, whose "|" escapes stay off the wire.
+            if item then items[itemID] = { name = item.name, quality = item.quality, icon = item.icon } end
+        end
     end
     return items
 end
@@ -71,8 +72,8 @@ function M.Pack(npcID)
     if not rec then return nil end
     local out = { zones = copy(rec.zones), loot = copy(rec.loot), looted = rec.looted, wares = copy(rec.wares),
         first = rec.first, last = rec.last }
-    for _, key in ipairs(SHARED_FIELDS) do out[key] = rec[key] end
-    for _, key in ipairs(SHARED_SETS) do out[key] = copy(rec[key]) end
+    for _, key in ipairs(Book.SHARED_FIELDS) do out[key] = rec[key] end
+    for _, key in ipairs(Book.SHARED_SETS) do out[key] = copy(rec[key]) end
     local quests = {}
     for _, field in ipairs({ "starts", "ends" }) do
         for questID in pairs(rec[field] or {}) do quests[questID] = questOf(questID) end
@@ -96,8 +97,7 @@ function M.Merge(sender, pack)
     end
     for itemID, item in pairs(type(pack.items) == "table" and pack.items or {}) do Book.MergeItem(itemID, item) end
     for questID, quest in pairs(type(pack.quests) == "table" and pack.quests or {}) do Book.MergeQuest(questID, quest) end
-    Book.Changed()
-    ns:Announce("BOOK_MERGED", npcID)
+    Book.Merged(npcID)
     return isNew
 end
 
@@ -111,12 +111,12 @@ function ns.CanShare()
 end
 
 function ns.ShareCreature(npcID)
-    if not ns.CanShare() then return ns.Print(M, L.SHARING_NO_TARGET) end
+    if not ns.CanShare() then return M:Reply(L.SHARING_NO_TARGET) end
     local pack = M.Pack(npcID)
     local target = GetUnitName("target", true)
     if pack and target then
         Transport.Send(M, "creature", pack, "WHISPER", target)
-        ns.Print(M, format(L.SHARING_SENT, pack.rec.name, target))
+        M:Reply(format(L.SHARING_SENT, pack.rec.name, target))
     end
 end
 
@@ -126,7 +126,7 @@ local function onCreature(sender, data)
     if type(name) ~= "string" then return end
     ns:Confirm(M, "FC_SHARE", format(L.SHARING_ASK, sender, name), function()
         M.Merge(sender, data)
-        ns.Print(M, format(L.SHARING_TAKEN, name, sender))
+        M:Reply(format(L.SHARING_TAKEN, name, sender))
     end)
 end
 
@@ -162,8 +162,8 @@ end
 
 local LEARNED = { CREATURE_NEW = true, LOOT_NEW = true, CREATURE_LEARNED = true }
 
-ns:OnNews(M, function(_, event, npcID)
-    if not (M.active and M.db.autoSync and LEARNED[event] and type(npcID) == "number" and groupChannel()) then return end
+M:OnNews(function(_, event, npcID)
+    if not (M.db.autoSync and LEARNED[event] and type(npcID) == "number" and groupChannel()) then return end
     local first = next(waiting) == nil
     waiting[npcID] = true
     if first then M:After(SYNC_WAIT, sendWaiting) end

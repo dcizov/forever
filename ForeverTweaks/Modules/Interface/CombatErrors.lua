@@ -35,6 +35,7 @@ local GROUP = { label = L.CERR_KINDS, format = L.CERR_KINDS_COUNT, tooltip = L.C
 local M = ns:NewModule("CombatErrors", {
     title = L.CERR_TITLE,
     category = "interface",
+    group = L.GROUP_COMBAT,
     description = L.CERR_DESC,
     added = "1.9.3",
     defaults = { enabled = false, cooldown = true, power = true, range = true, target = true, always = false },

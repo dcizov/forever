@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Item Tooltips: Sell Price, Repair Cost and Item Count
+    Forever Tweaks - Modules/Tooltips/ItemPrices.lua
+    Item Tooltips: Sell Price, Repair Cost and Item Count
       * Sell Price: the vendor price counts the whole stack, and Shift shows one (Mode turns that
         round). Forever's own line prices one item, so it's drawn again in its place.
       * Repair Cost: what repairing a damaged piece of gear costs, on gear you wear or carry (the
@@ -15,9 +16,9 @@ local _, ns = ...
 local L = ns.L
 
 local pairs, type, select, format, strfind, tconcat = pairs, type, select, string.format, string.find, table.concat
-local ItemTooltip, Kit, Plain = ns.ItemTooltip, ns.TooltipKit, ns.Plain
-local Parts = ns.ItemTooltipParts
-local M = Parts.module
+local ItemTooltip, Plain = ns.ItemTooltip, ns.Plain
+local Shared = assert(ns.ItemTooltipsShared, "ItemPrices.lua loads after ItemTooltips.lua")
+local M = assert(ns.modules.ItemTooltips, "ItemPrices.lua loads after ItemTooltips.lua")
 
 ---------------------------------------------------------------------------
 -- Sell Price
@@ -25,7 +26,7 @@ local M = Parts.module
 
 -- One item's vendor price: from item info, else the line's own (while item info isn't cached).
 local function drawSellPrice(_, tooltip, data, lineData)
-    local itemID = Parts.On("sellPrice") and ItemTooltip.ItemID(data)
+    local itemID = Shared.IsShown("sellPrice") and ItemTooltip.ItemID(data)
     if not itemID then return false end
     local price = select(11, C_Item.GetItemInfo(itemID)) or lineData.price
     if not price or price <= 0 then return false end
@@ -38,10 +39,10 @@ end
 ---------------------------------------------------------------------------
 
 local function addRepairCost(_, tooltip, data)
-    if not Parts.On("repairCost") or InRepairMode() then return end
+    if not Shared.IsShown("repairCost") or InRepairMode() then return end
     local cost = Plain(data.repairCost)
     if type(cost) == "number" and cost > 0 then
-        ItemTooltip.AddInfo(tooltip, L.REPAIRCOST_LINE, Kit.Money(cost), M.db.align, "white")
+        ItemTooltip.AddInfo(tooltip, L.REPAIRCOST_LINE, ns.MoneyText(cost), M.db.align, "white")
     end
 end
 
@@ -69,7 +70,7 @@ local function characterKey() return format("%s-%s", GetRealmName(), (UnitName("
 local bankOpen = false
 
 local function scanBank()
-    if not (bankOpen and Parts.On("itemCount")) then return end
+    if not (bankOpen and Shared.IsShown("itemCount")) then return end
     local counts = {}
     for _, bag in pairs(bankBagIDs()) do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
@@ -96,7 +97,7 @@ end
 
 -- "Owned: 45 (bag 30  bank 15)", or just one place and its count.
 local function addCount(_, tooltip, data)
-    local id = Parts.On("itemCount") and ItemTooltip.ItemID(data)
+    local id = Shared.IsShown("itemCount") and ItemTooltip.ItemID(data)
     if not id then return end
     local bags = C_Item.GetItemCount(id) or 0
     local bank = M.db.bank and bankCount(id, bags) or 0
@@ -127,11 +128,11 @@ local BANK_EVENTS = {
 local function asModule(fn) return function(...) return fn(M, ...) end end
 local sellPrice, repairCost, count = asModule(drawSellPrice), asModule(addRepairCost), asModule(addCount)
 
-Parts.Add({
+M:AddPart({
     Enable = function()
-        ItemTooltip.ReplaceSellPrice(sellPrice, M)
-        ItemTooltip.OnPrices(repairCost, M)
-        ItemTooltip.OnInfo(count, M)
+        ItemTooltip.ReplaceSellPrice(M, sellPrice)
+        ItemTooltip.OnPrices(M, repairCost)
+        ItemTooltip.OnInfo(M, count)
         ItemTooltip.RedrawOnShift(M, true)
         for event, fn in pairs(BANK_EVENTS) do M:RegisterEvent(event, fn) end
         bankOpen = BankFrame:IsShown()

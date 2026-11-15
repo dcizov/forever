@@ -376,7 +376,7 @@ end
 local function onIconCreated() M:After(0, M.Scan) end
 
 -- The Forever Tweaks button comes and goes with its own module's settings: look again then.
-ns:OnChanged(M, function(_, name)
+M:OnChanged(function(_, name)
     if name == "MinimapButton" then M:Scan() end
 end)
 

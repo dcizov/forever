@@ -61,7 +61,7 @@ check(W.ChatHas("latency"), "/ft options by the start of a module's name")
 W.Slash("/ft help")
 check(W.ChatHas("/ft set"), "/ft help lists commands")
 W.Slash("/ft button bag")
-eq(W.opened, ns.member.short, "/ft <module> opens the Forever Tweaks page on it")
+eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "/ft <module> opens the Forever Tweaks page on it")
 -- /forevertweaks works too.
 W.Slash("/forevertweaks list")
 finish()

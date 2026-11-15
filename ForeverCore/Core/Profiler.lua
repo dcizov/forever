@@ -2,10 +2,10 @@
     Forever Core - Core/Profiler.lua
     The Profiler: how much CPU each module takes (the debug report is Core/DebugReport.lua). The game measures only the addon as a whole
     (C_AddOnProfiler), so while recording, every event, hook, timer and settings call into a
-    module (they all go through ns.Run) is timed with debugprofilestop and charged to it, split
+    module (they all go through ns.ChargedHandler) is timed with debugprofilestop and charged to it, split
     by source ("LOOT_OPENED", "OnUpdate"). Each frame the suite took longer than SPIKE_MS
     in is kept as a spike, with the call that took the most of it.
-    Off (the default) nothing is timed: ns.Run checks `recording` and calls straight through.
+    Off (the default) nothing is timed: ns.ChargedHandler checks `recording` and calls straight through.
 
     Approach adapted from Forever++ by xIGBClutchIx (MIT License).
 ]]
@@ -13,7 +13,7 @@
 local _, ns = ...
 
 local debugprofilestop, GetTime, pairs, ipairs, sort, format = debugprofilestop, GetTime, pairs, ipairs, table.sort, string.format
-local call = ns.Call
+local call = ns.SafeCall
 
 local Profiler = { recording = false }
 ns.Profiler = Profiler
@@ -64,7 +64,7 @@ local function finish(owner, source, start, ...)
 end
 
 -- Times fn(...) and charges it to owner and source, returning everything fn returns. A timed
--- call made inside another (one module calling into another through ns.RunCall) is charged to
+-- call made inside another (one module calling into another through ns.ChargedCall) is charged to
 -- its own owner, and the outer call only its own share.
 function Profiler.Call(owner, source, fn, ...)
     depth = depth + 1
@@ -74,9 +74,9 @@ function Profiler.Call(owner, source, fn, ...)
 end
 
 -- Wraps an OnUpdate script (or any function) so its time is charged to `owner` and `source`.
--- Isolated (securecallfunction) whether recording or not, like everything run through ns.Run.
+-- Isolated (securecallfunction) whether recording or not, like everything run through ns.ChargedHandler.
 function Profiler.Wrap(owner, source, fn)
-    return function(...) return ns.RunCall(owner, source, fn, ...) end
+    return function(...) return ns.ChargedCall(owner, source, fn, ...) end
 end
 
 local function endOfFrame()

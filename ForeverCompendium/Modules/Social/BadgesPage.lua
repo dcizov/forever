@@ -11,7 +11,10 @@ local L = ns.L
 
 local ipairs, format, math = ipairs, string.format, math
 local CreateFrame = CreateFrame
-local Text, J, Journal, Badges = ns.JournalText, ns.JournalKit, ns.Journal, ns.Badges
+local Text = assert(ns.JournalText, "BadgesPage.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "BadgesPage.lua loads after JournalKit.lua")
+local Journal = assert(ns.Journal, "BadgesPage.lua loads after Journal.lua")
+local Badges = assert(ns.Badges, "BadgesPage.lua loads after Badges.lua")
 
 local COLUMNS, CARD_HEIGHT, GAP = 3, 74, 8
 local STAR = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"

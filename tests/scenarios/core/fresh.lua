@@ -40,7 +40,7 @@ for _, member in ipairs(ns.members) do
 end
 
 -- The Settings page: Mute All Chat Messages silences what modules say by themselves only.
-C_SettingsUtil.OpenSettingsPanel(ns.title)
+ForeverCore.SettingsWindow.Open(ns.title)
 ns.db.quiet = true
 local before = #W.chat
 ns.modules.Vendor:Print("layer news")

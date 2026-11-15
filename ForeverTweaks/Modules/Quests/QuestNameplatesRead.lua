@@ -30,17 +30,15 @@ function Read.Forget() kinds, matched = nil, {} end
 
 local function indexObjectives()
     kinds, matched = {}, {}
-    for index = 1, (C_QuestLog.GetNumQuestLogEntries()) do
-        local info = C_QuestLog.GetInfo(index)
-        local objectives = info and not info.isHeader and C_QuestLog.GetQuestObjectives(info.questID)
-        for _, objective in ipairs(objectives or {}) do
+    ns.EachLogQuest(function(questID)
+        for _, objective in ipairs(C_QuestLog.GetQuestObjectives(questID) or {}) do
             local text, kind = Plain(objective.text), Plain(objective.type)
             if text and kind then
                 text = normalize(text)
                 if #text >= 3 then kinds[text] = kind end
             end
         end
-    end
+    end)
 end
 
 local function objectiveKind(text)
@@ -94,8 +92,10 @@ end
 
 local LINE = Enum.TooltipDataLineType
 
--- The unit's quest objectives, in tooltip order: { text, percent, members = { { current, needed } } },
--- or nil when the game won't say (a secret value: in combat, in an instance).
+-- The unit's quest objectives, in tooltip order: { text, percent, members = { { current, needed } } }.
+-- Two empty answers mean different things: an empty list when the unit has no tooltip data
+-- (it has no objectives: the plate is cleared), nil when a line is secret (in combat, in an
+-- instance: the game won't say, so the plate keeps what it shows).
 local function objectivesOf(unit, party)
     local data = C_TooltipInfo.GetUnit(unit)
     if not (data and data.lines) then return {} end

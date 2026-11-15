@@ -1,10 +1,11 @@
 --[[
-    Forever Tweaks - Item Tooltips: Auction Prices
+    Forever Tweaks - Modules/Tooltips/AuctionPrices.lua
+    Item Tooltips: Auction Prices
     The lowest auction house buyout in item tooltips, under the sell price, counted for the stack
     (Shift for one) like it, and how long ago it was seen ("Scanned: 2h ago", green when fresh to
     red at Red After). The prices come from scanning the auction house (AuctionScan.lua), kept for
     each auction house ("Realm-Faction"), or, with Use Auctionator's Prices, from Auctionator
-    (Core/OtherAddons.lua). Disenchant prices its materials through Parts.AuctionPrice. A saved
+    (Lib/OtherAddons.lua). Disenchant prices its materials through ns.AuctionPrices.Price. A saved
     price is one short string, "copper,minutes since EPOCH", since thousands are kept. Adapted from
     Forever++'s Item Tooltips by xIGBClutchIx (MIT License).
 ]]
@@ -14,13 +15,19 @@ local L = ns.L
 
 local type, tonumber, format, floor, time = type, tonumber, string.format, math.floor, time
 local ItemTooltip, OtherAddons = ns.ItemTooltip, ns.OtherAddons
-local Parts = ns.ItemTooltipParts
-local M = Parts.module
+local Shared = assert(ns.ItemTooltipsShared, "AuctionPrices.lua loads after ItemTooltips.lua")
+local M = assert(ns.modules.ItemTooltips, "AuctionPrices.lua loads after ItemTooltips.lua")
+
+-- The auction prices kept, for AuctionScan.lua (which fills them) and Disenchant's line (which
+-- prices materials): ns.AuctionPrices.Pack/Unpack (a price as saved), House() (this character's
+-- auction house's), UsingAuctionator(), Price(itemID).
+local Prices = {}
+ns.AuctionPrices = Prices
 
 local EPOCH = 1700000000 -- before any price was saved
 
 -- A price and when it was seen, as saved; and back.
-function Parts.PackPrice(copper, seenAt)
+function Prices.Pack(copper, seenAt)
     -- %.0f: the game's %d overflows past 2^31 copper, and listings go higher.
     return format("%.0f,%d", floor(copper + 0.5), floor((seenAt - EPOCH) / 60))
 end
@@ -31,12 +38,12 @@ local function unpackPrice(saved)
     if not copper then return nil end
     return tonumber(copper), EPOCH + tonumber(minutes) * 60
 end
-Parts.UnpackPrice = unpackPrice
+Prices.Unpack = unpackPrice
 
 local houseData -- this character's auction house, once its faction is known
 
 -- The auction house this character sees (realms share one per faction).
-function Parts.House()
+function Prices.House()
     if houseData then return houseData end
     local faction = UnitFactionGroup("player")
     local key = format("%s-%s", GetRealmName(), faction or "")
@@ -50,14 +57,14 @@ function Parts.House()
 end
 
 -- Whether prices come from Auctionator: chosen, and it's there.
-function Parts.UsingAuctionator() return M.db.auctionator and OtherAddons.HasAuctionPrices() end
+function Prices.UsingAuctionator() return M.db.auctionator and OtherAddons.HasAuctionPrices() end
 
 -- One item's lowest buyout in copper and when it was seen (nil when Auctionator gives it), or nil
 -- while the auction lines are off or nothing's known.
-function Parts.AuctionPrice(itemID)
-    if not Parts.On("auction") then return nil end
-    if Parts.UsingAuctionator() then return OtherAddons.AuctionPrice(nil, itemID) end
-    return unpackPrice(Parts.House().items[itemID])
+function Prices.Price(itemID)
+    if not Shared.IsShown("auction") then return nil end
+    if Prices.UsingAuctionator() then return OtherAddons.AuctionPrice(nil, itemID) end
+    return unpackPrice(Prices.House().items[itemID])
 end
 
 -- A price's age color: by age green, yellow halfway, red at Red After; or the color named.
@@ -77,14 +84,14 @@ end
 
 -- The tooltip's item, unless it's gray and Hide on Junk is on.
 local function tooltipItem(data)
-    local itemID = Parts.On("auction") and ItemTooltip.ItemID(data)
+    local itemID = Shared.IsShown("auction") and ItemTooltip.ItemID(data)
     if itemID and M.db.hideJunk and C_Item.GetItemQualityByID(itemID) == Enum.ItemQuality.Poor then return nil end
     return itemID
 end
 
 local function addPrice(tooltip, data)
     local itemID = tooltipItem(data)
-    local price = itemID and Parts.AuctionPrice(itemID)
+    local price = itemID and Prices.Price(itemID)
     if price then
         ItemTooltip.AddPrice(tooltip, data, L.AUCTIONPRICES_LINE, price, M.db.mode, M.db.align, M.db.auctionColor)
     end
@@ -94,7 +101,7 @@ end
 local function addAge(tooltip, data)
     local itemID = tooltipItem(data)
     if not itemID or M.db.scanAge == "off" then return end
-    local price, seenAt = Parts.AuctionPrice(itemID)
+    local price, seenAt = Prices.Price(itemID)
     if price and seenAt then
         local age = time() - seenAt
         ItemTooltip.AddInfo(tooltip, L.AUCTIONPRICES_SCAN_AGE_LINE, ago(age), M.db.scanAge, ageColor(age))
@@ -104,15 +111,15 @@ end
 -- /ft resetprices: forgets this auction house's prices, after asking.
 M:AddCommand("resetprices", nil, L.AUCTIONPRICES_RESET_COMMAND, function()
     ns:Confirm(M, "AUCTIONPRICES_RESET", L.AUCTIONPRICES_RESET_CONFIRM, function()
-        local data = Parts.House()
+        local data = Prices.House()
         data.items, data.scannedAt = {}, 0
-        ns.Print(M, L.AUCTIONPRICES_RESET_DONE) -- a reply: shown even with chat muted
+        M:Reply(L.AUCTIONPRICES_RESET_DONE)
     end)
 end)
 
-Parts.Add({
+M:AddPart({
     Enable = function()
-        ItemTooltip.OnPrices(addPrice, M)
-        ItemTooltip.OnPriceNotes(addAge, M)
+        ItemTooltip.OnPrices(M, addPrice)
+        ItemTooltip.OnPriceNotes(M, addAge)
     end,
 })

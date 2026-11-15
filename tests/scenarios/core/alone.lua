@@ -17,7 +17,7 @@ check(ns.modules.MinimapButton.active and ns.modules.Updates.active, "its own mo
 openEverything(ns)
 W.Slash("/forever list")
 check(W.ChatHas(ns.modules.MinimapButton.title), "/forever lists its modules")
-W.opened = nil
+if rawget(_G, "ForeverSettingsFrame") then ForeverSettingsFrame:Hide() end
 ForeverTweaksMinimapButton:Fire("OnClick", "LeftButton")
-eq(W.opened, ns.title, "a click opens the settings")
+eq(ForeverCore.SettingsWindow.Current(), ns.title, "a click opens the settings")
 finish()

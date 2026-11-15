@@ -14,7 +14,8 @@
     Quests have no page of their own: the quest log has the ones you're on, and a creature's
     Quests tab every one it has to do with (ns.ShowQuest picks between them).
     A page is { key, label, icon, order, Build(parent), Refresh(), Shown() (optional: whether its
-    tab shows) }, added with Journal.AddPage. While the window is open, what the Recorder learns
+    tab shows), Select(...) (optional: picks what ns.ShowCreature / ShowItem point it at) },
+    added with Journal.AddPage. While the window is open, what the Recorder learns
     shows at once (its news redraws the page on the next frame).
 ]]
 
@@ -31,7 +32,7 @@ local M = ns:NewModule("Journal", {
     category = "journal",
     description = L.JOURNAL_DESC,
     added = "0.3.0",
-    defaults = { enabled = true, sort = "seen", reverse = false, critters = false, groupZones = true, scale = 1,
+    defaults = { enabled = true, sort = "seen", reverse = false, critters = false, groupZones = true, scale = 1, sounds = true,
         collapsed = {}, -- data: the creature list's folded groups (group key -> true)
     },
     options = {
@@ -41,6 +42,7 @@ local M = ns:NewModule("Journal", {
         { key = "groupZones", type = "checkbox", label = L.JOURNAL_GROUP_ZONES, tooltip = L.JOURNAL_GROUP_ZONES_TIP, added = "2.4.0" },
         { key = "scale", type = "slider", label = L.JOURNAL_SCALE, tooltip = L.JOURNAL_SCALE_TIP, added = "2.3.0",
           min = 0.7, max = 1.3, step = 0.05, format = "%.2f" },
+        { key = "sounds", type = "checkbox", label = L.JOURNAL_SOUNDS, tooltip = L.JOURNAL_SOUNDS_TIP, added = "2.5.0" },
     },
 })
 
@@ -65,7 +67,7 @@ local function pageNamed(key)
 end
 
 local function refresh()
-    if Journal.IsOpen() and current then ns.RunCall(M, "journal page", current.Refresh) end
+    if Journal.IsOpen() and current then ns.ChargedCall(M, "journal page", current.Refresh) end
 end
 
 -- Builds a page the first time it's shown: from under the title bar to the window's inner edges
@@ -77,7 +79,7 @@ local function frameOf(page)
         page.frame = CreateFrame("Frame", nil, window)
         page.frame:SetPoint("TOPLEFT", 4, -(60 - ns.JournalKit.STRIP))
         page.frame:SetPoint("BOTTOMRIGHT", -6, 5)
-        ns.RunCall(M, "journal page", page.Build, page.frame)
+        ns.ChargedCall(M, "journal page", page.Build, page.frame)
         page.frame:HookScript("OnSizeChanged", function() M:Soon(refresh) end)
     end
     return page.frame
@@ -128,11 +130,11 @@ local function buildWindow()
     tinsert(UISpecialFrames, "ForeverCompendiumJournal")
     window:Hide()
     window:HookScript("OnShow", function()
-        PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN)
+        ns.Sound("open")
         makeTabs()
         Journal.Show(current and current.key or Journal.pages[1].key)
     end)
-    window:HookScript("OnHide", function() PlaySound(SOUNDKIT.IG_CHARACTER_INFO_CLOSE) end)
+    window:HookScript("OnHide", function() ns.Sound("close") end)
 end
 
 local function open(key)
@@ -153,10 +155,14 @@ function ns.ToggleJournal()
     if window and window:IsShown() then window:Hide() else open() end
 end
 
--- Opens the journal on creature `npcID` (the tooltips, map pins and banner point here).
-function ns.ShowCreature(npcID)
-    if open("creatures") and Journal.SelectCreature then Journal.SelectCreature(npcID) end
+-- Opens the journal on page `key` and picks what's given there (its Select(...)).
+local function openOn(key, ...)
+    local page = open(key) and pageNamed(key)
+    if page and page.Select then page.Select(...) end
 end
+
+-- Opens the journal on creature `npcID` (the tooltips, map pins and banner point here).
+function ns.ShowCreature(npcID) openOn("creatures", npcID) end
 
 -- Shows quest `questID`: one in your log in Blizzard's quest log, any other on the creature that
 -- gives it (or takes it in), its Quests tab open.
@@ -164,15 +170,11 @@ function ns.ShowQuest(questID)
     if C_QuestLog.GetLogIndexForQuestID(questID) then return QuestMapFrame_OpenToQuestDetails(questID) end
     local q = ns.Book.Quest(questID)
     local npc = q and ((q.giver and q.giver.npc) or (q.ender and q.ender.npc))
-    if npc and ns.Book.Creature(npc) and open("creatures") and Journal.SelectCreature then
-        Journal.SelectCreature(npc, "quests")
-    end
+    if npc and ns.Book.Creature(npc) then openOn("creatures", npc, "quests") end
 end
 
 -- Opens the journal on item `itemID`.
-function ns.ShowItem(itemID)
-    if open("items") and Journal.SelectItem then Journal.SelectItem(itemID) end
-end
+function ns.ShowItem(itemID) openOn("items", itemID) end
 
 -- Global for the key binding (Bindings.xml) and the addon compartment.
 function ForeverCompendium_ToggleJournal() ns.ToggleJournal() end
@@ -180,8 +182,8 @@ function ForeverCompendium_ToggleJournal() ns.ToggleJournal() end
 -- The Recorder's news: redraw once on the next frame while open.
 local REDRAW = { CREATURE_NEW = true, LOOT_NEW = true, QUEST_PLACE = true, QUEST_TITLE = true,
     CREATURE_LEARNED = true, BOOK_MERGED = true, BADGE_EARNED = true, TROPHY = true }
-ns:OnNews(M, function(_, event)
-    if M.active and Journal.IsOpen() and REDRAW[event] then M:Soon(refresh) end
+M:OnNews(function(_, event)
+    if Journal.IsOpen() and REDRAW[event] then M:Soon(refresh) end
 end)
 
 M:AddCommand("journal", nil, L.CMD_JOURNAL, function() ns.ToggleJournal() end)

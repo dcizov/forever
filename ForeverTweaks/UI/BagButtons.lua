@@ -9,7 +9,7 @@
         BagButtons.PaintBlizzard(paint) does it now.
       * Baganator, which replaces the bag windows: BagButtons.Baganator() is its API or nil;
         BagButtons.RegisterWidget adds a corner widget (Baganator.API.RegisterCornerWidget), once
-        per id, quiet while the module is off, and with our callbacks run through ns.RunCall
+        per id, quiet while the module is off, and with our callbacks run through ns.ChargedCall
         (charged to the module), so an error of ours is reported and never breaks Baganator's loop;
         BagButtons.RefreshBaganator(mod) has Baganator draw its widgets again (on the next frame);
         BagButtons.ShowBags(mod, show) opens or closes Baganator's bags (else the game's). Calls
@@ -101,7 +101,7 @@ end
 -- One of our callbacks for Baganator, run as the module's code (reported and profiled); when it
 -- errors, `fallback` instead (Baganator takes nil as "not loaded yet, ask again").
 local function callOr(fallback, mod, source, fn, ...)
-    local ok, result = ns.RunCall(mod, source, ns.Succeeded, fn, ...)
+    local ok, result = ns.ChargedCall(mod, source, ns.Succeeded, fn, ...)
     if not ok then return fallback end
     return result
 end

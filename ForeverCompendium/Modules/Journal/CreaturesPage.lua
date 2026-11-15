@@ -2,8 +2,8 @@
     Forever Compendium - Modules/Journal/CreaturesPage.lua
     The journal's Creatures page: the list of creatures on the left, under a folding header for
     each zone (Filter.Grouped; pinned ones first under their own; off with "Group by zone"),
-    and the chosen one on the right, its model and what's known of it above (CreatureDetail.lua) and its tabs below
-    (CreatureTabs.lua). What the list holds is CreatureFilter.lua's. The layout is JournalKit's
+    and the chosen one on the right, its model and what's known of it above (CreatureDetail.lua) and its loot and
+    quests below (CreatureBoxes.lua). What the list holds is CreatureFilter.lua's. The layout is JournalKit's
     ListPage: the count and the order in the strip at the top, the search box and the filter
     menu (which also picks what the search looks through: Name / Loot / Quest) over the list.
 
@@ -17,17 +17,20 @@ local _, ns = ...
 local L = ns.L
 
 local ipairs, format = ipairs, string.format
-local Book, Text, J = ns.Book, ns.JournalText, ns.JournalKit
-local Filter, Journal = ns.CreatureFilter, ns.Journal
+local Book = ns.Book
+local Text = assert(ns.JournalText, "CreaturesPage.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "CreaturesPage.lua loads after JournalKit.lua")
+local Filter = assert(ns.CreatureFilter, "CreaturesPage.lua loads after CreatureFilter.lua")
+local Journal = assert(ns.Journal, "CreaturesPage.lua loads after Journal.lua")
 local Detail = assert(ns.CreatureDetail, "CreaturesPage.lua loads after CreatureDetail.lua")
-local Tabs = assert(ns.CreatureTabs, "CreaturesPage.lua loads after CreatureTabs.lua")
+local Boxes = assert(ns.CreatureBoxes, "CreaturesPage.lua loads after CreatureBoxes.lua")
 
-local DISPLAY_HEIGHT = 330 -- the model and what's known of it; the tabs fill the rest
+local DISPLAY_HEIGHT = 330 -- the model and what's known of it; the loot and quest boxes fill the rest
 local SEARCH_TEXT = { name = L.JOURNAL_SEARCH, loot = L.CFILTER_SEARCH_LOOT, quest = L.CFILTER_SEARCH_QUEST }
 
 local M = Journal.module
 local page = { key = "creatures", label = L.JOURNAL_TAB_CREATURES, icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", order = 10 }
-local list, count, detail, tabs, filterButton, search
+local list, count, detail, boxes, filterButton, search
 local selected
 local log = {} -- the quests in your log, read once per redraw
 
@@ -58,15 +61,14 @@ end
 function Journal.TogglePin(npcID)
     local rec = Book.Creature(npcID)
     if not rec then return end
-    rec.pinned = not rec.pinned or nil
-    ns:Announce("CREATURE_PINNED", npcID, rec.pinned)
+    ns.Sound(Book.SetPinned(npcID, not rec.pinned) and "pinOn" or "pinOff")
     Journal.Refresh()
 end
 
 local function showCreature(npcID)
     selected = npcID
     detail:Show(npcID)
-    tabs:Show(npcID)
+    boxes:Show(npcID)
 end
 
 local function onCreatureClick(item, button)
@@ -94,9 +96,9 @@ function page.Refresh()
     showCreature(selected)
 end
 
--- Picks creature `npcID` (its group unfolded, scrolled into view), and its tab `tab` if given
--- (CreatureTabs' keys: "quests" for ns.ShowQuest).
-function Journal.SelectCreature(npcID, tab)
+-- Picks creature `npcID` (its group unfolded, scrolled into view), and shows `part` if given
+-- (CreatureBoxes:Open's keys: "quests" for ns.ShowQuest).
+function page.Select(npcID, part)
     selected = npcID
     local rec = Book.Creature(npcID)
     if rec then
@@ -106,7 +108,7 @@ function Journal.SelectCreature(npcID, tab)
     for i, item in ipairs(list.items) do
         if item.npcID == npcID then list:ShowIndex(i) end
     end
-    if tab then tabs:Open(tab) end
+    if part then boxes:Open(part) end
 end
 
 -- Picks order `key`, or the same one the other way.
@@ -196,7 +198,7 @@ function page.Build(frame)
     page.dataButton = J.MenuButton(frame, L.ARCHIVE_MENU, function(_, root) ns.Archive.FillMenu(root, selected) end)
     page.dataButton:SetPoint("RIGHT", p.sort, "LEFT", -8, 0)
     detail = Detail.Build(p.right, DISPLAY_HEIGHT)
-    tabs = Tabs.Build(p.right, DISPLAY_HEIGHT)
+    boxes = Boxes.Build(p.right, DISPLAY_HEIGHT)
 end
 
 Journal.AddPage(page)

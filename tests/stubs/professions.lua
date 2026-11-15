@@ -1,18 +1,17 @@
 --[[
     Forever Tweaks - tests/stubs/professions.lua
-    The stand-in game's professions, worn gear, weapon enchants, item tooltips, spells, equipment
-    sets and error text, loaded by tests/wow.lua after loot.lua (it adds to its C_Item).
+    The stand-in game's professions, worn gear, weapon enchants, item tooltips, spells and error
+    text, loaded by tests/wow.lua after loot.lua (it adds to its C_Item).
       W.profs[i]    = { name, rank, maxRank, modifier, line, icon }: 1 and 2 the primary
                       professions, 4 Fishing (GetProfessions' order)
       W.equipped    = slot -> item ID worn there
       W.lure        = the main hand's temporary enchant's time left in ms, or nil
       W.tooltips    = item ID -> its tooltip lines (text)
-      W.sets        = equipment set ID -> { name, items = slot -> item ID, ignored = slot -> true }
       W.uiErrors    = the red messages shown, in order
       W.mapID       = the map you're on (C_Map.GetBestMapForUnit), W.maps = map ID -> its parent
 ]]
 
-W.profs, W.equipped, W.tooltips, W.sets, W.uiErrors, W.maps = {}, {}, {}, {}, {}, {}
+W.profs, W.equipped, W.tooltips, W.uiErrors, W.maps = {}, {}, {}, {}, {}
 W.mapTypes = {} -- map ID -> Enum.UIMapType (3, a zone, unless set)
 
 C_Map = {
@@ -37,7 +36,6 @@ C_Item.GetWeaponEnchantInfo = function(weaponSlot)
     if W.lure == nil then return {} end
     return { { hasEnchant = true, timeLeft = W.lure, charges = 0, enchantID = 263, enchantIconID = 0 } }
 end
-C_Item.EquipItemByName = function(item, slot) W.equipped[slot] = item end
 
 C_TooltipInfo = {
     GetInventoryItem = function(_, slot)
@@ -52,49 +50,6 @@ C_Spell = { GetSpellName = function(id) return W.spells[id] end }
 
 UIErrorsFrame = W.NewFrame("MessageFrame", "UIErrorsFrame")
 function UIErrorsFrame:AddMessage(text) W.uiErrors[#W.uiErrors + 1] = text end
-
--- Equipment sets: saving takes what's worn in every slot not ignored for the save.
-local LAST_SLOT = 19
-local ignoring, nextSet = {}, 1
-W.setsUsable = true
-
-local function takeWorn(set)
-    set.items, set.ignored = {}, {}
-    for slot = 1, LAST_SLOT do
-        if ignoring[slot] then set.ignored[slot] = true else set.items[slot] = W.equipped[slot] end
-    end
-end
-
-local function copy(t)
-    local out = {}
-    for k, v in pairs(t) do out[k] = v end
-    return out
-end
-
-C_EquipmentSet = {
-    CanUseEquipmentSets = function() return W.setsUsable end,
-    ClearIgnoredSlotsForSave = function() ignoring = {} end,
-    IgnoreSlotForSave = function(slot) ignoring[slot] = true end,
-    GetEquipmentSetID = function(name)
-        for id, set in pairs(W.sets) do if set.name == name then return id end end
-    end,
-    CreateEquipmentSet = function(name)
-        local set = { name = name }
-        takeWorn(set)
-        W.sets[nextSet], nextSet = set, nextSet + 1
-    end,
-    SaveEquipmentSet = function(id) takeWorn(W.sets[id]) end,
-    -- As in game for a set saved this way: no slot reported ignored (the Fishing Outfit reads its items).
-    GetIgnoredSlots = function() return {} end,
-    GetItemIDs = function(id) return copy(W.sets[id].items) end,
-    UseEquipmentSet = function(id)
-        local set = W.sets[id]
-        for slot = 1, LAST_SLOT do
-            if not set.ignored[slot] then W.equipped[slot] = set.items[slot] end
-        end
-        return true
-    end,
-}
 
 -- Override bindings and the mouse (Fishing Cast). W.bindings[key] = { spell = name } or
 -- { click = button name }, per what's set now; W.mouseFoci is what GetMouseFoci answers

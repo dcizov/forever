@@ -32,7 +32,7 @@ local Pages = assert(ns.DungeonJournalPages, "DungeonJournalSkin.lua loads after
 local Restyle = ns.Restyle
 
 local ipairs, pairs, type = ipairs, pairs, type
-local C_AddOns, C_Item = C_AddOns, C_Item
+local C_Item = C_Item
 
 local ADDON = "ForeverDungeonJournal"
 
@@ -52,8 +52,8 @@ local M = ns:NewModule("DungeonJournalSkin", {
     addon = ADDON, -- the Tweaks for Addons page shows its section only while it's loaded
 })
 
-local function journal() return C_AddOns.IsAddOnLoaded(ADDON) and _G.ForeverDungeonJournal_NS or nil end
-local function window() return C_AddOns.IsAddOnLoaded(ADDON) and _G.ForeverDungeonJournalFrame or nil end
+local function journal() return ns.OtherAddons.Loaded(ADDON) and _G.ForeverDungeonJournal_NS or nil end
+local function window() return ns.OtherAddons.Loaded(ADDON) and _G.ForeverDungeonJournalFrame or nil end
 
 local applied = {} -- part key -> true once put into effect this session
 

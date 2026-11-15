@@ -1,0 +1,12 @@
+<Bindings>
+	<Binding name="CLICK ForeverTweaksFishingButton:LeftButton" header="FOREVERTWEAKS" category="ADDONS"/>
+	<Binding name="FOREVERTWEAKS_SESSION_PAUSE" category="ADDONS">
+		ForeverCore.RunBinding("FOREVERTWEAKS_SESSION_PAUSE")
+	</Binding>
+	<Binding name="FOREVERTWEAKS_GATHER_WINDOW" category="ADDONS">
+		ForeverCore.RunBinding("FOREVERTWEAKS_GATHER_WINDOW")
+	</Binding>
+	<Binding name="FOREVERTWEAKS_ROTATE" category="ADDONS">
+		ForeverCore.RunBinding("FOREVERTWEAKS_ROTATE")
+	</Binding>
+</Bindings>

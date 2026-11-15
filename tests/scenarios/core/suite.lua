@@ -27,12 +27,12 @@ check(ForeverTweaksDB == nil, "Forever Tweaks off: none of its saved variables")
 openEverything(ns)
 
 -- Settings: a page for Compendium, none for Tweaks.
-check(W.categories[ns.member.short] ~= nil, "a Compendium page")
-check(W.categories.Tweaks == nil, "no Tweaks page")
+check(ForeverCore.SettingsWindow.Page(ns.member.short) ~= nil, "a Compendium page")
+check(ForeverCore.SettingsWindow.Page("Tweaks") == nil, "no Tweaks page")
 ns:OpenSettings("Journal")
-eq(W.opened, ns.member.short, "a Compendium module opens on its page")
+eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "a Compendium module opens on its page")
 ns:OpenSettings("MinimapButton")
-eq(W.opened, core.title, "a core module opens on the top page")
+eq(ForeverCore.SettingsWindow.Current(), core.title, "a core module opens on the top page")
 
 -- Slashes: /fc lists Compendium's modules only, /forever every one; no /ft.
 check(not pcall(W.Slash, "/ft list"), "no /ft without Forever Tweaks")
@@ -48,17 +48,17 @@ W.chat = {}
 W.Slash("/fc help")
 check(W.ChatHas("/fc journal"), "/fc help shows Compendium's commands under /fc")
 W.Slash("/fc settings")
-eq(W.opened, ns.member.short, "/fc settings opens Compendium's page")
+eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "/fc settings opens Compendium's page")
 
 -- The suite's minimap button: click opens the journal, right-click the settings.
 local button = ForeverTweaksMinimapButton
 check(button and button:IsShown(), "the suite's minimap button")
-W.opened = nil
+if rawget(_G, "ForeverSettingsFrame") then ForeverSettingsFrame:Hide() end
 button:Fire("OnClick", "LeftButton")
 check(ForeverCompendiumJournal and ForeverCompendiumJournal:IsShown(), "a click opens the journal")
-eq(W.opened, nil, "and not the settings")
+eq(ForeverCore.SettingsWindow.Current(), nil, "and not the settings")
 button:Fire("OnClick", "RightButton")
-eq(W.opened, core.title, "right-click opens the settings")
+eq(ForeverCore.SettingsWindow.Current(), core.title, "right-click opens the settings")
 W.Slash("/fc")
 check(not ForeverCompendiumJournal:IsShown(), "a bare /fc closes it again")
 

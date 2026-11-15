@@ -143,13 +143,25 @@ ns.ShowCreature(3100)
 local shown = shownTexts()
 W.quests = {}
 check(shown:find("Mottled Boar", 1, true) ~= nil, "the creature's name")
-check(shown:find("Level 3-5", 1, true) ~= nil, "its level range")
 check(shown:find("Valley of Trials", 1, true) ~= nil, "where")
 check(shown:find("Rabies", 1, true) ~= nil, "an ability, beside the model")
 check(shown:find(ns.L.CDETAIL_BEST_DROPS, 1, true) ~= nil, "its best drops beside the model")
 check(shown:find("Cutting Teeth", 1, true) ~= nil, "a quest in your log that wants it, beside the model")
-local creatureTabs = under(window, function(f) return f._template == "TabSystemButtonTemplate" end)
-eq(#creatureTabs, 5, "Loot, Wares, Rewards, Quests, Notes")
+check(shown:find(ns.L.CDETAIL_IDENTITY, 1, true) ~= nil, "what it is first: Identification")
+check(shown:find("3-5", 1, true) ~= nil, "its levels")
+check(shown:find(ns.L.CDETAIL_ZONE, 1, true) ~= nil, "its places under Zone")
+check(shown:find(ns.L.CDETAIL_TOTAL_KILLS, 1, true) ~= nil, "its total kills")
+check(under(window, function(f) return f._template == "TabSystemButtonTemplate" end)[1] == nil, "no tabs under the model")
+local function boxTitles()
+    local all = {}
+    for _, f in ipairs(under(window, function(f) return f._kind == "FontString" and f:IsVisible() end)) do
+        local t = tostring(text(f))
+        if t:find("^" .. ns.L.CTABS_LOOT .. " %(") or t:find("^" .. ns.L.CTABS_QUESTS .. " %(") then all[#all + 1] = t end
+    end
+    return table.concat(all, "|")
+end
+check(boxTitles():find(ns.L.CTABS_LOOT .. " (", 1, true) ~= nil, "the Loot box, with how much")
+check(boxTitles():find(ns.L.CTABS_QUESTS .. " (", 1, true) ~= nil, "the Quests box beside it: it has quests")
 check(shown:find("75%", 1, true) ~= nil, "a drop rate: 3 of 4 corpses")
 -- The loot grid fills the pane's width, however wide it turns out: as many slots across as fit.
 local slots = under(window, function(f) return rawget(f, "corner") ~= nil and f:IsVisible() end)
@@ -170,22 +182,33 @@ eq(models[1]._creature, 3100, "its model from its creature ID")
 ns.ShowCreature(3296)
 eq(models[1]._display, 4259, "a creature with a known model shows that")
 
--- Its tabs: quests by name, wares, rewards, notes.
-check(text(creatureTabs[2]):find("(1)", 1, true) ~= nil, "Wares counts what it sells")
+-- Its boxes: wares from the loot box's header, quests by name, and the note on the stage.
+local function viewButton(label)
+    return under(window, function(f) return f._kind == "Button" and f:IsVisible() and rawget(f, "text")
+        and text(f.text):find(label, 1, true) == 1 end)[1]
+end
+check(viewButton(ns.L.CTABS_WARES) ~= nil and text(viewButton(ns.L.CTABS_WARES).text):find("(1)", 1, true) ~= nil,
+    "Wares in the loot box's header, with what it sells")
+check(viewButton(ns.L.CTABS_REWARDS) ~= nil, "Rewards too: the quest it gives has one")
+viewButton(ns.L.CTABS_WARES):Fire("OnClick")
+check(shownTexts():find(ns.L.CTABS_NO_WARES, 1, true) == nil, "its wares shown")
+Book.Meet(3197, "Bloodtalon Taillasher")
+ns.ShowCreature(3197)
+check(not boxTitles():find(ns.L.CTABS_QUESTS .. " (", 1, true), "no Quests box for a creature without quests")
 ns.ShowCreature(3100)
-creatureTabs[4]:Fire("OnClick")
 shown = shownTexts()
 check(shown:find("Cutting Teeth", 1, true) ~= nil, "its quest by title")
 check(shown:find("Sarkoth", 1, true) ~= nil, "a quest known by number shows the game's title")
 check(not shown:find("Quest #305", 1, true), "never the bare number once known")
-check(shown:find(ns.L.JOURNAL_STATE_LOG, 1, true) ~= nil and shown:find(ns.L.JOURNAL_ROLE_SLAY_SHORT, 1, true) ~= nil,
-    "a legend of the quest icons")
-creatureTabs[5]:Fire("OnClick")
+local noteButton = under(window, function(f) return f._kind == "Button" and f:IsVisible() and rawget(f, "title") == nil
+    and rawget(f, "icon") and f.icon._texture == "Interface\\Icons\\INV_Misc_Note_01" end)[1]
+check(noteButton ~= nil, "a note button on the stage")
+noteButton:Fire("OnClick")
 local note = under(window, function(f) return f._kind == "EditBox" and f:IsVisible() and f._template == nil end)[1]
 note:SetText("Watch for its charge.")
 note:Fire("OnTextChanged")
 eq(boar.note, "Watch for its charge.", "the note is kept as you type")
-creatureTabs[1]:Fire("OnClick")
+check(not noteButton.icon._desaturated, "the note button lit once it has one")
 
 -- A quest: one in the log opens Blizzard's quest log on it; any other its giver's Quests tab.
 W.quests = { { questID = 300, title = "Cutting Teeth", level = 4 } }
@@ -197,7 +220,6 @@ ns.ShowQuest(301)
 shown = shownTexts()
 check(shown:find("A Peon's Burden", 1, true) ~= nil, "any other on its giver's Quests tab")
 check(shown:find("Orgrimmar Grunt", 1, true) ~= nil, "the giver shown")
-creatureTabs[1]:Fire("OnClick")
 
 -- The Items page.
 ns.ShowItem(769)
@@ -207,6 +229,40 @@ check(shown:find("Mottled Boar", 1, true) ~= nil, "and who drops it")
 local card = under(window, function(f) return f._template == "GameTooltipTemplate" and f:IsShown() end)[1]
 check(card ~= nil, "its own tooltip docked in the page")
 check(shown:find("[3-5]", 1, true) ~= nil, "a dropper's level beside its name")
+local sourceScroll = under(window, function(f) return f._kind == "FontString" and f:IsVisible() and tostring(text(f)):find("Mottled Boar", 1, true) end)[1]
+while sourceScroll and sourceScroll._kind ~= "ScrollFrame" do sourceScroll = sourceScroll:GetParent() end
+local point, _, _, x = sourceScroll:GetPoint()
+check(point == "TOPLEFT" and x >= 200, "who drops it sits right of the card")
+eq((card:GetPoint()), "TOPLEFT", "the card docked at the left")
+Book.Item(769).link = "|cffffffff|Hitem:769::::::::|h[Chunk of Boar Meat]|h|r"
+ns.ShowItem(769)
+eq(card._hyperlink, Book.Item(769).link, "the card shows the item as it was seen (its link)")
+
+-- An item you carry: a click on its icon opens Blizzard's bags on it, its buttons aglow.
+W.items["[Chunk of Boar Meat]"] = { id = 769 }
+W.bags[0] = { [2] = { link = "[Chunk of Boar Meat]", count = 3 } }
+W.owned[769] = 3
+local slot = under(window, function(f) return rawget(f, "itemID") == 769 and rawget(f, "_width") == 52 and f:IsVisible() end)[1]
+local opened = W.bagsOpened
+slot:Fire("OnClick", "LeftButton")
+W.Advance(0.3)
+eq(W.bagsOpened, opened + 1, "clicking its icon opens the bags")
+local lit = 0
+for _, b in ipairs(ContainerFrameCombinedBags._items) do
+    for _, c in ipairs(b._children or {}) do if c._atlas == "bags-glow-white" and c:IsShown() then lit = lit + 1 end end
+end
+eq(lit, 1, "the slot holding it glows")
+W.Advance(3)
+lit = 0
+for _, b in ipairs(ContainerFrameCombinedBags._items) do
+    for _, c in ipairs(b._children or {}) do if c._atlas == "bags-glow-white" and c:IsShown() then lit = lit + 1 end end
+end
+eq(lit, 0, "for a few seconds")
+CloseAllBags()
+W.owned[769], W.bags[0] = nil, nil
+slot:Fire("OnClick", "LeftButton")
+W.Advance(0.3)
+eq(W.bagsOpened, opened + 1, "not in your bags: nothing opens")
 Journal.Show("creatures")
 
 -- Trophies: the rares and bosses met, defeated ones in colour; a first defeat is news.
@@ -216,10 +272,10 @@ local boss = Book.Meet(3295, "Sludge Anomaly")
 boss.skull = true
 local news = {}
 ns:OnNews(journal, function(_, event, npc) news[#news + 1] = event .. ":" .. tostring(npc) end)
-ns.RecorderCombat.Kill(ns.modules.Recorder, "Creature-0-0-0-0-3270-0000000001")
+ns.RecorderCombat.OnPartyKill(ns.modules.Recorder, "Creature-0-0-0-0-3270-0000000001")
 check(table.concat(news, ","):find("TROPHY:3270", 1, true) ~= nil, "a rare's first defeat is a trophy")
 news = {}
-ns.RecorderCombat.Kill(ns.modules.Recorder, "Creature-0-0-0-0-3270-0000000002")
+ns.RecorderCombat.OnPartyKill(ns.modules.Recorder, "Creature-0-0-0-0-3270-0000000002")
 check(not table.concat(news, ","):find("TROPHY", 1, true), "not its second")
 Journal.Show("trophies")
 shown = shownTexts()
@@ -244,5 +300,5 @@ ns:SetEnabled("Journal", false)
 check(not window:IsShown(), "closed when turned off")
 W.Slash("/fc")
 check(not window:IsShown(), "not opened while off")
-check(W.opened ~= nil, "the settings instead")
+check(ForeverCore.SettingsWindow.Current() ~= nil, "the settings instead")
 finish()

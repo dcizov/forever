@@ -5,7 +5,7 @@
 ]]
 
 local T = ...
-local eq, login, finish, openEverything, root = T.eq, T.login, T.finish, T.openEverything, T.root
+local check, eq, login, finish, openEverything, root = T.check, T.eq, T.login, T.finish, T.openEverything, T.root
 local ns
 
 -- Saved by 1.1.1 (layout 4), with Status Text and Mute Error Speech, removed in 1.2.0, View
@@ -53,8 +53,14 @@ for _, name in ipairs({ "StatusText", "MuteErrorSpeech", "ViewDistance" }) do
     eq(db.seenModules[name], nil, name .. " seen gone")
 end
 for _, name in ipairs(GONE_1_6) do
-    eq(db.settings[name], nil, name .. " settings gone")
-    eq(db.data[name], nil, name .. " data gone")
+    -- Rotate Minimap came back in 2.6.0, a new module: what 1.6.0 forgot stays forgotten.
+    if name == "RotateMinimap" then
+        eq((db.settings[name] or {}).enabled, nil, name .. ": the old module's On forgotten")
+        check(not ns.modules.RotateMinimap.active, "the new one off until turned on")
+    else
+        eq(db.settings[name], nil, name .. " settings gone")
+        eq(db.data[name], nil, name .. " data gone")
+    end
 end
 eq(ForeverTweaksCharDB.data.GatherTracking, nil, "a removed module's character data gone")
 eq(ns.modules.Vendor.db.buy[2512], 1000, "Autobuy's list kept")

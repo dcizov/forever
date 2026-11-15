@@ -2,7 +2,7 @@
     Forever Core - UI/Popups.lua
     Blizzard's own popups for a yes/no question, a line of text to type, and one to copy. `owner`
     is the module asking (or any table with a name, such as Kit.owner): what the player answers
-    runs as its code (ns.RunCall). `key` is the caller's name for the popup, kept apart per kind (one key can be both a question and a copy);
+    runs as its code (ns.ChargedCall). `key` is the caller's name for the popup, kept apart per kind (one key can be both a question and a copy);
     each gets its popup made once; preferredIndex 3 keeps them clear of the game's own popups.
 
     Adapted from Forever++ by xIGBClutchIx (MIT License).
@@ -32,7 +32,7 @@ function ns:Confirm(owner, key, text, onAccept, textArg)
         return {
             button1 = YES,
             button2 = NO,
-            OnAccept = function(_, data) ns.RunCall(data.owner, "popup", data.onAccept) end,
+            OnAccept = function(_, data) ns.ChargedCall(data.owner, "popup", data.onAccept) end,
         }
     end, { owner = owner, onAccept = onAccept }, textArg)
 end
@@ -52,10 +52,10 @@ function ns:Prompt(owner, key, text, onAccept, initial)
                 box:HighlightText()
             end,
             OnAccept = function(self, data)
-                ns.RunCall(data.owner, "popup", data.onAccept, strtrim(self:GetEditBox():GetText() or ""))
+                ns.ChargedCall(data.owner, "popup", data.onAccept, strtrim(self:GetEditBox():GetText() or ""))
             end,
             EditBoxOnEnterPressed = function(box, data)
-                ns.RunCall(data.owner, "popup", data.onAccept, strtrim(box:GetText() or ""))
+                ns.ChargedCall(data.owner, "popup", data.onAccept, strtrim(box:GetText() or ""))
                 box:GetParent():Hide()
             end,
             EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,

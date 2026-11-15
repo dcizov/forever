@@ -2,41 +2,51 @@
 ## Title: |cffd4a017Forever|r Tweaks
 ## Notes: Small quality-of-life tweaks for WoW Forever. Part of the Forever suite: Settings > AddOns > Forever, or /ft.
 ## Author: wtFAQ
-## Version: 2.4.0
+## Version: 2.9.0
 ## Dependencies: ForeverCore
-## OptionalDeps: Auctionator, Baganator, QuestieDB, ForeverDungeonJournal
+## OptionalDeps: ForeverPlusPlus, Baganator, Auctionator, Chattynator, MinimapButtonButton, !WilduTools, Plumber, QuestieDB, ForeverDungeonJournal
 ## SavedVariables: ForeverTweaksDB
 ## SavedVariablesPerCharacter: ForeverTweaksCharDB
 ## IconTexture: Interface\AddOns\ForeverTweaks\Media\Icon
 
-# Joins the suite first (Forever Core), then strings and Forever Tweaks' own runtime pieces
+# Joins the suite first (Forever Core), then strings, the saved variables' layout steps, and the
+# libraries several modules share (Lib\) and the UI pieces they share (UI\)
 Part.lua
 Locales\enUS.lua
 Locales\enUS_Modules.lua
 Locales\enUS_Shared.lua
 Locales\enUS_Tooltips.lua
-Core\Migrations.lua
-Core\OtherAddons.lua
-Core\Chat.lua
-Core\TooltipKit.lua
-Core\ItemTooltip.lua
-Core\ItemStats.lua
-Core\Disenchant.lua
-Core\Professions.lua
+Locales\enUS_Interface.lua
+Locales\enUS_Quests.lua
+Migrations.lua
+Lib\OtherAddons.lua
+Lib\Chat.lua
+Lib\TooltipKit.lua
+Lib\ItemTooltip.lua
+Lib\ItemStats.lua
+Lib\Disenchant.lua
+Lib\Professions.lua
+Lib\QuestLog.lua
+Lib\CVars.lua
 UI\BagButtons.lua
 UI\ItemList.lua
+UI\Restyle.lua
 Settings\Addons.lua
 
 Changelog.lua
 
 # Modules: one line per file, grouped by category (each folder is a category)
 Modules\Interface\Performance.lua
-Modules\Interface\Durability.lua
+Modules\Interface\DurabilityWarning.lua
 Modules\Interface\MeleeRange.lua
 Modules\Interface\FiveSecond.lua
 Modules\Interface\CombatErrors.lua
 Modules\Interface\PlayerCastBar.lua
 Modules\Interface\LayerInfo.lua
+Modules\Interface\ClassColors.lua
+Modules\Interface\Threat.lua
+Modules\Interface\MovableWindows.lua
+Modules\Interface\KeepWindowsOpen.lua
 Modules\Chat\ChatFade.lua
 Modules\Chat\ChatArrowKeys.lua
 Modules\Chat\ChatFont.lua
@@ -60,27 +70,30 @@ Modules\Tooltips\ProfessionTooltips.lua
 Modules\Tooltips\ProfessionObjects.lua
 Modules\Tooltips\ProfessionCreatures.lua
 Modules\Tooltips\ProfessionItems.lua
-# (Quests: QuestLog first, which QuestItems and FullBagsPlan use)
-Modules\Quests\QuestLog.lua
 Modules\Quests\QuestItems.lua
 Modules\Quests\QuestNameplatesRead.lua
 Modules\Quests\QuestNameplates.lua
+Modules\Quests\LootSparkle.lua
+Modules\Quests\ForeverMarks.lua
+Modules\Quests\DialogueKeys.lua
 Modules\Quests\ObjectNames.lua
 # (Bags: FullBagsPlan before FullBags)
 Modules\Bags\FullBagsPlan.lua
 Modules\Bags\FullBags.lua
 Modules\Merchant\Vendor.lua
 Modules\Merchant\VendorButton.lua
+Modules\Merchant\VendorWindow.lua
 Modules\Merchant\Repair.lua
 Modules\Gathering\GatherSession.lua
-Modules\Gathering\GatherTracking.lua
+Modules\Gathering\GatheringTracking.lua
 Modules\Gathering\GatherMap.lua
 Modules\Gathering\FishingZones.lua
 Modules\Gathering\FishingState.lua
+Modules\Gathering\GatherWindow.lua
 Modules\Gathering\Fishing.lua
-Modules\Gathering\FishingOutfit.lua
 Modules\Gathering\FishingCast.lua
 Modules\Map\ButtonBag.lua
+Modules\Map\RotateMinimap.lua
 # (Addons: tweaks to other addons, on their own Tweaks for Addons page)
 Modules\Addons\DungeonJournalPages.lua
 Modules\Addons\DungeonJournalSkin.lua

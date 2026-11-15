@@ -56,6 +56,20 @@ W.Advance(60)
 check(line():find("2:05", 1, true) and line():find(ns.L.GATHERSESSION_PAUSED, 1, true), "paused: the clock stops")
 W.Slash("/ft session")
 check(W.ChatHas("1 x [Raw Brilliant Smallfish]"), "/ft session lists the items")
+-- The Gathering window: the session, Fishing and the items, from the menu or the command.
+display:Fire("OnMouseUp", "RightButton")
+W.menu:Find(ns.L.GATHERWINDOW_OPEN).fn()
+local window = ForeverTweaksGatherWindow
+check(window:IsShown(), "the menu opens the Gathering window")
+local function windowHas(part)
+    for _, f in ipairs(W.frames) do
+        if f._kind == "FontString" and type(f._text) == "string" and f._text:find(part, 1, true) and f:IsVisible() then return true end
+    end
+end
+check(windowHas("[Raw Brilliant Smallfish]  x1"), "every item gathered, with how many")
+check(windowHas(string.format(ns.L.GATHERWINDOW_COUNTS, 0, 1, 1)) or windowHas(ns.L.GATHERWINDOW_TIME:sub(1, 5)), "the session's counts")
+W.Slash("/ft session window")
+check(not window:IsShown(), "/ft session window closes it again")
 W.Slash("/ft session reset")
 eq(display:IsShown(), false, "started again: hidden until the next gather")
 

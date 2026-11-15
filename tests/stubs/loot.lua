@@ -31,7 +31,7 @@ C_Item = {
             for _, it in pairs(W.items) do if it.id == link then item = it end end
         end
         if not item then return nil end
-        return item.id, nil, nil, nil, nil, item.class, item.subclass
+        return item.id, nil, nil, item.equipLoc, nil, item.class, item.subclass
     end,
     IsEquippableItem = function(link) local item = W.items[link]; return item and item.equippable or false end,
     GetItemIconByID = function(id) return 200000 + id end,

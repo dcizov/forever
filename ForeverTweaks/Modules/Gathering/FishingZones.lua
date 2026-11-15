@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Fishing's zones
+    Forever Tweaks - Modules/Gathering/FishingZones.lua
+    Fishing's zones
     The Fishing skill each zone's water needs before fish stop getting away, by zone map ID (the
     Classic zones' C_Map IDs): { inland, coast } where the coast (open sea, or the zone's deeper
     pools) needs more than the inland water, else { both }. Skill here is your rank plus the

@@ -1,21 +1,29 @@
 --[[
     Forever Compendium - Modules/Journal/CreatureOverview.lua
     What's known of a creature, the column beside its model (CreatureDetail.lua makes and fills
-    it), as Forever Bestiary lays it out: lines under gold headers, scrolling when long.
+    it): lines under gold headers, scrolling when long. The information Forever Bestiary showed,
+    in our own order:
 
       * Wanted: the quests in your log that want it (kill, loot, speak to), first, in gold.
-      * Locations (click one to open the map there with its area shown).
+      * Identification: its level with its rank (Elite, Rare, Boss), its kind and family, how
+        it stands toward you. Inside some instances the game keeps a creature's kind to itself:
+        then it says Unknown, with a mark saying why.
+      * Locations: zones (click one to open the map there with its area shown) with the areas
+        in them, then dungeons and raids.
       * Abilities (each spell's tooltip on mouse over) and Defenses.
       * Best Drops: its likeliest drops worth having (common or better), with their chances.
-      * Encounters (first and last seen, your deaths to it), Kills (first and last, how many,
+      * Encounters (first and last seen, your deaths to it), Kills (how many, first and last,
         corpses looted, money) and Reputation.
+    Each label says on mouse over how the journal learns it.
 ]]
 
 local _, ns = ...
 local L = ns.L
 
 local ipairs, pairs, format, table, math = ipairs, pairs, string.format, table, math
-local Book, Text, J = ns.Book, ns.JournalText, ns.JournalKit
+local Book = ns.Book
+local Text = assert(ns.JournalText, "CreatureOverview.lua loads after JournalText.lua")
+local J = assert(ns.JournalKit, "CreatureOverview.lua loads after JournalKit.lua")
 
 local BEST_DROPS = 4 -- drops the column names, at most
 
@@ -28,6 +36,34 @@ local function field(label, value)
     return Text.GOLD .. label .. "|r " .. Text.WHITE .. value .. "|r"
 end
 
+local function learnedTip(line)
+    J.Tip(line, line.data.title, line.data.text)
+end
+
+-- A "Label: value" line saying on mouse over how it was learned (`tip`).
+local function fact(lines, label, value, tip, opts)
+    opts = opts or {}
+    if tip then
+        opts.data = { title = label:gsub(":$", ""), text = tip }
+        opts.onEnter = learnedTip
+    end
+    return lines:Line(field(label, value), opts)
+end
+
+local function addIdentity(lines, rec)
+    lines:Head(L.CDETAIL_IDENTITY)
+    local ranged = rec.minLevel and rec.minLevel ~= rec.maxLevel
+    fact(lines, ranged and L.CDETAIL_LEVELS or L.CDETAIL_LEVEL, Text.LevelTagged(rec), L.CDETAIL_LEVEL_TIP)
+    local kind = rec.creatureType and (rec.creatureType .. (rec.family and (" (" .. rec.family .. ")") or ""))
+    if kind then
+        fact(lines, L.CDETAIL_TYPE, kind, L.CDETAIL_TYPE_TIP)
+    else
+        fact(lines, L.CDETAIL_TYPE, L.JOURNAL_UNKNOWN, L.CDETAIL_TYPE_HIDDEN_TIP, { icon = "Interface\\DialogFrame\\UI-Dialog-Icon-AlertNew" })
+    end
+    local r, g, b = Text.ReactionColor(rec.reaction)
+    fact(lines, L.CDETAIL_REACTION, Text.Color(r, g, b) .. Text.Reaction(rec.reaction) .. "|r", L.CDETAIL_REACTION_TIP)
+end
+
 local function openMap(line)
     local data = line.data
     if ns.FocusCreature then ns.FocusCreature(pane.npcID) end
@@ -38,18 +74,53 @@ local function placeTip(line)
     J.Tip(line, line.data.name, L.CDETAIL_MAP_TIP)
 end
 
+local function addZone(lines, place)
+    lines:Line(place.name, { indent = 12, onClick = openMap, onEnter = placeTip, data = place })
+    for _, sub in ipairs(place.subs) do lines:Line(Text.GRAY .. sub .. "|r", { indent = 28 }) end
+end
+
+-- A sub-label ("Zones:"; none when it carries on the one above) and its entries.
+local function group(lines, label, entries, add)
+    if #entries == 0 then return end
+    if label then lines:Line(Text.GOLD .. label .. "|r", { font = "GameFontNormalSmall" }) end
+    for _, entry in ipairs(entries) do add(lines, entry) end
+end
+
+local function instanceLine(lines, name) lines:Line(name, { indent = 12 }) end
+
+-- Zones, then dungeons and raids: an instance's own map (with its areas) where it has one, else
+-- its name as the Recorder kept it.
 local function addPlaces(lines, rec)
-    local places = Text.Places(rec)
-    if #places == 0 and not next(rec.instances or {}) then return end
+    local zones, dungeons, raids, mapped = {}, {}, {}, {}
+    local instances = rec.instances or {}
+    for _, place in ipairs(Text.Places(rec)) do
+        if instances[place.name] == "raid" then
+            raids[#raids + 1] = place
+        elseif place.dungeon or instances[place.name] then
+            dungeons[#dungeons + 1] = place
+        else
+            zones[#zones + 1] = place
+        end
+        mapped[place.name] = true
+    end
+    local otherDungeons, otherRaids = {}, {}
+    for name, kind in pairs(instances) do
+        if not mapped[name] then
+            local list = kind == "raid" and otherRaids or otherDungeons
+            list[#list + 1] = name
+        end
+    end
+    table.sort(otherDungeons)
+    table.sort(otherRaids)
+    if #zones + #dungeons + #raids + #otherDungeons + #otherRaids == 0 then return end
     lines:Head(L.CDETAIL_LOCATIONS)
-    for _, place in ipairs(places) do
-        lines:Line(place.name, { icon = "Interface\\Minimap\\Tracking\\None", onClick = openMap, onEnter = placeTip, data = place })
-        for _, sub in ipairs(place.subs) do lines:Line(Text.GRAY .. sub .. "|r", { indent = 20 }) end
-    end
-    for instance, kind in pairs(rec.instances or {}) do
-        local label = kind == "raid" and L.CDETAIL_RAID or L.CDETAIL_DUNGEON
-        lines:Line(instance .. " " .. Text.GRAY .. "(" .. label .. ")|r", { icon = "Interface\\Minimap\\Dungeon" })
-    end
+    group(lines, #zones == 1 and L.CDETAIL_ZONE or L.CDETAIL_ZONES, zones, addZone)
+    local dungeonCount, raidCount = #dungeons + #otherDungeons, #raids + #otherRaids
+    group(lines, dungeonCount == 1 and L.CDETAIL_DUNGEON_ONE or L.CDETAIL_DUNGEONS, dungeons, addZone)
+    group(lines, #dungeons == 0 and (dungeonCount == 1 and L.CDETAIL_DUNGEON_ONE or L.CDETAIL_DUNGEONS) or nil,
+        otherDungeons, instanceLine)
+    group(lines, raidCount == 1 and L.CDETAIL_RAID_ONE or L.CDETAIL_RAIDS, raids, addZone)
+    group(lines, #raids == 0 and (raidCount == 1 and L.CDETAIL_RAID_ONE or L.CDETAIL_RAIDS) or nil, otherRaids, instanceLine)
 end
 
 local function spellTip(line)
@@ -87,21 +158,21 @@ end
 
 local function addEncounters(lines, rec)
     lines:Head(L.CDETAIL_ENCOUNTERS)
-    lines:Line(field(L.CDETAIL_FIRST_SEEN, Text.Date(rec.first)))
-    lines:Line(field(L.CDETAIL_LAST_SEEN, Text.Date(rec.last)))
-    if (rec.deaths or 0) > 0 then lines:Line(field(L.CDETAIL_DEATHS, rec.deaths)) end
+    fact(lines, L.CDETAIL_FIRST_SEEN, Text.Date(rec.first), L.CDETAIL_SEEN_TIP)
+    fact(lines, L.CDETAIL_LAST_SEEN, Text.Date(rec.last), L.CDETAIL_SEEN_TIP)
+    if (rec.deaths or 0) > 0 then fact(lines, L.CDETAIL_DEATHS, rec.deaths, L.CDETAIL_DEATHS_TIP) end
 end
 
 local function addKills(lines, rec)
     if (rec.kills or 0) == 0 and (rec.looted or 0) == 0 then return end
     lines:Head(L.CDETAIL_KILLS)
-    lines:Line(field(L.CDETAIL_TOTAL_KILLS, rec.kills or 0))
+    fact(lines, L.CDETAIL_TOTAL_KILLS, rec.kills or 0, L.CDETAIL_KILLS_TIP)
     if rec.firstKill then lines:Line(field(L.CDETAIL_FIRST_KILL, Text.Date(rec.firstKill))) end
     if rec.lastKill then lines:Line(field(L.CDETAIL_LAST_KILL, Text.Date(rec.lastKill))) end
-    if (rec.looted or 0) > 0 then lines:Line(field(L.CDETAIL_LOOTED, rec.looted)) end
+    if (rec.looted or 0) > 0 then fact(lines, L.CDETAIL_LOOTED, rec.looted, L.CDETAIL_LOOTED_TIP) end
     if (rec.money or 0) > 0 then
-        lines:Line(field(L.CDETAIL_MONEY, Text.Money(rec.money)))
-        lines:Line(field(L.CDETAIL_MONEY_AVERAGE, Text.Money(rec.money / math.max(rec.looted or 1, 1))))
+        lines:Line(field(L.CDETAIL_MONEY, ns.MoneyText(rec.money)))
+        lines:Line(field(L.CDETAIL_MONEY_AVERAGE, ns.MoneyText(rec.money / math.max(rec.looted or 1, 1))))
     end
 end
 
@@ -151,6 +222,19 @@ local function addBestDrops(lines, rec)
     end
 end
 
+-- Every section, in order.
+local function addSections(lines, rec)
+    addWanted(lines, rec)
+    addIdentity(lines, rec)
+    addPlaces(lines, rec)
+    addAbilities(lines, rec)
+    addDefenses(lines, rec)
+    addBestDrops(lines, rec)
+    addEncounters(lines, rec)
+    addKills(lines, rec)
+    addReputation(lines, rec)
+end
+
 -- The column in `parent` (the caller places Overview.lines.scroll).
 function Overview.Build(parent)
     pane.lines = J.NewLines(parent, 300)
@@ -162,14 +246,7 @@ function Overview.Fill(rec, npcID)
     pane.npcID = npcID
     local lines = pane.lines
     lines:Begin()
-    addWanted(lines, rec)
-    addPlaces(lines, rec)
-    addAbilities(lines, rec)
-    addDefenses(lines, rec)
-    addBestDrops(lines, rec)
-    addEncounters(lines, rec)
-    addKills(lines, rec)
-    addReputation(lines, rec)
+    addSections(lines, rec)
     lines:End()
     lines.scroll:SetVerticalScroll(0)
 end

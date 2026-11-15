@@ -47,10 +47,17 @@ local M = ns:NewModule("Vendor", {
     },
 })
 
-local function money(copper) return C_CurrencyInfo.GetCoinTextureString(copper) end
+local money = ns.MoneyText
 
 local merchantOpen = false
-local page, refreshPage -- its Settings pane and the list's redraw, once built
+local lists = {} -- every Autobuy list drawn (its Settings pane, its window): { stack, refresh }
+
+-- Redraws each Autobuy list that shows now.
+local function refreshLists()
+    for _, list in ipairs(lists) do
+        if list.stack:IsVisible() then list.refresh() end
+    end
+end
 
 ---------------------------------------------------------------------------
 -- What to buy
@@ -76,8 +83,8 @@ function M.PlanPurchase(missing, bundle, price, available, cash, perPurchase)
     return purchases
 end
 
--- What this merchant would sell now: a list of { index, link, units (purchases), count, cost },
--- in the merchant's order, paid for from the money there is, item by item.
+-- What this merchant would sell now: a list of { index, link, units (purchases), count, cost,
+-- have, keep }, in the merchant's order, paid for from the money there is, item by item.
 function M:Plan()
     local list, paused, entries = M.db.buy, M.db.paused, {}
     if next(list) == nil then return entries end
@@ -86,7 +93,9 @@ function M:Plan()
         local itemID = GetMerchantItemID(index)
         local keep = itemID and not paused[itemID] and list[itemID]
         local info = keep and C_MerchantFrame.GetItemInfo(index)
-        local missing = info and keep - C_Item.GetItemCount(itemID)
+        local have = info and C_Item.GetItemCount(itemID)
+        local missing = info and keep - have
+        if info then M:Debug(itemID, "keep", keep, "have", have, "missing", missing) end
         if info and missing > 0 and info.isPurchasable and not info.hasExtendedCost then
             local units = M.PlanPurchase(missing, info.stackCount, info.price, info.numAvailable, cash,
                 GetMerchantItemMaxStack(index))
@@ -96,7 +105,7 @@ function M:Plan()
                 local cost = info.price * count / max(info.stackCount, 1)
                 cash = cash - cost
                 entries[#entries + 1] = { index = index, link = GetMerchantItemLink(index) or info.name or "?",
-                    units = units, count = count, cost = cost }
+                    units = units, count = count, cost = cost, have = have, keep = keep }
             end
         end
     end
@@ -106,6 +115,7 @@ end
 -- The list changed: the Restock button (Modules/Merchant/VendorButton.lua, M.button) looks again.
 function M:ListChanged()
     if M.button then M.button:Update() end
+    refreshLists()
 end
 
 local function buy(entries)
@@ -120,7 +130,7 @@ end
 local function questionText(entries)
     local lines, total = { L.VENDOR_ASK_QUESTION }, 0
     for _, entry in ipairs(entries) do
-        lines[#lines + 1] = format(L.VENDOR_ASK_LINE, entry.count, entry.link)
+        lines[#lines + 1] = format(L.VENDOR_ASK_LINE, entry.count, entry.link, entry.have, entry.keep)
         total = total + entry.cost
     end
     lines[#lines + 1] = format(L.VENDOR_ASK_TOTAL, money(total))
@@ -155,7 +165,6 @@ local function onMerchantClosed() merchantOpen = false end
 
 -- The bags changed: the page's counts (while it's shown) and the Restock button follow.
 local function onBagsChanged()
-    if refreshPage and page:IsVisible() then refreshPage() end
     M:ListChanged()
 end
 
@@ -179,13 +188,13 @@ local function onModifiedClick(_, button)
     ns:Prompt(M, "VENDOR_AUTOBUY", ask, function(text)
         local n = ns.ItemList.ParseAmount(text)
         if not n then
-            ns:Print(L.VENDOR_PROMPT_BAD)
+            M:Reply(L.VENDOR_PROMPT_BAD)
             return
         end
         M.db.buy[itemID] = n > 0 and n or nil
         M.db.paused[itemID] = nil
-        ns:Print(n > 0 and format(L.VENDOR_KEEPING, n, name) or format(L.VENDOR_STOPPED, name))
-        if n > 0 and n < bundle then ns:Print(format(L.VENDOR_BELOW_BUNDLE, bundle)) end
+        M:Reply(n > 0 and format(L.VENDOR_KEEPING, n, name) or format(L.VENDOR_STOPPED, name))
+        if n > 0 and n < bundle then M:Reply(format(L.VENDOR_BELOW_BUNDLE, bundle)) end
         M:ListChanged()
     end, current and tostring(current) or "")
 end
@@ -198,15 +207,16 @@ local function addTooltipLine(mod, tooltip, data)
 end
 
 -- /ft autobuy: the list.
-M:AddCommand("autobuy", L.VENDOR_CMD_USAGE, L.VENDOR_CMD_DESC, function()
+M:AddCommand("autobuy", L.VENDOR_CMD_USAGE, L.VENDOR_CMD_DESC, function(rest)
+    if strtrim(rest or ""):lower() == L.VENDOR_CMD_WINDOW then return M.ToggleWindow() end
     local ids = {}
     for id in pairs(M.db.buy) do ids[#ids + 1] = id end
     if #ids == 0 then
-        ns:Print(L.VENDOR_LIST_EMPTY)
+        M:Reply(L.VENDOR_LIST_EMPTY)
         return
     end
     sort(ids)
-    ns:Print(L.VENDOR_LIST)
+    M:Reply(L.VENDOR_LIST)
     for _, id in ipairs(ids) do
         local name = C_Item.GetItemNameByID(id) or ("item:" .. id)
         ns:PrintLine(format(M.db.paused[id] and L.VENDOR_LIST_PAUSED or "  %d x %s", M.db.buy[id], name))
@@ -226,7 +236,8 @@ end
 
 -- Its Settings pane, under the options: the Autobuy list, to add items with their amounts to,
 -- change, pause and clear without a merchant, with how many are in the bags (Settings/Modules.lua
--- calls this when the pane is built, and redraws it with what it returns).
+-- calls this when the pane is built, and redraws it with what it returns). The Autobuy window
+-- (VendorWindow.lua) draws the same list with it.
 function M:BuildPage(stack)
     ns.Kit.AddHeaderRow(stack, L.VENDOR_LIST_HEADER)
     local function changed(fn)
@@ -235,8 +246,7 @@ function M:BuildPage(stack)
             M:ListChanged()
         end
     end
-    page = stack
-    refreshPage = ns.ItemList.Add(stack, {
+    local refresh = ns.ItemList.Add(stack, {
         owner = M,
         get = function() return M.db.buy end,
         add = changed(function(id, n) M.db.buy[id], M.db.paused[id] = n, nil end),
@@ -248,7 +258,8 @@ function M:BuildPage(stack)
         have = function(id) return C_Item.GetItemCount(id) end,
         addLabel = L.VENDOR_LIST_ADD, addTip = L.VENDOR_LIST_ADD_TIP, empty = L.VENDOR_LIST_EMPTY,
     })
-    return refreshPage
+    lists[#lists + 1] = { stack = stack, refresh = refresh }
+    return refresh
 end
 
 function M:DebugLine()

@@ -21,6 +21,7 @@ local MANA = 0 -- Enum.PowerType.Mana
 local M = ns:NewModule("FiveSecond", {
     title = L.FIVESEC_TITLE,
     category = "interface",
+    group = L.GROUP_COMBAT,
     description = L.FIVESEC_DESC,
     added = "1.9.3",
     defaults = { enabled = false },

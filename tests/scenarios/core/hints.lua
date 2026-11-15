@@ -68,23 +68,23 @@ end
 local function buttonOf(row)
     for _, c in ipairs(row._children or {}) do if c._kind == "Button" then return c end end
 end
-W.cvars.equipmentManager = "0"
-ns:OpenSettings("Fishing")
-local row = shownRow("equipmentManager")
-check(row ~= nil, "the Equipment Manager off: the Fishing page asks for it")
+W.cvars.SoftTargetIconGameObject = "0"
+ns:OpenSettings("ObjectNames")
+local row = shownRow("SoftTargetIconGameObject")
+check(row ~= nil, "object icons off: the Object Names page asks for them")
 local text = ""
 for i = #W.frames, 1, -1 do
     local f = W.frames[i]
     if f._kind == "FontString" and f:GetParent() == row then text = f._text end
 end
 check(text:find("|cffd4641c" .. L.REQUIRES_HEADER, 1, true) ~= nil, "under Plumber's orange line")
-check(text:find("- Set CVar |cffffd100equipmentManager|r to |cffffffff1|r", 1, true) ~= nil, "naming the CVar and its value")
+check(text:find("- Set CVar |cffffd100SoftTargetIconGameObject|r to |cffffffff1|r", 1, true) ~= nil, "naming the CVar and its value")
 buttonOf(row):Fire("OnClick")
-eq(W.cvars.equipmentManager, "1", "its button sets it")
+eq(W.cvars.SoftTargetIconGameObject, "1", "its button sets it")
 W.RunTimers()
 W.Advance(1)
-ns:OpenSettings("Fishing")
-eq(shownRow("equipmentManager"), nil, "then the request is gone")
+ns:OpenSettings("ObjectNames")
+eq(shownRow("SoftTargetIconGameObject"), nil, "then the request is gone")
 W.cvars.nameplateShowFriendlyNpcs = "0"
 ns:OpenSettings("LayerInfo")
 check(shownRow("nameplateShowFriendlyNpcs") ~= nil, "Layer Info asks for friendly NPC nameplates the same way")
@@ -119,14 +119,14 @@ ForeverPlusPlusAPI = { v1 = { IsModuleEnabled = function(name) return name == "P
     OpenSettings = function(name) opened = name; return true end } }
 ns:SetOption("ChatFade", "messages", true)
 W.loaded.ForeverPlusPlus = true
-C_SettingsUtil.OpenSettingsPanel(L.CATEGORY_ADDONS)
+ForeverCore.SettingsWindow.Open(L.CATEGORY_ADDONS)
 check(shownRow("Forever++") ~= nil, "a section titled Forever++, as a module's title")
 check(shownRow(L.ADDONS_SETTINGS_IN:format("Forever++")) ~= nil, "with a line under it, as a module's description")
 eq(shownRow("Baganator"), nil, "Baganator isn't loaded here: no section for it")
 eq(shownRow(L.DJSKIN_TITLE), nil, "nor for DungeonJournal, which isn't loaded")
 W.loaded.ForeverDungeonJournal = true
-W.categories[L.CATEGORY_ADDONS].frame:Hide()
-C_SettingsUtil.OpenSettingsPanel(L.CATEGORY_ADDONS) -- shown again, the page looks again
+ForeverCore.SettingsWindow.Page(L.CATEGORY_ADDONS).frame:Hide()
+ForeverCore.SettingsWindow.Open(L.CATEGORY_ADDONS) -- shown again, the page looks again
 check(shownRow(L.DJSKIN_TITLE) ~= nil, "loaded: its section shows, titled Dungeon Journal")
 check(shownRow(L.CHATFADE_ADVICE_KEEP_VISIBLE) ~= nil, "with Forever++'s Keep Chat Visible")
 check(shownRow(L.FULL_ADVICE_AUCTION) ~= nil, "Auctionator, installed")

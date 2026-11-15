@@ -22,9 +22,11 @@ local ipairs, type, next = ipairs, type, next
 local setmetatable, tremove = setmetatable, table.remove
 local CreateFrame, InCombatLockdown, C_Timer = CreateFrame, InCombatLockdown, C_Timer
 
--- Calls fn so an error in it is reported but doesn't stop the caller.
+-- Calls fn so an error in it is reported but doesn't stop the caller. The three ways to call
+-- code are named for what they add: SafeCall only isolates; ChargedCall (below) also charges the
+-- time to an owner in the Profiler; ChargedHandler also passes that owner first.
 local call = securecallfunction
-ns.Call = call
+ns.SafeCall = call
 
 -- The one global the suite adds: how member addons reach the shared namespace (Core/Members.lua).
 ForeverCore = ns
@@ -144,6 +146,24 @@ function ns.SetPoints(frame, points)
     for _, p in ipairs(points) do frame:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
 end
 
+-- fn(questID, info) for each quest in the quest log (C_QuestLog.GetInfo's info; headers left
+-- out). The log is read until it runs out, as Questie does, not up to GetNumQuestLogEntries():
+-- that counts the entries shown, so quests under a collapsed header would be missed.
+local MAX_LOG_INDEX = 75 -- past the last entry the log can have (Questie's QuestLogCache uses the same)
+function ns.EachLogQuest(fn)
+    for i = 1, MAX_LOG_INDEX do
+        local info = C_QuestLog.GetInfo(i)
+        if not info then return end
+        if not info.isHeader and info.questID then fn(info.questID, info) end
+    end
+end
+
+-- Copper as money, the game's way: gold, silver and copper with their coin icons, thousands
+-- grouped, rounded to whole copper. Every Forever addon's money goes through this.
+function ns.MoneyText(copper)
+    return GetMoneyString(math.floor(copper + 0.5), true)
+end
+
 -- "On" in green or "Off" in red.
 function ns:StateText(on)
     return on and ("|cff44dd44" .. L.ON .. "|r") or ("|cffdd4444" .. L.OFF .. "|r")
@@ -178,14 +198,14 @@ end
 
 local combatQueue = {} -- { owner, fn } in order
 
--- fn() now, or once combat ends: run as `owner`'s code (ns.RunCall), like everything else that
+-- fn() now, or once combat ends: run as `owner`'s code (ns.ChargedCall), like everything else that
 -- calls into a module. A module's queued work runs even if it turned off meanwhile (its
 -- OnDisable's cleanup is such work); a closure that only makes sense while on checks that.
 function ns:AfterCombat(owner, fn)
     if InCombatLockdown() then
         combatQueue[#combatQueue + 1] = { owner, fn }
     else
-        ns.RunCall(owner, "after combat", fn)
+        ns.ChargedCall(owner, "after combat", fn)
     end
 end
 
@@ -211,14 +231,14 @@ end
 local function run(owner, source, fn, ...)
     return timed(owner, source, fn, owner, ...)
 end
-ns.Run = run
+ns.ChargedHandler = run
 
 -- Runs fn(...) the same way, isolated and charged to owner, but without passing owner: for a
 -- callback that isn't the owner's method (a part's, an Edit Mode frame's, a command's).
-ns.RunCall = timed
+ns.ChargedCall = timed
 
 -- true and fn(...)'s results. Run through either of those, an error answers nothing, so
--- ns.RunCall(owner, source, ns.Succeeded, fn, ...) tells an error apart from a nil result.
+-- ns.ChargedCall(owner, source, ns.Succeeded, fn, ...) tells an error apart from a nil result.
 function ns.Succeeded(fn, ...) return true, fn(...) end
 
 -- Module news: fn(owner, event, ...) for a module's news that isn't a setting (Layer Info's
@@ -231,12 +251,12 @@ end
 function ns:Announce(event, ...)
     for i = 1, #newsListeners do
         local listener = newsListeners[i]
-        ns.Run(listener[1], "OnNews", listener[2], event, ...)
+        ns.ChargedHandler(listener[1], "OnNews", listener[2], event, ...)
     end
 end
 
 -- A one-off timer for code that isn't a module (the Settings pages): fn(owner) runs through
--- ns.Run, charged to owner. A module uses its own module:After, which stops when it turns off.
+-- ns.ChargedHandler, charged to owner. A module uses its own module:After, which stops when it turns off.
 function ns:After(owner, seconds, fn)
     C_Timer.After(seconds, function() run(owner, "timer", fn) end)
 end
@@ -311,7 +331,7 @@ local core = { name = "Core" }
 ns:On("PLAYER_REGEN_ENABLED", core, function()
     while #combatQueue > 0 do
         local entry = tremove(combatQueue, 1)
-        ns.RunCall(entry[1], "after combat", entry[2])
+        ns.ChargedCall(entry[1], "after combat", entry[2])
     end
 end)
 ns:On("PLAYER_ENTERING_WORLD", core, function()

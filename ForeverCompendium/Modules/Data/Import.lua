@@ -22,7 +22,7 @@ local ImportQuests = assert(ns.ImportQuests, "Import.lua loads after ImportQuest
 
 local M = ns:NewModule("Import", {
     title = L.IMPORT_TITLE,
-    category = "journal",
+    category = "data",
     description = L.IMPORT_DESC,
     added = "2.3.0",
     defaults = { enabled = true },
@@ -58,7 +58,7 @@ end
 
 function M.Run()
     local dbs = bestiaryDBs()
-    if not available() then return ns.Print(M, L.IMPORT_NONE) end
+    if not available() then return M:Reply(L.IMPORT_NONE) end
     local faction = UnitFactionGroup("player")
     local creatures, added, skipped, quests = 0, 0, 0, 0
     for _, db in ipairs(dbs) do
@@ -73,12 +73,11 @@ function M.Run()
                 skipped = skipped + 1
             end
         end
-        Book.Changed()
+        Book.ForgetIndex() -- the next database matches names against what this one added
         quests = quests + ImportQuests.Import(db)
     end
-    Book.Changed()
-    ns:Announce("BOOK_MERGED")
-    ns.Print(M, format(L.IMPORT_DONE, creatures, added, quests, skipped))
+    Book.Merged()
+    M:Reply(format(L.IMPORT_DONE, creatures, added, quests, skipped))
 end
 
 M.notice = {

@@ -9,6 +9,9 @@
       * Only Forever Core's Core.lua calls issecretvalue: everywhere else asks ns.Plain, the one
         way a secret value is turned away (a file that must tell a secret value from nil says so
         on that line with "secret apart from nil").
+      * Each file starts with its addon's name: a module's file then its title, any other file
+        its path in the addon ("Forever Tweaks - Lib/Chat.lua"), so a file is found from its
+        header and a moved file's header can't go stale unnoticed.
     Run by tests/run.lua (lua5.1 tests/run.lua lint), which passes its helpers in.
 ]]
 
@@ -16,6 +19,7 @@ local T = ...
 local check, finish, root = T.check, T.finish, T.root
 
 local ADDONS = { "ForeverCore", "ForeverTweaks", "ForeverCompendium" }
+local TITLES = { ForeverCore = "Forever Core", ForeverTweaks = "Forever Tweaks", ForeverCompendium = "Forever Compendium" }
 
 -- Every file an addon's TOC loads, as paths from the repository root.
 local function filesOf(addon)
@@ -45,13 +49,18 @@ for _, addon in ipairs(ADDONS) do
         local text = read(path)
         local lines = {}
         for line in (text .. "\n"):gmatch("(.-)\n") do lines[#lines + 1] = line end
+        local title, rest = (lines[2] or ""):match("^%s*(Forever %a+) %- (.-)%s*$")
+        check(title == TITLES[addon], path .. ": header names " .. tostring(title) .. ", not " .. TITLES[addon])
+        if not text:find("ns:NewModule(", 1, true) and not text:find("function ns:NewModule", 1, true) then
+            check(rest == path:sub(#addon + 2), path .. ": a file that isn't a module is headed with its path, not " .. tostring(rest))
+        end
         for i, line in ipairs(lines) do
             -- A top-level local (not a function): each of its names used on another line.
             local names = line:match("^local%s+([%w_,%s]+)%s*=")
             if names then
-                local rest = table.concat(lines, "\n", 1, i - 1) .. "\n" .. table.concat(lines, "\n", i + 1)
+                local others = table.concat(lines, "\n", 1, i - 1) .. "\n" .. table.concat(lines, "\n", i + 1)
                 for name in names:gmatch("[%w_]+") do
-                    if name ~= "_" then check(uses(rest, name), path .. ":" .. i .. ": local " .. name .. " is never used") end
+                    if name ~= "_" then check(uses(others, name), path .. ":" .. i .. ": local " .. name .. " is never used") end
                 end
             end
             local key = line:match("^L%.([%w_]+)%s*=")

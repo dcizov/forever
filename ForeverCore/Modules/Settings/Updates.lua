@@ -10,7 +10,9 @@
     What another player sends is only their word: a version more than one major release ahead of
     this one is ignored, one player's claim is told for this session only, and a version is kept
     for the account (so the notice comes again at each login until you update) once CONFIRMED
-    different players have said it.
+    different characters have said it. Characters, not players: the game names only the sender's
+    character, so two of one player's (two accounts at once) count twice; a message whose sender
+    can't be read doesn't count at all.
     Where to get it is the TOC's X-Website (the GitHub releases page once there is one), where a
     manager like WowUp, which does read GitHub releases, updates it; releases also go to
     CurseForge (.github/workflows/release.yml), for the CurseForge app.
@@ -67,10 +69,11 @@ end
 -- A newer version `sender` says is out.
 local function hearNewer(version, sender)
     if not plausible(version) then return M:Debug("ignored version", version, "from", tostring(sender)) end
+    if ns:IsNewer(version, heardNewest) then heardNewest = version end
+    if not sender then return end -- told for this session, but no one to count
     local senders = heardFrom[version] or {}
     heardFrom[version] = senders
-    senders[sender or "?"] = true
-    if ns:IsNewer(version, heardNewest) then heardNewest = version end
+    senders[sender] = true
     local count = 0
     for _ in pairs(senders) do count = count + 1 end
     if count >= CONFIRMED and ns:IsNewer(version, M.db.newest.version) then M.db.newest.version = version end
@@ -113,7 +116,7 @@ end
 local ANSWERED = { GUILD = true, PARTY = true, RAID = true, INSTANCE_CHAT = true }
 
 local function onMessage(_, _, prefix, text, channel, sender)
-    prefix, text = ns.Plain(prefix), ns.Plain(text)
+    prefix, text, sender = ns.Plain(prefix), ns.Plain(text), ns.Plain(sender)
     if prefix ~= PREFIX or type(text) ~= "string" then return end
     local version = match(text, "^v:([%d%.]+)$")
     if not version then return end

@@ -1,5 +1,6 @@
 --[[
-    Forever Tweaks - Item Tooltips: the auction house scan
+    Forever Tweaks - Modules/Tooltips/AuctionScan.lua
+    Item Tooltips: the auction house scan
     Scans the auction house when it opens (every SCAN_INTERVAL at most; /ft scan any time),
     keeping the lowest buyout of each item for Auction Prices (AuctionPrices.lua), with a line of
     text in the auction house's title bar while it runs. Any browse (the player's own searches too)
@@ -17,9 +18,10 @@ local L = ns.L
 
 local ipairs, pairs, format, time, floor = ipairs, pairs, string.format, time, math.floor
 local GetTime, CreateFrame = GetTime, CreateFrame
-local Parts = ns.ItemTooltipParts
-local M = Parts.module
-local packPrice, unpackPrice = Parts.PackPrice, Parts.UnpackPrice
+local Shared = assert(ns.ItemTooltipsShared, "AuctionScan.lua loads after ItemTooltips.lua")
+local M = assert(ns.modules.ItemTooltips, "AuctionScan.lua loads after ItemTooltips.lua")
+local Prices = assert(ns.AuctionPrices, "AuctionScan.lua loads after AuctionPrices.lua")
+local packPrice, unpackPrice = Prices.Pack, Prices.Unpack
 
 local SCAN_INTERVAL = 15 * 60 -- seconds between automatic scans, as Auctionator waits
 
@@ -82,7 +84,7 @@ local listed = {} -- itemIDs priced in the browse results shown now (any browse,
 -- Keeps the lowest price from browse results. Any browse (the player's own searches too) updates
 -- the prices, so they stay fresh between full scans.
 local function addResults(results)
-    local items = Parts.House().items
+    local items = Prices.House().items
     local now = time()
     for _, result in ipairs(results or {}) do
         local itemID = result.itemKey and result.itemKey.itemID
@@ -146,7 +148,7 @@ end
 -- interval before scanning again on its own.
 local function finishScan(text)
     local count = seenCount
-    Parts.House().scannedAt = time()
+    Prices.House().scannedAt = time()
     stopScan()
     showIndicator(format(text, count), false)
 end
@@ -295,7 +297,7 @@ local QUERIES = {
 
 -- With Auctionator's prices in use, ours aren't scanned; the saved ones stay for when it's off.
 local function startScan()
-    if scanning or not open or Parts.UsingAuctionator() then
+    if scanning or not open or Prices.UsingAuctionator() then
         return
     end
     scanning, sent, waiting = true, false, nil
@@ -306,13 +308,13 @@ end
 -- A moment after opening, so Blizzard's window has set itself up first: scan when it's due, or
 -- say how old the prices are.
 local function afterShow()
-    if not open or scanning or Parts.UsingAuctionator() then
+    if not open or scanning or Prices.UsingAuctionator() then
         return
     end
-    local age = time() - Parts.House().scannedAt
+    local age = time() - Prices.House().scannedAt
     if M.db.scanOnOpen and age >= SCAN_INTERVAL then
         startScan()
-    elseif Parts.House().scannedAt > 0 then
+    elseif Prices.House().scannedAt > 0 then
         showIndicator(format(L.AUCTIONPRICES_AGE, floor(age / 60)), false)
     end
 end
@@ -324,12 +326,12 @@ end
 
 -- /ft scan: scan now, whenever the last one was.
 local function scanCommand()
-    if not Parts.On("auction") then
-        ns.Print(M, L.AUCTIONPRICES_IS_OFF)
-    elseif Parts.UsingAuctionator() then
-        ns.Print(M, L.AUCTIONPRICES_USING_AUCTIONATOR)
+    if not Shared.IsShown("auction") then
+        M:Reply(L.AUCTIONPRICES_IS_OFF)
+    elseif Prices.UsingAuctionator() then
+        M:Reply(L.AUCTIONPRICES_USING_AUCTIONATOR)
     elseif not open then
-        ns.Print(M, L.AUCTIONPRICES_NOT_OPEN)
+        M:Reply(L.AUCTIONPRICES_NOT_OPEN)
     else
         startScan()
     end
@@ -354,7 +356,7 @@ local events = {
 -- Listens to the auction house only while the auction lines are on and use our own scans; the
 -- hooks do nothing unless a scan runs.
 local function update()
-    local on = Parts.On("auction") and not Parts.UsingAuctionator()
+    local on = Shared.IsShown("auction") and not Prices.UsingAuctionator()
     for event, fn in pairs(events) do
         if on then M:RegisterEvent(event, fn) else M:UnregisterEvent(event) end
     end
@@ -369,12 +371,12 @@ local function update()
     end
 end
 
-Parts.Add({
+M:AddPart({
     Enable = update,
     Disable = function()
         stopScan()
         hideIndicator()
         open = false
     end,
-    Changed = function(key) if key == "auction" or key == "auctionator" then update() end end,
+    Changed = function(_, key) if key == "auction" or key == "auctionator" then update() end end,
 })

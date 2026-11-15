@@ -59,7 +59,7 @@ end
 check(button:IsShown() and not inCompartment(), "on the minimap only, by default")
 button:Fire("OnEnter")
 button:Fire("OnClick", "LeftButton")
-eq(W.opened, ns.title, "a click opens Settings")
+eq(ForeverCore.SettingsWindow.Current(), ns.title, "a click opens Settings")
 ns:SetOption("MinimapButton", "where", "compartment")
 check(not button:IsShown() and inCompartment(), "in the addon menu instead")
 ns:SetOption("MinimapButton", "where", "both")
