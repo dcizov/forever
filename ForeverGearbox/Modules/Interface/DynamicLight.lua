@@ -66,6 +66,163 @@ DL.Defaults = {
 }
 
 local mod = assert(ns.Visuals, "DynamicLight.lua loads after Visuals.lua").module
+
+local LIGHT_KEYS = {
+    "day", "cityFade", "sunrise", "sunset", "twilight", "moon", "moonrise", "dusk", "midnight", "moonlit",
+    "indoorDay", "indoorNight", "cave", "dungeonCaves", "undercity", "capitalLift", "lights", "lightBoost",
+    "lightMax", "nightVision", "multBrightness", "multContrast", "multGamma", "gamma", "speed",
+}
+
+local REFERENCE = "reference"
+local PROFILE_CUSTOM = ""
+
+local function copyLevel(level)
+    return { level[1], level[2], level[3] }
+end
+
+local function copyValue(value)
+    if type(value) == "table" then return copyLevel(value) end
+    return value
+end
+
+local function withDefaults(own)
+    local values = {}
+    own = type(own) == "table" and own or {}
+    for _, key in ipairs(LIGHT_KEYS) do
+        local value = own[key]
+        if value == nil then value = DL.Defaults[key] end
+        values[key] = copyValue(value)
+    end
+    return values
+end
+
+local function copyZones(values)
+    local copied = {}
+    for mapID, value in pairs(type(values) == "table" and values or {}) do copied[mapID] = value end
+    return copied
+end
+
+local function copyZoneDay(values)
+    local copied = {}
+    for mapID, level in pairs(type(values) == "table" and values or {}) do
+        if type(level) == "table" then copied[mapID] = copyLevel(level) end
+    end
+    return copied
+end
+
+local function sameLevel(a, b)
+    return type(a) == "table" and type(b) == "table" and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
+end
+
+local function sameValues(a, b)
+    for _, key in ipairs(LIGHT_KEYS) do
+        local av, bv = a[key], b[key]
+        if type(av) == "table" or type(bv) == "table" then
+            if not sameLevel(av, bv) then return false end
+        elseif av ~= bv then
+            return false
+        end
+    end
+    return true
+end
+
+local function sameZones(a, b)
+    for mapID, value in pairs(a) do if b[mapID] ~= value then return false end end
+    for mapID, value in pairs(b) do if a[mapID] ~= value then return false end end
+    return true
+end
+
+local function sameZoneDay(a, b)
+    for mapID, level in pairs(a) do if not sameLevel(level, b[mapID]) then return false end end
+    for mapID, level in pairs(b) do if not sameLevel(level, a[mapID]) then return false end end
+    return true
+end
+
+DL["PROFILES"] = {
+    {
+        id = REFERENCE,
+        title = function() return L.DLIGHT_PROFILE_REFERENCE end,
+        tip = function() return L.DLIGHT_PROFILE_REFERENCE_TIP end,
+        values = function() return withDefaults() end,
+    },
+    {
+        id = "va-odyssey-g5-sdr",
+        title = function() return L.DLIGHT_PROFILE_VA_G5 end,
+        tip = function() return L.DLIGHT_PROFILE_VA_G5_TIP end,
+        values = function() return withDefaults({
+            dusk = { 34, 37, 0.93 }, midnight = { 22, 24, 0.88 }, moonlit = { 27, 28, 0.9 },
+            indoorNight = { 37, 47, 0.95 }, cave = { 20, 24, 0.86 }, undercity = { 33, 28, 0.91 },
+            capitalLift = 32, lightBoost = 4, lightMax = 8, nightVision = 4,
+            multBrightness = 110, multContrast = 95,
+        }) end,
+    },
+    {
+        id = "icc-neutral",
+        title = function() return L.DLIGHT_PROFILE_ICC_NEUTRAL end,
+        tip = function() return L.DLIGHT_PROFILE_ICC_NEUTRAL_TIP end,
+        values = function() return withDefaults({
+            dusk = { 32, 35, 1 }, midnight = { 18, 20, 1 }, moonlit = { 24, 25, 1 }, indoorDay = { 50, 50, 1 },
+            indoorNight = { 34, 45, 1 }, cave = { 16, 20, 1 }, undercity = { 30, 25, 1 }, gamma = true,
+        }) end,
+    },
+}
+
+local function builtInByID(id)
+    for _, profile in ipairs(DL["PROFILES"]) do
+        if profile.id == id then
+            return {
+                id = profile.id,
+                title = profile.title(),
+                tip = profile.tip(),
+                values = profile.values(),
+                builtin = true,
+            }
+        end
+    end
+end
+
+local function ownProfileByID(id)
+    local own = mod.db and mod.db.lightProfiles and mod.db.lightProfiles[id]
+    if type(own) ~= "table" then return end
+    local profile = {
+        id = id,
+        title = type(own.title) == "string" and own.title or L.DLIGHT_PROFILE_CUSTOM,
+        values = withDefaults(own.values),
+        builtin = false,
+    }
+    if type(own.zones) == "table" then profile.zones = copyZones(own.zones) end
+    if type(own.zoneDay) == "table" then profile.zoneDay = copyZoneDay(own.zoneDay) end
+    return profile
+end
+
+local function allProfiles()
+    local list = {}
+    for _, built in ipairs(DL["PROFILES"]) do list[#list + 1] = builtInByID(built.id) end
+    local own = mod.db and mod.db.lightProfiles or {}
+    local ownList = {}
+    for id in pairs(own) do
+        if not builtInByID(id) then ownList[#ownList + 1] = ownProfileByID(id) end
+    end
+    table.sort(ownList, function(a, b) return a.title < b.title end)
+    for _, profile in ipairs(ownList) do list[#list + 1] = profile end
+    return list
+end
+
+function DL.Profile(id)
+    return builtInByID(id) or ownProfileByID(id)
+end
+
+function DL.ProfileTitle(id)
+    local profile = DL.Profile(id)
+    return profile and profile.title or nil
+end
+
+function DL.ProfileList()
+    return allProfiles()
+end
+
+local suspendChanged
+
 local ticker
 local current, last = {}, {} -- what's eased to so far; what was last set (rounded)
 local target                 -- where the light is going, from the last look
@@ -89,7 +246,139 @@ function DL.SetValue(key, value)
     end
     -- Kept only when it isn't the default (false too: an `and/or` would drop it).
     if same then mod.db.light[key] = nil else mod.db.light[key] = value end
+    if not suspendChanged then DL.Changed() end
+end
+
+local function currentValues()
+    local values = {}
+    for _, key in ipairs(LIGHT_KEYS) do values[key] = copyValue(DL.Value(key)) end
+    return values
+end
+
+local function matchesProfile(profile)
+    if not profile then return false end
+    if not sameValues(currentValues(), profile.values) then return false end
+    if profile.zones and not sameZones(copyZones(mod.db.zones), profile.zones) then return false end
+    if profile.zoneDay and not sameZoneDay(copyZoneDay(mod.db.zoneDay), profile.zoneDay) then return false end
+    return true
+end
+
+local function selectedID()
+    return mod.db.lightProfile or PROFILE_CUSTOM
+end
+
+function DL.SelectedProfile()
+    local id = selectedID()
+    local selected = id ~= PROFILE_CUSTOM and DL.Profile(id) or nil
+    if selected and matchesProfile(selected) then return id end
+    for _, profile in ipairs(allProfiles()) do
+        if matchesProfile(profile) then return profile.id end
+    end
+    return PROFILE_CUSTOM
+end
+
+function DL.MarkCustom()
+    mod.db.lightProfile = PROFILE_CUSTOM
+end
+
+local function nextProfileID()
+    local own = mod.db.lightProfiles
+    local n = 1
+    while own["custom" .. n] do n = n + 1 end
+    return "custom" .. n
+end
+
+local function saveOwnProfile(id, title, values)
+    local own = mod.db.lightProfiles
+    own[id] = own[id] or {}
+    own[id].title = title
+    own[id].values = withDefaults(values)
+    if next(mod.db.zones) then own[id].zones = copyZones(mod.db.zones) else own[id].zones = nil end
+    if next(mod.db.zoneDay) then own[id].zoneDay = copyZoneDay(mod.db.zoneDay) else own[id].zoneDay = nil end
+end
+
+function DL.SaveCurrent(title)
+    title = (type(title) == "string" and title:gsub("^%s*(.-)%s*$", "%1") or "")
+    if title == "" then return nil end
+    local id = nextProfileID()
+    saveOwnProfile(id, title, currentValues())
+    mod.db.lightProfile = id
+    return id
+end
+
+function DL.Duplicate(id, title)
+    local source = DL.Profile(id)
+    title = (type(title) == "string" and title:gsub("^%s*(.-)%s*$", "%1") or "")
+    if not source or title == "" then return nil end
+    local newID = nextProfileID()
+    mod.db.lightProfiles[newID] = {
+        title = title,
+        values = withDefaults(source.values),
+        zones = source.zones and copyZones(source.zones) or nil,
+        zoneDay = source.zoneDay and copyZoneDay(source.zoneDay) or nil,
+    }
+    mod.db.lightProfile = newID
+    return newID
+end
+
+function DL.Rename(id, title)
+    local own = mod.db.lightProfiles[id]
+    title = (type(title) == "string" and title:gsub("^%s*(.-)%s*$", "%1") or "")
+    if type(own) ~= "table" or title == "" then return false end
+    own.title = title
+    return true
+end
+
+local function applyProfile(profile)
+    suspendChanged = true
+    for key in pairs(mod.db.light) do mod.db.light[key] = nil end
+    for _, key in ipairs(LIGHT_KEYS) do
+        DL.SetValue(key, copyValue(profile.values[key]))
+    end
+    suspendChanged = nil
+    if profile.zones then mod.db.zones = copyZones(profile.zones) end
+    if profile.zoneDay then mod.db.zoneDay = copyZoneDay(profile.zoneDay) end
+    mod.db.lightProfile = profile.id
     DL.Changed()
+end
+
+function DL.ApplyProfile(id)
+    local profile = DL.Profile(id)
+    if not profile then
+        profile = assert(DL.Profile(REFERENCE))
+        applyProfile(profile)
+        mod:Reply(L.DLIGHT_PROFILE_FALLBACK)
+        return profile.id
+    end
+    applyProfile(profile)
+    return profile.id
+end
+
+function DL.ResetToSelected()
+    local id = selectedID()
+    if id == PROFILE_CUSTOM then
+        DL.ApplyProfile(REFERENCE)
+        mod:Reply(L.DLIGHT_PROFILE_RESET_FALLBACK)
+        return REFERENCE
+    end
+    return DL.ApplyProfile(id)
+end
+
+function DL.Delete(id)
+    if builtInByID(id) then return false end
+    if not mod.db.lightProfiles[id] then
+        if selectedID() == id then
+            DL.ApplyProfile(REFERENCE)
+            mod:Reply(L.DLIGHT_PROFILE_FALLBACK)
+        end
+        return false
+    end
+    mod.db.lightProfiles[id] = nil
+    if selectedID() == id then
+        DL.ApplyProfile(REFERENCE)
+        mod:Reply(L.DLIGHT_PROFILE_DELETE_FALLBACK)
+    end
+    return true
 end
 
 ---------------------------------------------------------------------------

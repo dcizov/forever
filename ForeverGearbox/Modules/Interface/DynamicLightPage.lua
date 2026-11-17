@@ -89,6 +89,99 @@ LightPage.ShowNow = function() end -- its "Now" line drawn again (set once the p
 
 local function on() return Page.Enabled() end
 
+function LightPage.SetValue(key, value)
+    local light = DL()
+    light.MarkCustom()
+    light.SetValue(key, value)
+    Page.Redraw()
+end
+
+local function selectedProfile()
+    local id = DL().SelectedProfile()
+    if id == "" then return nil end
+    return id
+end
+
+local function addProfiles(stack)
+    local profiles = Kit.AddDropdownRow(stack, L.DLIGHT_PROFILE, function(root)
+        for _, profile in ipairs(DL().ProfileList()) do
+            local radio = root:CreateRadio(profile.title, function(id) return selectedProfile() == id end,
+                function(id)
+                    DL().ApplyProfile(id)
+                    Page.Redraw()
+                end, profile.id)
+            if profile.tip then radio:SetTitleAndTextTooltip(profile.title, profile.tip) end
+        end
+    end, function()
+        local id = selectedProfile()
+        return id and (DL().ProfileTitle(id) or L.VISUALS_PRESET_CUSTOM) or L.VISUALS_PRESET_CUSTOM
+    end, L.DLIGHT_PROFILE_TIP)
+    Page.AddRefresh(profiles.Refresh)
+
+    local _, reset = Kit.AddButtonRow(stack, L.DLIGHT_PROFILE_RESET, L.DLIGHT_PROFILE_RESET_BUTTON, function()
+        DL().ResetToSelected()
+        Page.Redraw()
+    end, L.DLIGHT_PROFILE_RESET_TIP)
+    Page.AddRefresh(function()
+        local id = selectedProfile()
+        reset:SetEnabled(id ~= nil)
+        reset:SetAlpha(id and 1 or 0.5)
+    end)
+
+    Kit.AddButtonRow(stack, L.DLIGHT_PROFILE_SAVE, L.DLIGHT_PROFILE_SAVE_BUTTON, function()
+        ns:Prompt(LightPage, "DLIGHT_PROFILE_SAVE", L.DLIGHT_PROFILE_SAVE_PROMPT, function(title)
+            local id = DL().SaveCurrent(title)
+            if id then
+                DL().ApplyProfile(id)
+                Page.Redraw()
+            end
+        end, L.DLIGHT_PROFILE_MY_SETTINGS)
+    end, L.DLIGHT_PROFILE_SAVE_TIP)
+
+    local _, duplicate, rename, delete = Kit.AddButtonsRow(stack, L.DLIGHT_PROFILE_ACTIONS, {
+        { L.DLIGHT_PROFILE_DUPLICATE, function()
+            local id = selectedProfile()
+            if not id then return end
+            local title = (DL().ProfileTitle(id) or L.DLIGHT_PROFILE_MY_SETTINGS) .. " " .. L.DLIGHT_PROFILE_COPY_SUFFIX
+            ns:Prompt(LightPage, "DLIGHT_PROFILE_DUPLICATE", L.DLIGHT_PROFILE_DUPLICATE_PROMPT, function(wanted)
+                local copy = DL().Duplicate(id, wanted)
+                if copy then
+                    DL().ApplyProfile(copy)
+                    Page.Redraw()
+                end
+            end, title)
+        end },
+        { L.DLIGHT_PROFILE_RENAME, function()
+            local id = selectedProfile()
+            if not id then return end
+            local title = DL().ProfileTitle(id)
+            ns:Prompt(LightPage, "DLIGHT_PROFILE_RENAME", L.DLIGHT_PROFILE_RENAME_PROMPT, function(wanted)
+                if DL().Rename(id, wanted) then Page.Redraw() end
+            end, title)
+        end },
+        { L.DLIGHT_PROFILE_DELETE, function()
+            local id = selectedProfile()
+            if not id then return end
+            local title = DL().ProfileTitle(id)
+            ns:Confirm(LightPage, "DLIGHT_PROFILE_DELETE", L.DLIGHT_PROFILE_DELETE_PROMPT, function()
+                DL().Delete(id)
+                Page.Redraw()
+            end, title)
+        end },
+    }, L.DLIGHT_PROFILE_ACTIONS_TIP)
+    Page.AddRefresh(function()
+        local id = selectedProfile()
+        local profile = id and DL().Profile(id) or nil
+        local own = profile and not profile.builtin
+        duplicate:SetEnabled(id ~= nil)
+        rename:SetEnabled(own and true or false)
+        delete:SetEnabled(own and true or false)
+        duplicate:SetAlpha(id and 1 or 0.5)
+        rename:SetAlpha(own and 1 or 0.5)
+        delete:SetAlpha(own and 1 or 0.5)
+    end)
+end
+
 -- A level's three rows (brightness, contrast, gamma): get() gives the level, set(level) keeps it.
 local function addLevel(stack, label, tip, get, set)
     for i, part in ipairs(PARTS) do
@@ -109,7 +202,7 @@ local function addRows(stack, spec)
     local light = DL()
     if spec.kind == "level" then
         addLevel(stack, spec.label, spec.tip, function() return light.Value(spec.key) end,
-            function(level) light.SetValue(spec.key, level) end)
+            function(level) LightPage.SetValue(spec.key, level) end)
         if spec.key == "day" then
             local row = Kit.AddButtonRow(stack, L.DLIGHT_DAY_YOURS, L.DLIGHT_DAY_YOURS_BUTTON, function()
                 light.DayFromYours()
@@ -119,15 +212,15 @@ local function addRows(stack, spec)
         end
     elseif spec.kind == "slider" then
         local row = Kit.AddSliderRow(stack, spec.label, spec, function() return light.Value(spec.key) end,
-            function(value) light.SetValue(spec.key, value) end, spec.tip)
+            function(value) LightPage.SetValue(spec.key, value) end, spec.tip)
         Page.AddRefresh(function() row.Refresh(on()) end)
     elseif spec.kind == "checkbox" then
         local row = Kit.AddCheckRow(stack, spec.label, function() return light.Value(spec.key) end,
-            function(checked) light.SetValue(spec.key, checked) end, spec.tip)
+            function(checked) LightPage.SetValue(spec.key, checked) end, spec.tip)
         Page.AddRefresh(row.Refresh)
     else
         local row = Kit.AddEditRow(stack, spec.label, function() return light.Value(spec.key) end,
-            function(text) light.SetValue(spec.key, text) end, spec.tip)
+            function(text) LightPage.SetValue(spec.key, text) end, spec.tip)
         Page.AddRefresh(row.Refresh)
     end
 end
@@ -222,6 +315,7 @@ end
 function LightPage.AddTo(stack)
     Kit.AddPartRow(stack, L.DLIGHT_TITLE, 40)
     Kit.AddTextRow(stack, L.DLIGHT_PAGE_INTRO, "GameFontHighlightSmall", 6)
+    addProfiles(stack)
     Page.AddOptionRow(stack, "dynamic")
     Page.AddOptionRow(stack, "dynamicStrength", Page.Enabled)
     Kit.AddHeaderRow(stack, L.VISUALS_SKY)

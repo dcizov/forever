@@ -21,7 +21,8 @@ W.cvarDefaults.groundEffectDensity = "40"
 
 -- Saved before 3.3.0: Loot Sparkles kept with the Outline Mode it set.
 ForeverGearboxDB = { version = 15, settings = {}, data = { Visuals = { values = {
-    outlineModeShowLootEffectWhenDisabled = 1, graphicsOutlineMode = 0, giQuality = 2 } } } }
+    outlineModeShowLootEffectWhenDisabled = 1, graphicsOutlineMode = 0, giQuality = 2 },
+    light = { midnight = { 21, 23, 0.89 } } } } }
 W.Strict()
 local ns = W.LoadAddon(root, "ForeverGearbox")
 -- Forever++ gives Settings its entry at its login: its pages, then the entry itself.
@@ -36,12 +37,43 @@ login()
 ns:SetEnabled("ForeverPlusPlus", true)
 W.RunTimers()
 local V = ns.Visuals
+local DL = ns.DynamicLight
 local L = ns.L
+
+eq(V.module.db.lightProfile, "my-settings", "migration keeps pre-profile Dynamic Light values as My Settings")
+check(type(V.module.db.lightProfiles["my-settings"]) == "table", "migration creates My Settings once")
+eq(V.module.db.lightProfiles["my-settings"].values.midnight[1], 21, "My Settings keeps the tuned value")
+
+DL.ApplyProfile("va-odyssey-g5-sdr")
+eq(V.module.db.lightProfile, "va-odyssey-g5-sdr", "a built-in profile can be selected")
+eq(V.module.db.light.midnight[1], 22, "built-in apply writes expected Dynamic Light keys")
+eq(V.module.db.light.multContrast, 95, "built-in apply writes expected scalar values")
+
+V.module.db.lightProfiles.sparse = { title = "Sparse", values = { midnight = { 26, 27, 0.92 } } }
+DL.ApplyProfile("sparse")
+eq(DL.Value("midnight")[1], 26, "a profile can override one key")
+eq(V.module.db.light.dusk, nil, "a key absent from the profile does not leak from the previous profile")
+DL.ApplyProfile("reference")
+eq(V.module.db.light.midnight, nil, "switching back to Reference clears previous profile overrides")
+
+ns.DynamicLightPage.SetValue("midnight", { 19, 21, 0.85 })
+eq(V.module.db.lightProfile, "", "a manual page change marks the profile selection Custom")
+DL.ApplyProfile("reference")
+
+local ownProfile = DL.SaveCurrent("Temp Profile")
+DL.ApplyProfile(ownProfile)
+DL.Delete(ownProfile)
+eq(V.module.db.lightProfile, "reference", "deleting the selected profile falls back to Reference")
+eq(DL.Value("day")[1], 50, "fallback keeps valid Dynamic Light values")
 
 eq(L.VISUALS_SKY, "Sky", "the sky section is named Sky")
 eq(L.VISUALS_SKY_ENABLE, "Sky Gradient", "the sky toggle has its own name")
+eq(L.VISUALS_SKY_HIDE, "Fade Indoors or While Flying", "the sky hide row names indoors first")
+check(L.VISUALS_SKY_HIDE_TIP:find("client reports flying", 1, true) ~= nil,
+    "the sky hide tip explains flying depends on client reporting")
 eq(L.VISUALS_SKY_DYNAMIC_TIP:match("Dynamic Light"), "Dynamic Light", "the hybrid mapping explains the time curve source")
 eq(type(V.module.defaults.skyGradientIntensity), "number", "there is a dedicated sky gradient intensity value")
+eq(type(V.module.defaults.skyColorDarkness), "number", "there is a dedicated sky color darkness value")
 eq(V.module.defaults.skyNightOnly, true, "the night-only gate defaults on")
 
 local function pageNames()
@@ -97,7 +129,6 @@ check(next(V.module.db.values) == nil, "nothing kept to put back")
 
 -- Dynamic Light: by day its own Day level at once (as the original: a change you see as you
 -- turn it on), whatever your own Brightness and Contrast.
-local DL = ns.DynamicLight
 W.gameTime = { 12, 0 }
 local bright, contrast
 for _, def in ipairs(V.SETTINGS) do
@@ -290,11 +321,60 @@ check(skyTexture._gradient and skyTexture._gradient[1] == "VERTICAL", "the sky u
 local topAlpha = skyTexture._gradient[2].a or skyTexture._gradient[2][4]
 local bottomAlpha = skyTexture._gradient[3].a or skyTexture._gradient[3][4]
 check(topAlpha and bottomAlpha and topAlpha ~= bottomAlpha, "the top and bottom gradient alphas differ")
+
+local function gradientTopAlpha()
+    local g = skyTexture and skyTexture._gradient
+    local top = g and g[2]
+    return top and (top.a or top[4]) or 0
+end
+
+local function gradientTopColor()
+    local g = skyTexture and skyTexture._gradient
+    local top = g and g[2]
+    if not top then return 0, 0, 0 end
+    return top.r or top[1] or 0, top.g or top[2] or 0, top.b or top[3] or 0
+end
+
+-- Hidden by day, visible by night again without needing an explicit toggle.
+ns:SetOption("Visuals", "skyNightOnly", true)
+ns:SetOption("Visuals", "skyHideFlyingOrIndoors", false)
+W.gameTime = { 12, 0 }
+W.Advance(2)
+check(not sky:IsShown(), "day with Night Only: sky fades out and hides")
+W.gameTime = { 0, 0 }
+W.Advance(2)
+check(sky:IsShown(), "night after day: sky fades in again")
+check(gradientTopAlpha() > 0, "night: gradient alpha is above zero")
+
+-- Indoors event hides it promptly, then outdoors shows it again.
+ns:SetOption("Visuals", "skyHideFlyingOrIndoors", true)
+W.indoors = true
+W.Fire("ZONE_CHANGED_INDOORS")
+W.Advance(1)
+check(not sky:IsShown(), "indoors: sky fades out")
+W.indoors = false
+W.Fire("ZONE_CHANGED_INDOORS")
+W.Advance(1)
+check(sky:IsShown(), "outdoors: sky fades back in")
+
+-- Color darkness darkens the tint independently from alpha.
+ns:SetOption("Visuals", "skyNightOnly", false)
+ns:SetOption("Visuals", "skyDynamicTime", false)
+ns:SetOption("Visuals", "skyGradientIntensity", 1)
+ns:SetOption("Visuals", "skyColorDarkness", 0)
+W.Advance(1)
+local r0, g0, b0 = gradientTopColor()
+ns:SetOption("Visuals", "skyColorDarkness", 1)
+W.Advance(1)
+local r1, g1, b1 = gradientTopColor()
+check(r1 < r0 and g1 < g0 and b1 < b0, "Color Darkness darkens the gradient tint")
+
 ns:SetOption("Visuals", "skyEnabled", false)
 check(shownRows() < skyShown, "sky off: the detail rows hide")
 check(shownRows() >= 1, "sky off: the toggle stays visible")
 ns:SetOption("Visuals", "skyEnabled", true)
 check(shownRows() == skyShown, "sky on: the detail rows come back")
+ns:SetOption("Visuals", "skyDynamicTime", true)
 W.gameTime = { 6, 30 }
 local before = V.SkyAlpha()
 V.module.db.skySunriseHour = 10

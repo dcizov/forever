@@ -307,3 +307,65 @@ ns:Migrate(21, function(db)
     visuals.skyGradientAlpha = nil
     if visuals.skyNightOnly == nil then visuals.skyNightOnly = true end
 end)
+
+local LIGHT_DEFAULTS_22 = {
+    day = { 50, 50, 1 },
+    cityFade = 30,
+    sunrise = 6, sunset = 20, twilight = 1.5, moon = true, moonrise = 22,
+    dusk = { 32, 35, 0.92 }, midnight = { 18, 20, 0.84 }, moonlit = { 24, 25, 0.88 },
+    indoorDay = { 50, 50, 1 }, indoorNight = { 34, 45, 0.94 }, cave = { 16, 20, 0.82 }, dungeonCaves = false,
+    undercity = { 30, 25, 0.9 }, capitalLift = 30,
+    lights = "", lightBoost = 5, lightMax = 10, nightVision = 5,
+    multBrightness = 100, multContrast = 100, multGamma = 100, gamma = true, speed = 100,
+}
+
+local function copyLevel(level)
+    return { level[1], level[2], level[3] }
+end
+
+local function normalizeProfileValues(own)
+    own = type(own) == "table" and own or {}
+    local values = {}
+    for key, default in pairs(LIGHT_DEFAULTS_22) do
+        local value = own[key]
+        if value == nil then
+            values[key] = type(default) == "table" and copyLevel(default) or default
+        elseif type(default) == "table" and type(value) == "table" then
+            values[key] = { tonumber(value[1]) or default[1], tonumber(value[2]) or default[2], tonumber(value[3]) or default[3] }
+        elseif type(value) == type(default) then
+            values[key] = value
+        else
+            values[key] = type(default) == "table" and copyLevel(default) or default
+        end
+    end
+    return values
+end
+
+local function mySettingsID(profiles)
+    local id, i = "my-settings", 2
+    while profiles[id] do
+        id = "my-settings-" .. i
+        i = i + 1
+    end
+    return id
+end
+
+-- 3.3.0 Dynamic Light profiles: if someone had hand-tuned values before profiles existed,
+-- keep them as "My Settings" and select it once.
+ns:Migrate(22, function(db)
+    local settings = type(db.settings) == "table" and db.settings.Visuals
+    local data = type(db.data) == "table" and db.data.Visuals
+    if type(data) ~= "table" then return end
+    if type(data.lightProfiles) ~= "table" then data.lightProfiles = {} end
+    if type(settings) ~= "table" then
+        settings = {}
+        db.settings = db.settings or {}
+        db.settings.Visuals = settings
+    end
+    if type(settings.lightProfile) ~= "string" then settings.lightProfile = "" end
+    if settings.lightProfile ~= "" then return end
+    if type(data.light) ~= "table" or not next(data.light) then return end
+    local id = mySettingsID(data.lightProfiles)
+    data.lightProfiles[id] = { title = "My Settings", values = normalizeProfileValues(data.light) }
+    settings.lightProfile = id
+end)

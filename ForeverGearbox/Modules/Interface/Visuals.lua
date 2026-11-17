@@ -128,13 +128,15 @@ local M = ns:NewModule("Visuals", {
         enabled = false, protect = true, dynamic = false, dynamicStrength = 100,
         skyEnabled = true, skyDynamicTime = true, skyNightOnly = true, skyHideFlyingOrIndoors = true,
         skyGradientHeight = 250, skyDayAlpha = 0.25, skyNightAlpha = 0.5,
-        skyGradientIntensity = 0.65, skySunriseHour = 6, skySunsetHour = 20, skyTwilightHours = 1,
+        skyGradientIntensity = 0.65, skyColorDarkness = 0, skySunriseHour = 6, skySunsetHour = 20, skyTwilightHours = 1,
         values = {},   -- data: cvar -> the value you set here (Protect Values puts it back)
         original = {}, -- data: cvar -> its value when the module first ran (the Before preset)
         preset = "",   -- data: the preset last applied ("" once a value is changed by hand)
         zones = {},    -- data: mapID -> Dynamic Light's strength there, percent
         zoneDay = {},  -- data: mapID -> Dynamic Light's Day light there (a level), when it has its own
         light = {},    -- data: Dynamic Light's values you changed (DynamicLight.Defaults has the rest)
+        lightProfile = "", -- data: Dynamic Light profile selected ("" when values are custom)
+        lightProfiles = {}, -- data: Dynamic Light profiles made by the player (built-ins stay in code)
     },
     options = {
         { key = "protect", type = "checkbox", label = L.VISUALS_PROTECT, tooltip = L.VISUALS_PROTECT_TIP },
@@ -154,6 +156,8 @@ local M = ns:NewModule("Visuals", {
           min = 0, max = 1, step = 0.05, format = "%.2f" },
         { key = "skyGradientIntensity", type = "slider", label = L.VISUALS_SKY_GRADIENT, tooltip = L.VISUALS_SKY_GRADIENT_TIP,
           min = 0, max = 1, step = 0.05, format = "%.2f" },
+                { key = "skyColorDarkness", type = "slider", label = L.VISUALS_SKY_COLOR, tooltip = L.VISUALS_SKY_COLOR_TIP,
+                    min = 0, max = 1, step = 0.05, format = "%.2f" },
         { key = "skySunriseHour", type = "slider", label = L.VISUALS_SKY_SUNRISE, tooltip = L.VISUALS_SKY_SUNRISE_TIP,
           min = 0, max = 24, step = 0.5, format = "%.1f h" },
         { key = "skySunsetHour", type = "slider", label = L.VISUALS_SKY_SUNSET, tooltip = L.VISUALS_SKY_SUNSET_TIP,
@@ -181,9 +185,40 @@ function Visuals.Has(cvar) return C_CVar.GetCVar(cvar) ~= nil end
 
 local skyFrame
 local skyTexture
-local skyFade = 0
-local skyFadeTarget = 0
+local skyAlpha = 0
+local skyTargetAlpha = 0
+local skyTicker
+local skyFadeTicker
+local skySupported
+local skyWarned
+local SKY_TICK = 1
+local SKY_FADE_TICK = 0.05
 local SKY_FADE_SPEED = 4
+
+local function clamp(value, low, high)
+    if value < low then return low end
+    if value > high then return high end
+    return value
+end
+
+local function skyHiddenByPlace()
+    local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
+    local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
+    return M.db.skyHideFlyingOrIndoors and (fly or inside)
+end
+
+local function skyWarnUnavailable()
+    if skyWarned then return end
+    skyWarned = true
+    M:Reply(L.VISUALS_SKY_UNAVAILABLE)
+end
+
+local function skyCanRender()
+    if skySupported ~= nil then return skySupported end
+    skySupported = skyTexture and (type(skyTexture.SetGradient) == "function" or type(skyTexture.SetGradientAlpha) == "function")
+    if not skySupported then skyWarnUnavailable() end
+    return skySupported
+end
 
 local function skyPhase(now)
     local db = M.db
@@ -237,20 +272,22 @@ end
 function Visuals.SkyAlpha()
     local db = M.db
     if not db.skyEnabled then return 0 end
-    local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
-    local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
-    if db.skyHideFlyingOrIndoors and (fly or inside) then return 0 end
+    if skyHiddenByPlace() then return 0 end
 
-    local intensity = db.skyGradientIntensity or 0.65
+    local intensity = clamp(db.skyGradientIntensity or 0.65, 0, 1)
+    local strength = intensity * (0.55 + intensity * 0.45)
     local alpha = db.skyDynamicTime and skyTimeAlpha() or 1
-    return alpha * (db.skyNightOnly and skyNightGate() or 1) * intensity
+    return clamp(alpha * (db.skyNightOnly and skyNightGate() or 1) * strength, 0, 1)
 end
 
 local function skySetGradient(alpha)
     if not skyTexture then return end
-    local topR, topG, topB = 0.35, 0.48, 0.72
-    local bottomR, bottomG, bottomB = 0.02, 0.06, 0.16
-    local topAlpha = alpha
+    local darkness = clamp((M.db and M.db.skyColorDarkness) or 0, 0, 1)
+    local topMul = 1 - darkness * 0.75
+    local bottomMul = 1 - darkness * 0.55
+    local topR, topG, topB = 0.35 * topMul, 0.48 * topMul, 0.72 * topMul
+    local bottomR, bottomG, bottomB = 0.02 * bottomMul, 0.06 * bottomMul, 0.16 * bottomMul
+    local topAlpha = clamp(alpha * (1 + darkness * 0.25), 0, 1)
     local bottomAlpha = 0
     if type(skyTexture.SetGradient) == "function" and rawget(_G, "CreateColor") then
         local top = _G.CreateColor(topR, topG, topB, topAlpha)
@@ -265,29 +302,47 @@ local function skySetGradient(alpha)
     skyTexture:SetColorTexture(bottomR, bottomG, bottomB, alpha)
 end
 
-function Visuals.UpdateSky()
-    if not skyFrame or not skyTexture or not M.db then return end
-    skyFrame:SetHeight(M.db.skyGradientHeight or 250)
-
-    local fadeTarget = 1
-    if not M.db.skyEnabled then
-        fadeTarget = 0
+local function skyStepFade()
+    if not skyFrame then return end
+    if math.abs(skyAlpha - skyTargetAlpha) <= 0.005 then
+        if skyAlpha ~= skyTargetAlpha then
+            skyAlpha = skyTargetAlpha
+            skySetGradient(skyAlpha)
+        end
     else
-        local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
-        local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
-        if M.db.skyHideFlyingOrIndoors and (fly or inside) then fadeTarget = 0 end
+        local step = SKY_FADE_TICK * SKY_FADE_SPEED
+        if skyAlpha < skyTargetAlpha then
+            skyAlpha = math.min(skyTargetAlpha, skyAlpha + step)
+        else
+            skyAlpha = math.max(skyTargetAlpha, skyAlpha - step)
+        end
+        skySetGradient(skyAlpha)
     end
-    skyFadeTarget = fadeTarget
-    if fadeTarget > 0 then
+    if skyAlpha <= 0.001 and skyTargetAlpha <= 0.001 then
+        skyFrame:Hide()
+    elseif not skyFrame:IsShown() then
         skyFrame:Show()
     end
+end
 
-    local alpha = Visuals.SkyAlpha()
-    if fadeTarget <= 0 or alpha <= 0 then
-        skySetGradient(0)
+function Visuals.UpdateSky()
+    if not skyFrame or not skyTexture or not M.db then return end
+    if not skyCanRender() then
+        skyTargetAlpha = 0
+        skyAlpha = 0
+        skyFrame:Hide()
         return
     end
-    skySetGradient(alpha)
+    skyFrame:SetHeight(M.db.skyGradientHeight or 250)
+
+    skyTargetAlpha = Visuals.SkyAlpha()
+    if skyTargetAlpha > 0 and not skyFrame:IsShown() then
+        skyFrame:Show()
+    end
+    if math.abs(skyAlpha - skyTargetAlpha) <= 0.005 then
+        skySetGradient(skyAlpha)
+    end
+    skyStepFade()
 end
 
 function Visuals.StartSky()
@@ -302,39 +357,29 @@ function Visuals.StartSky()
         skyTexture = skyFrame:CreateTexture(nil, "BACKGROUND")
         skyTexture:SetAllPoints()
         skyTexture:SetColorTexture(0, 0, 0, 0)
-        local tick = 0
-        skyFrame:SetScript("OnUpdate", function(self, elapsed)
-            tick = tick + elapsed
-            if tick < 1 then return end
-            tick = 0
-            if not M.db or not M.db.skyEnabled or not self:IsShown() then return end
-            Visuals.UpdateSky()
-            if math.abs(skyFade - skyFadeTarget) > 0.005 then
-                if skyFade < skyFadeTarget then
-                    skyFade = math.min(skyFadeTarget, skyFade + elapsed * SKY_FADE_SPEED)
-                else
-                    skyFade = math.max(skyFadeTarget, skyFade - elapsed * SKY_FADE_SPEED)
-                end
-                self:SetAlpha(skyFade)
-            elseif skyFade ~= skyFadeTarget then
-                skyFade = skyFadeTarget
-                self:SetAlpha(skyFade)
-            end
-            if skyFadeTarget <= 0.01 and skyFade <= 0.01 then self:Hide() end
-            if skyFadeTarget > 0 and not self:IsShown() then self:Show() end
-        end)
-        skyFade, skyFadeTarget = 0, 0
-        skyFrame:SetAlpha(0)
         skyFrame:Hide()
     end
+    skySupported = nil
+    if not skyCanRender() then return end
+    if not M:IsPending(skyTicker) then
+        skyTicker = M:NewTicker(SKY_TICK, Visuals.UpdateSky)
+    end
+    if not M:IsPending(skyFadeTicker) then
+        skyFadeTicker = M:NewTicker(SKY_FADE_TICK, skyStepFade)
+    end
+    skyAlpha, skyTargetAlpha = 0, 0
+    skySetGradient(0)
     Visuals.UpdateSky()
 end
 
 function Visuals.StopSky()
     if skyFrame then
-        skyFadeTarget = 0
+        skyTargetAlpha = 0
+        skyAlpha = 0
+        if M:IsPending(skyTicker) then M:CancelTimer(skyTicker) skyTicker = nil end
+        if M:IsPending(skyFadeTicker) then M:CancelTimer(skyFadeTicker) skyFadeTicker = nil end
+        skySetGradient(0)
         skyFrame:Hide()
-        skyFrame:SetAlpha(0)
     end
 end
 
@@ -460,6 +505,9 @@ function M:OnEnable()
             Visuals.SetCVar(cvar, tonumber(wanted))
         end
     end)
+    self:RegisterEvent("ZONE_CHANGED", Visuals.UpdateSky)
+    self:RegisterEvent("ZONE_CHANGED_NEW_AREA", Visuals.UpdateSky)
+    self:RegisterEvent("ZONE_CHANGED_INDOORS", Visuals.UpdateSky)
     reapplyNow()
     ns.VisualsPage.Show(true)
     ns.DynamicLight.Start()
@@ -480,6 +528,7 @@ function M:OnSettingChanged(key)
     elseif key == "protect" then
         reapplyNow()
     elseif key:match("^sky") then
+        if key == "skyEnabled" and self.db.skyEnabled and not skyCanRender() then skyWarnUnavailable() end
         Visuals.UpdateSky()
     end
     if Visuals.Redraw then Visuals.Redraw() end
