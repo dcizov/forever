@@ -247,12 +247,17 @@ function Visuals.SkyAlpha()
     return alpha * (db.skyGradientIntensity or 0.65)
 end
 
--- A vertical wash from the top colour to near-black, dimmer at the top: Forever has
--- Texture:SetGradient, taking a colour mixin at each end.
+-- A night-blue veil over the top of the screen: full at the top edge, gone by the gradient's
+-- bottom, so it darkens the sky and the top of the world without ending on a line across it (a
+-- band that stops at some alpha is a visible edge through every tree and roof). Forever's
+-- SetGradient takes the colour at the bottom first and the one at the top second: seen in game,
+-- where the band's bottom edge showed the first colour.
+local SKY_VEIL = { 0.02, 0.06, 0.16 }
+
 local function skySetGradient(alpha)
     if not skyTexture then return end
-    skyTexture:SetGradient("VERTICAL", CreateColor(0.35, 0.48, 0.72, alpha * 0.9),
-        CreateColor(0.02, 0.06, 0.16, alpha))
+    local r, g, b = SKY_VEIL[1], SKY_VEIL[2], SKY_VEIL[3]
+    skyTexture:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, alpha))
 end
 
 -- The clock moved on: the sky's fade with the time of day (a minute is close enough).

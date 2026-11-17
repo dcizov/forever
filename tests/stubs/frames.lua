@@ -177,7 +177,8 @@ function Frame:CreateFontString(name) return W.NewFrame("FontString", name, self
 function Frame:GetEditBox() return self.EditBox end
 function Frame:SetupMenu(fn) self._menu = fn end
 function Frame:SetColorTexture(r, g, b, a) self._color = { r, g, b, a } end
--- Texture:SetGradient (SimpleTextureBaseAPI): the orientation and a colour mixin at each end.
+-- Texture:SetGradient (SimpleTextureBaseAPI): the orientation and a colour mixin at each end,
+-- the first at the bottom in Forever (see the sky gradient in Modules/Interface/Visuals.lua).
 function Frame:SetGradient(orientation, minColor, maxColor)
     self._gradient = { orientation, minColor, maxColor }
 end
