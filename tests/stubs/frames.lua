@@ -177,6 +177,12 @@ function Frame:CreateFontString(name) return W.NewFrame("FontString", name, self
 function Frame:GetEditBox() return self.EditBox end
 function Frame:SetupMenu(fn) self._menu = fn end
 function Frame:SetColorTexture(r, g, b, a) self._color = { r, g, b, a } end
+function Frame:SetGradient(kind, top, bottom)
+    self._gradient = { kind, top, bottom }
+end
+function Frame:SetGradientAlpha(kind, r1, g1, b1, a1, r2, g2, b2, a2)
+    self._gradient = { kind, { r1, g1, b1, a1 }, { r2, g2, b2, a2 } }
+end
 function Frame:SetAlpha(a) self._alpha = a end
 function Frame:GetAlpha() return self._alpha or 1 end
 function Frame:EnableMouse(on) self._mouse = on and true or false end

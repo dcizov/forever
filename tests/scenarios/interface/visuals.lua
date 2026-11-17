@@ -39,7 +39,7 @@ local V = ns.Visuals
 local L = ns.L
 
 eq(L.VISUALS_SKY, "Sky", "the sky section is named Sky")
-eq(L.VISUALS_SKY_ENABLE, "Sky", "the sky toggle is named Sky")
+eq(L.VISUALS_SKY_ENABLE, "Sky Gradient", "the sky toggle has its own name")
 eq(L.VISUALS_SKY_DYNAMIC_TIP:match("Dynamic Light"), "Dynamic Light", "the hybrid mapping explains the time curve source")
 eq(type(V.module.defaults.skyGradientIntensity), "number", "there is a dedicated sky gradient intensity value")
 eq(V.module.defaults.skyNightOnly, true, "the night-only gate defaults on")
@@ -281,11 +281,29 @@ check(#stack.entries >= 40, "then Dynamic Light across the page")
 local offRows = shownRows()
 -- The Sky toggle stays visible while the rest of the sky rows are hidden.
 local skyShown = shownRows()
+V.module.db.skyNightOnly = false
+V.UpdateSky()
+local sky = _G.ForeverGearboxVisualsSky
+local skyTexture = sky and sky._children and sky._children[1]
+check(sky and skyTexture, "the sky frame and texture exist")
+check(skyTexture._gradient and skyTexture._gradient[1] == "VERTICAL", "the sky uses a vertical gradient")
+local topAlpha = skyTexture._gradient[2].a or skyTexture._gradient[2][4]
+local bottomAlpha = skyTexture._gradient[3].a or skyTexture._gradient[3][4]
+check(topAlpha and bottomAlpha and topAlpha ~= bottomAlpha, "the top and bottom gradient alphas differ")
 ns:SetOption("Visuals", "skyEnabled", false)
 check(shownRows() < skyShown, "sky off: the detail rows hide")
 check(shownRows() >= 1, "sky off: the toggle stays visible")
 ns:SetOption("Visuals", "skyEnabled", true)
 check(shownRows() == skyShown, "sky on: the detail rows come back")
+W.gameTime = { 6, 30 }
+local before = V.SkyAlpha()
+V.module.db.skySunriseHour = 10
+check(V.SkyAlpha() ~= before, "the sky reads its own sunrise time")
+ns:SetOption("Visuals", "dynamic", true)
+local afterDynamic = V.SkyAlpha()
+V.module.db.skySunriseHour = 6
+check(V.SkyAlpha() ~= afterDynamic, "the sky keeps its own clock even while Dynamic Light is on")
+ns:SetOption("Visuals", "dynamic", false)
 ns:SetOption("Visuals", "dynamic", true)
 check(shownRows() > offRows + 30, "Dynamic Light on: its sections show")
 local now

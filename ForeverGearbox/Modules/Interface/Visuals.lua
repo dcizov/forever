@@ -185,68 +185,53 @@ local skyFade = 0
 local skyFadeTarget = 0
 local SKY_FADE_SPEED = 4
 
-local function skyTimeAlpha()
+local function skyPhase(now)
     local db = M.db
-    local light = ns.DynamicLight
-    -- Hybrid: Dynamic Light sets the time curve (sunrise, sunset, twilight), while the sky's
-    -- Day Alpha and Night Alpha remain independent ramp endpoints that can be tuned separately.
-    local sunrise = light and light.Value and light.Value("sunrise") or (db.skySunriseHour or 6)
-    local sunset = light and light.Value and light.Value("sunset") or (db.skySunsetHour or 20)
-    local twilight = light and light.Value and light.Value("twilight") or (db.skyTwilightHours or 1)
-    local dayAlpha = db.skyDayAlpha or 0.25
-    local nightAlpha = db.skyNightAlpha or 0.5
-
-    local hour, minute = GetGameTime()
-    local now = (hour or 12) + ((minute or 0) / 60)
-
+    local sunrise = db.skySunriseHour or 6
+    local sunset = db.skySunsetHour or 20
+    local twilight = db.skyTwilightHours or 1
     local dawnStart = sunrise - twilight
     local dawnEnd = sunrise + twilight
     local duskStart = sunset - twilight
     local duskEnd = sunset + twilight
 
-    if now >= dawnEnd and now <= duskStart then
-        return dayAlpha
-    elseif now > dawnStart and now < dawnEnd then
+    if now >= dawnEnd and now <= duskStart then return "day", 0 end
+    if now > dawnStart and now < dawnEnd then
         local t = (now - dawnStart) / (dawnEnd - dawnStart)
-        return nightAlpha + (dayAlpha - nightAlpha) * t
-    elseif now > duskStart and now < duskEnd then
-        local t = (now - duskStart) / (duskEnd - duskStart)
-        return dayAlpha + (nightAlpha - dayAlpha) * t
+        return "dawn", t
     end
+    if now > duskStart and now < duskEnd then
+        local t = (now - duskStart) / (duskEnd - duskStart)
+        return "dusk", t
+    end
+    return "night", 1
+end
+
+local function skyTimeAlpha()
+    local db = M.db
+    local hour, minute = GetGameTime()
+    local now = (hour or 12) + ((minute or 0) / 60)
+    local phase, t = skyPhase(now)
+    local dayAlpha = db.skyDayAlpha or 0.25
+    local nightAlpha = db.skyNightAlpha or 0.5
+
+    if phase == "day" then return dayAlpha end
+    if phase == "dawn" then return nightAlpha + (dayAlpha - nightAlpha) * t end
+    if phase == "dusk" then return dayAlpha + (nightAlpha - dayAlpha) * t end
     return nightAlpha
 end
 
 local function skyNightGate()
     local db = M.db
     if not db.skyNightOnly then return 1 end
-    local light = ns.DynamicLight
-    local sunrise = light and light.Value and light.Value("sunrise") or (db.skySunriseHour or 6)
-    local sunset = light and light.Value and light.Value("sunset") or (db.skySunsetHour or 20)
-    local twilight = light and light.Value and light.Value("twilight") or (db.skyTwilightHours or 1)
-    local dayAlpha = db.skyDayAlpha or 0.25
-    local nightAlpha = db.skyNightAlpha or 0.5
     local hour, minute = GetGameTime()
     local now = (hour or 12) + ((minute or 0) / 60)
-    local dawnStart = sunrise - twilight
-    local dawnEnd = sunrise + twilight
-    local duskStart = sunset - twilight
-    local duskEnd = sunset + twilight
+    local phase, t = skyPhase(now)
 
-    if now >= dawnEnd and now <= duskStart then
-        return 0
-    elseif now > dawnStart and now < dawnEnd then
-        local t = (now - dawnStart) / (dawnEnd - dawnStart)
-        return math.max(0, math.min(1, 1 - t))
-    elseif now > duskStart and now < duskEnd then
-        local t = (now - duskStart) / (duskEnd - duskStart)
-        return math.max(0, math.min(1, t))
-    elseif now < dawnStart or now > duskEnd then
-        return 1
-    end
-
-    local base = skyTimeAlpha()
-    local span = math.max(0.05, nightAlpha - dayAlpha)
-    return math.max(0, math.min(1, (base - dayAlpha) / span))
+    if phase == "day" then return 0 end
+    if phase == "dawn" then return 1 - t end
+    if phase == "dusk" then return t end
+    return 1
 end
 
 function Visuals.SkyAlpha()
@@ -265,14 +250,16 @@ local function skySetGradient(alpha)
     if not skyTexture then return end
     local topR, topG, topB = 0.35, 0.48, 0.72
     local bottomR, bottomG, bottomB = 0.02, 0.06, 0.16
-    if rawget(skyTexture, "SetGradient") and rawget(_G, "CreateColor") then
-        local top = _G.CreateColor(topR, topG, topB, alpha * 0.9)
-        local bottom = _G.CreateColor(bottomR, bottomG, bottomB, alpha)
+    local topAlpha = alpha
+    local bottomAlpha = 0
+    if type(skyTexture.SetGradient) == "function" and rawget(_G, "CreateColor") then
+        local top = _G.CreateColor(topR, topG, topB, topAlpha)
+        local bottom = _G.CreateColor(bottomR, bottomG, bottomB, bottomAlpha)
         skyTexture:SetGradient("VERTICAL", top, bottom)
         return
     end
-    if rawget(skyTexture, "SetGradientAlpha") then
-        skyTexture:SetGradientAlpha("VERTICAL", topR, topG, topB, alpha * 0.9, bottomR, bottomG, bottomB, alpha)
+    if type(skyTexture.SetGradientAlpha) == "function" then
+        skyTexture:SetGradientAlpha("VERTICAL", topR, topG, topB, topAlpha, bottomR, bottomG, bottomB, bottomAlpha)
         return
     end
     skyTexture:SetColorTexture(bottomR, bottomG, bottomB, alpha)
@@ -313,9 +300,15 @@ function Visuals.StartSky()
         skyFrame:SetHeight(M.db.skyGradientHeight or 250)
         skyFrame:EnableMouse(false)
         skyTexture = skyFrame:CreateTexture(nil, "BACKGROUND")
-        skyTexture:SetAllPoints(true)
-        skyTexture:SetColorTexture(1, 1, 1, 1)
+        skyTexture:SetAllPoints()
+        skyTexture:SetColorTexture(0, 0, 0, 0)
+        local tick = 0
         skyFrame:SetScript("OnUpdate", function(self, elapsed)
+            tick = tick + elapsed
+            if tick < 1 then return end
+            tick = 0
+            if not M.db or not M.db.skyEnabled or not self:IsShown() then return end
+            Visuals.UpdateSky()
             if math.abs(skyFade - skyFadeTarget) > 0.005 then
                 if skyFade < skyFadeTarget then
                     skyFade = math.min(skyFadeTarget, skyFade + elapsed * SKY_FADE_SPEED)
