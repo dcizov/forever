@@ -60,6 +60,7 @@ Modules\Interface\Performance.lua
 Modules\Interface\FiveSecond.lua
 Modules\Interface\PlayerCastBar.lua
 Modules\Interface\LayerInfo.lua
+Modules\Interface\NameplateDistance.lua
 Modules\Interface\CooldownLayout.lua
 Modules\Interface\DrawerFlyout.lua
 Modules\Interface\Drawer.lua

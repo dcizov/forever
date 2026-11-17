@@ -163,6 +163,19 @@ L.LAYER_HOW = "Target or mouse over an NPC to find it."
 L.LAYER_COPY = "Copy Zone UID"
 L.LAYER_COPY_TEXT = "Your layer's zone UID, to copy:"
 
+-- Nameplate Distance ---------------------------------------------------------------------------
+L.NPDIST_TITLE = "Nameplate Distance"
+L.NPDIST_DESC = "Keep nameplates a little closer while you rest and farther out while you move, using the game's own resting check so inns, town time and world travel behave the same as the macro did. The CVar is changed only when safe and restored on disable if you choose it."
+L.NPDIST_RESTING = "Resting Distance"
+L.NPDIST_RESTING_TIP = "How far away nameplates sit while you are resting, in yards."
+L.NPDIST_NORMAL = "Normal Distance"
+L.NPDIST_NORMAL_TIP = "How far away nameplates sit while you are not resting, in yards."
+L.NPDIST_RESTORE = "Restore Previous Value on Disable"
+L.NPDIST_RESTORE_TIP = "Put back the value that was already there the first time the module wrote it."
+L.NPDIST_DEBUG = "distance %d yd (%s)"
+L.NPDIST_RESTING_STATE = "resting"
+L.NPDIST_NORMAL_STATE = "active"
+
 -- Dungeon Journal Skin --------------------------------------------------------------------------
 L.DJSKIN_TITLE = "Dungeon Journal"
 L.DJSKIN_DESC = "Give DungeonJournal the look of Forever's own windows: a metal frame, marble panels, gold titles over white text, and quality borders on loot icons."

@@ -18,7 +18,7 @@ local GROUPS = {
     { "core", { "suite", "bindings", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api",
         "changelog", "hints", "updates", "standalone", "lint" } },
     { "tweaks", { "fpppage", "bag", "djskin", "djcolors", "fishing", "chat", "chatsplit" } },
-    { "interface", { "layer", "combathelpers", "performance", "cooldowns", "visuals", "drawer" } },
+    { "interface", { "layer", "combathelpers", "performance", "cooldowns", "nameplatedistance", "visuals", "drawer" } },
     { "quests", { "questmarkers" } },
     { "bags", { "fullbags", "questitems", "questiedb", "vendor", "baganator", "bagupgrades" } },
     { "compendium", { "openmap", "recorder", "learning", "import", "journal", "quests", "archive", "social", "pins", "tooltips", "banner" } },

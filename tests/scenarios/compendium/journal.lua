@@ -196,7 +196,16 @@ ns.ShowCreature(3100)
 eq(select(4, slots[10]:GetPoint()), 9 * 42, "the tenth slot still in the first row")
 eq(select(5, slots[11]:GetPoint()), -42, "the eleventh starts the second")
 eq(select(4, slots[11]:GetPoint()), 0, "at the left edge")
+for _, scroll in ipairs(under(window, function(f) return f._kind == "ScrollFrame" and rawget(f, "ScrollBar") ~= nil end)) do
+    function scroll:GetTop() return 19 end
+end
 local searchBox = under(window, function(f) return f._template == "SearchBoxTemplate" and f:IsVisible() end)[1]
+local filter = under(window, function(f) return f._template == "WowStyle1FilterDropdownTemplate" and f:IsVisible() end)[1]
+local listScroll = under(searchBox:GetParent(), function(f) return rawget(f, "ScrollBar") ~= nil and f:IsVisible() end)[1]
+check(searchBox:GetHeight() > 0, "the search box keeps its native height")
+check(filter and filter:GetHeight() > 0, "the filter keeps its template height")
+eq(searchBox:GetHeight(), filter:GetHeight(), "search and filter share the same native height")
+check(listScroll and listScroll:GetTop() < searchBox:GetTop(), "the list starts below the search row")
 eq(searchBox:GetParent()._template, "InsetFrameTemplate", "the search box sits at the top of the list's inset, as in the Mount Journal")
 -- A search is forgotten when the journal closes: it opens again on the whole list.
 searchBox:SetText("boar")
@@ -381,7 +390,7 @@ check(journal:DebugLine():find(ns.L.JOURNAL_TAB_CREATURES, 1, true) ~= nil, "Deb
 
 -- Open On: where you left it (the default), your zone's creatures, or the first pinned one.
 local creaturesPage
-for _, page in ipairs(Journal.pages) do if page.key == "creatures" then creaturesPage = page end end
+for _, p in ipairs(Journal.pages) do if p.key == "creatures" then creaturesPage = p end end
 Journal.Show("items")
 ns.ToggleJournal()
 ns.ToggleJournal()

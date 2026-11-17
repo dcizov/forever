@@ -29,7 +29,7 @@ end
 ---------------------------------------------------------------------------
 
 W.EVENTS = {}
-for _, e in ipairs({ "UPDATE_MACROS", "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "CVAR_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
+for _, e in ipairs({ "UPDATE_MACROS", "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "CVAR_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "PLAYER_UPDATE_RESTING",
     "ADDON_ACTION_BLOCKED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT",
     "NAME_PLATE_UNIT_ADDED", "ZONE_CHANGED_NEW_AREA", "GROUP_ROSTER_UPDATE", "ZONE_CHANGED", "LOOT_OPENED",
     "LOOT_SLOT_CLEARED", "LOOT_CLOSED", "BAG_UPDATE_DELAYED", "GET_ITEM_INFO_RECEIVED", "QUEST_LOG_UPDATE",
@@ -125,7 +125,7 @@ end
 -- Game API
 ---------------------------------------------------------------------------
 
-W.cvars = { statusText = "0", nameplateShowFriendlyNpcs = "0" }
+W.cvars = { statusText = "0", nameplateShowFriendlyNpcs = "0", nameplateMaxDistance = "45" }
 local function realName(n)
     for k in pairs(W.cvars) do if k:lower() == tostring(n):lower() then return k end end
 end
@@ -140,7 +140,7 @@ C_CVar = {
     -- W.cvarDefaults[name], else what it is now.
     GetCVarDefault = function(n) local r = realName(n) return r and (W.cvarDefaults[r] or W.cvars[r]) end,
 }
-W.cvarDefaults = {}
+W.cvarDefaults = { nameplateMaxDistance = "45" }
 -- The game's clock: W.gameTime = { hours, minutes }.
 W.gameTime = { 12, 0 }
 function GetGameTime() return W.gameTime[1], W.gameTime[2] end
@@ -404,7 +404,7 @@ W.METHODS = {
     UpdateDisplay = true, EnableKeyboard = true, GetEffectiveScale = true, GetFrameStrata = true,
     SetAlpha = true, SetDrawLayer = true, SetFixedFrameLevel = true, SetFixedFrameStrata = true,
     ClearFocus = true, EnableMouse = true, EnableMouseWheel = true, GenerateMenu = true, GetFrameLevel = true,
-    GetHeight = true, GetHighlightTexture = true, GetStringHeight = true, GetTop = true,
+    GetHeight = true, GetHighlightTexture = true, GetStringHeight = true, GetTop = true, GetBottom = true,
     GetUnboundedStringWidth = true, GetVerticalScrollRange = true, GetWidth = true, HasFocus = true,
     Init = true, RegisterCallback = true, RegisterForClicks = true, RegisterForDrag = true,
     SetAllPoints = true, SetAtlas = true, SetAutoFocus = true, SetCheckedTexture = true,

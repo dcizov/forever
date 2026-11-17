@@ -54,6 +54,7 @@ J.TITLE_FONT = "QuestTitleFont"
 J.PORTRAIT = 62
 J.LIST_WIDTH = 280
 J.GAP = 16
+J.ROW_INSET = 8
 J.INSET = 15
 
 -- Blizzard's inset (InsetFrameTemplate).
