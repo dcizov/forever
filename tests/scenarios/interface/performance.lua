@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/interface/performance.lua
+    Forever Gearbox - tests/scenarios/interface/performance.lua
     FPS & Latency's line: each latency choice, colours on and off, hidden with nothing chosen,
     and read again each second.
     Run by tests/run.lua (lua5.1 tests/run.lua performance), which passes its helpers in.
@@ -9,11 +9,11 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 local mod = ns.modules.Performance
 check(mod.active, "on by default")
-local frame = _G.ForeverTweaksPerformance
+local frame = _G.ForeverGearboxPerformance
 local display = frame.display
 local GREEN, YELLOW, RED = "|cff40ff40", "|cffffd100", "|cffff4040"
 

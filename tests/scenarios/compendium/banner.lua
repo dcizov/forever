@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/banner.lua
+    Forever Codex - tests/scenarios/compendium/banner.lua
     The notifications: a new creature (a rare saying so) by default, with the discovery sound;
     what's learned of a known creature gathered into one ("Information updated"), none just after
     it was met; one after another, fading out after their time but kept while the mouse is on
@@ -13,7 +13,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, L = ns.Book, ns.L
 local mod = ns.modules.Banner
@@ -37,7 +37,7 @@ Book.Meet(1, "Plain Wolf").classification = "normal"
 local rare = Book.Meet(2, "Old Greyjaw")
 rare.classification = "rare"
 ns:Announce("CREATURE_NEW", 1)
-local banner = ForeverCompendiumBanner
+local banner = ForeverCodexBanner
 check(banner and banner:IsShown(), "a new creature: a notification")
 eq(banner.title._text, "Plain Wolf", "naming it")
 eq(banner.sub._text, L.BANNER_ADDED, "added to the journal")
@@ -139,8 +139,8 @@ check(not banner:IsShown(), "a click puts the notification away")
 Book.Meet(6, "Dire Mottled Boar")
 ns:Announce("CREATURE_NEW", 6)
 banner:Fire("OnClick", "LeftButton")
-check(ForeverCompendiumJournal and ForeverCompendiumJournal:IsShown(), "a click opens the journal")
-ForeverCompendiumJournal:Hide()
+check(ForeverCodexJournal and ForeverCodexJournal:IsShown(), "a click opens the journal")
+ForeverCodexJournal:Hide()
 
 -- A badge: its tier's sound.
 W.sounds = {}
@@ -170,7 +170,7 @@ for _, f in ipairs(W.frames) do
 end
 selection.info.moveTo(1000, 900)
 eq(mod.db.x, 40, "moved: its top centre's offset from the screen's, across")
-eq(mod.db.y, -141, "and down")
+eq(mod.db.y, -155, "and down")
 EditModeManagerFrame:ExitEditMode()
 check(not banner:IsShown(), "and hidden after")
 

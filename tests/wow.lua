@@ -29,7 +29,7 @@ end
 ---------------------------------------------------------------------------
 
 W.EVENTS = {}
-for _, e in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "CVAR_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
+for _, e in ipairs({ "UPDATE_MACROS", "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "CVAR_UPDATE", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
     "ADDON_ACTION_BLOCKED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT",
     "NAME_PLATE_UNIT_ADDED", "ZONE_CHANGED_NEW_AREA", "GROUP_ROSTER_UPDATE", "ZONE_CHANGED", "LOOT_OPENED",
     "LOOT_SLOT_CLEARED", "LOOT_CLOSED", "BAG_UPDATE_DELAYED", "GET_ITEM_INFO_RECEIVED", "QUEST_LOG_UPDATE",
@@ -44,8 +44,8 @@ for _, e in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "C
     "GUILD_ROSTER_UPDATE", "FRIENDLIST_UPDATE", "WHO_LIST_UPDATE", "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED",
     "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY",
     "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED",
-    "LOOT_READY", "MODIFIER_STATE_CHANGED", "ZONE_CHANGED_INDOORS", "GOSSIP_CLOSED", "QUEST_FINISHED", "TRAINER_SHOW",
-    "TRAINER_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED" }) do
+    "LOOT_READY", "PLAYER_STARTED_MOVING", "PLAYER_STOPPED_MOVING", "MODIFIER_STATE_CHANGED", "ZONE_CHANGED_INDOORS", "GOSSIP_CLOSED", "QUEST_FINISHED", "TRAINER_SHOW",
+    "TRAINER_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "PLAYER_LEVEL_UP", "PLAYER_TALENT_UPDATE", "CHARACTER_POINTS_CHANGED", "QUEST_WATCH_LIST_CHANGED", "PLAYER_STOPPED_MOVING" }) do
     W.EVENTS[e] = true
 end
 function W.validEvent(e) return W.EVENTS[e] or false end
@@ -137,20 +137,63 @@ C_CVar = {
         W.cvars[r] = type(v) == "boolean" and (v and "1" or "0") or tostring(v)
         return true
     end,
+    -- W.cvarDefaults[name], else what it is now.
+    GetCVarDefault = function(n) local r = realName(n) return r and (W.cvarDefaults[r] or W.cvars[r]) end,
 }
+W.cvarDefaults = {}
+-- The game's clock: W.gameTime = { hours, minutes }.
+W.gameTime = { 12, 0 }
+function GetGameTime() return W.gameTime[1], W.gameTime[2] end
+function GetZoneText() return W.zoneText or "" end
 
-W.metadata = { Version = "1.0.0", Author = "wtFAQ", Title = "Forever Tweaks" }
+W.metadata = { Version = "1.0.0", Author = "wtFAQ", Title = "Forever Gearbox" }
 W.loaded = {}
+W.addonMeta = {} -- addon name -> { key = value }: another addon's TOC fields
+-- Addons the game knows but hasn't loaded: name -> { onDemand, disabled, onLoad }. QuestieDB is
+-- installed and loads on demand, as it does in Forever; loaded, it answers nothing unless a test
+-- put its own LibQuestieDB in place.
+W.addonInfo = { QuestieDB = { onDemand = true, onLoad = function()
+    if _G.LibQuestieDB == nil then
+        local none = { Get = function() return nil end }
+        _G.LibQuestieDB = { Quest = none, Item = none }
+    end
+end } }
 C_AddOns = {
-    GetAddOnMetadata = function(_, key) return W.metadata[key] end,
+    GetAddOnMetadata = function(name, key)
+        local own = W.addonMeta[name]
+        if own and own[key] ~= nil then return own[key] end
+        return W.metadata[key]
+    end,
     IsAddOnLoaded = function(name) return W.loaded[name] or false end,
+    -- name, title, notes, loadable, reason
+    GetAddOnInfo = function(name)
+        local info = W.addonInfo[name]
+        if W.loaded[name] then return name, name, "", true, nil end
+        if not info then return name, nil, nil, false, "MISSING" end
+        if info.disabled then return name, name, "", false, "DISABLED" end
+        return name, name, "", true, info.onDemand and "DEMAND_LOADED" or nil
+    end,
+    IsAddOnLoadOnDemand = function(name)
+        local info = W.addonInfo[name]
+        return info and info.onDemand or false
+    end,
+    LoadAddOn = function(name)
+        local info = W.addonInfo[name]
+        if not info or info.disabled then return false, "MISSING" end
+        if not W.loaded[name] then
+            W.loaded[name] = true
+            if info.onLoad then info.onLoad() end
+            W.Fire("ADDON_LOADED", name)
+        end
+        return true
+    end,
 }
 Enum = {
     AddOnProfilerMetric = { SessionAverageTime = 0, RecentAverageTime = 1, EncounterAverageTime = 2, PeakTime = 3 },
     LootSlotType = { None = 0, Item = 1, Money = 2, Currency = 3 },
     ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4 },
     ItemClass = { Consumable = 0, Container = 1, Weapon = 2, Armor = 4, Reagent = 5, Tradegoods = 7, Recipe = 9,
-        Questitem = 12, Miscellaneous = 15, Profession = 19 },
+        Questitem = 12, Miscellaneous = 15, Profession = 19, Projectile = 6 },
     ItemWeaponSubclass = { Fishingpole = 20 },
     ItemMiscellaneousSubclass = { Reagent = 1 },
     BagIndex = { Backpack = 0 },
@@ -164,69 +207,8 @@ C_AddOnProfiler = {
     GetTopKAddOnsForMetric = function() return { { addOnName = "Questie", metricValue = 1.2 } } end,
 }
 
-W.categories = {}
-local function category(frame, name)
-    local c = { frame = frame, name = name }
-    function c:GetID() return name end
-    W.categories[name] = c
-    return c
-end
-Settings = {
-    RegisterCanvasLayoutCategory = function(frame, name) return category(frame, name) end,
-    RegisterCanvasLayoutSubcategory = function(_, frame, name) return category(frame, name) end,
-    RegisterAddOnCategory = function() end,
-    CreateSliderOptions = function() return { SetLabelFormatter = function() end } end,
-}
-SettingsPanel = W.NewFrame("Frame", "SettingsPanel")
-SettingsPanel._shown = false
-function HideUIPanel(frame) frame:Hide() end
-C_SettingsUtil = {
-    OpenSettingsPanel = function(id)
-        W.opened = id
-        SettingsPanel:Show()
-        local c = W.categories[id]
-        if c then c.frame:Show() end
-    end,
-}
-MinimalSliderWithSteppersMixin = { Label = { Right = 1, Left = 2, Top = 3 }, Event = { OnValueChanged = 1 } }
-function CreateMinimalSliderFormatter(_, fn) return fn end
-NineSliceUtil = {
-    ApplyLayout = function() end,
-    ApplyLayoutByName = function(container, name) container._layout = name end,
-}
-
-W.menu = nil
-local function menuNode(label)
-    local node = { label = label, items = {} }
-    function node:CreateTitle(text) self.items[#self.items + 1] = { title = text } end
-    function node:CreateDivider() end
-    function node:CreateButton(text, fn) local c = menuNode(text); c.fn = fn; self.items[#self.items + 1] = c; return c end
-    function node:CreateCheckbox(text, get, set) local c = menuNode(text); c.get, c.set = get, set; self.items[#self.items + 1] = c; return c end
-    function node:CreateRadio(text, get, set, data) local c = menuNode(text); c.get, c.set, c.data = get, set, data; self.items[#self.items + 1] = c; return c end
-    function node:SetScrollMode() end
-    function node:SetTitleAndTextTooltip(title, text) self.tooltip = { title, text } end
-    function node:Find(text) for _, i in ipairs(self.items) do if i.label == text then return i end end end
-    return node
-end
-MenuUtil = { CreateContextMenu = function(owner, gen) local root = menuNode("root"); gen(owner, root); W.menu = root end }
-
-StaticPopupDialogs = {}
-W.popups = {}
-function StaticPopup_Show(which, textArg, _, data)
-    local dialog = StaticPopupDialogs[which]
-    local popup = W.NewFrame("Frame")
-    popup.EditBox = W.NewFrame("EditBox", nil, popup)
-    popup.which, popup.data, popup.text = which, data, dialog.text:format(textArg or "")
-    if dialog.OnShow then dialog.OnShow(popup, data) end
-    W.popups[#W.popups + 1] = popup
-    return popup
-end
--- Presses the first button of the newest popup.
-function W.Accept()
-    local popup = table.remove(W.popups)
-    local dialog = StaticPopupDialogs[popup.which]
-    if dialog.OnAccept then dialog.OnAccept(popup, popup.data) end
-end
+-- Blizzard's Settings, menus and popups (tests/stubs/settings.lua).
+stub("settings")
 
 SlashCmdList, hash_SlashCmdList = {}, {}
 function W.Slash(text)
@@ -269,6 +251,7 @@ function ClearCursor() W.held = nil end
 function IsControlKeyDown() return W.ctrl or false end
 W.shift = false
 function IsShiftKeyDown() return W.shift end
+function IsPlayerMoving() return W.moving or false end
 W.alt = false
 function IsAltKeyDown() return W.alt end
 W.instance = false
@@ -359,6 +342,8 @@ function EditModeManagerFrame:ClearSelectedSystem() end
 stub("loot")
 -- Professions, worn gear, equipment sets and error text.
 stub("professions")
+-- The world map's window and Blizzard's scroll container (W.worldMapID, W.canvasScale, the zoom).
+stub("worldmap")
 -- The chat window.
 stub("chat")
 -- The quest log and item tooltips.
@@ -369,8 +354,10 @@ stub("merchant")
 stub("units")
 -- Tooltip processing, colors, items, professions and the auction house (the Tooltips category).
 stub("tooltips")
--- Forever Compendium's own (tests/stubs/compendium.lua).
+-- Forever Codex's own (tests/stubs/compendium.lua).
 stub("compendium")
+-- Macros, cooldowns, mounts and restricted snippets (Drawer).
+stub("macros")
 
 -- Lua 5.1 stand-ins for the game's string and table helpers.
 format, strlower, strupper, strsub, strfind, strlen, gsub = string.format, string.lower, string.upper, string.sub, string.find, string.len, string.gsub
@@ -405,9 +392,11 @@ end
 -- any other verb-like name is reported, so a misspelled or made-up method fails the run. Add a
 -- name only once it's a real method on this client (docs/forever-api.md).
 W.METHODS = {
+    SetOrientation = true, GetValue = true, GetAlpha = true, UpdateScrollChildRect = true, SetNormalFontObject = true,
+    SetThumbTexture = true, SetHighlightFontObject = true, SetValueStep = true,
     AddMaskTexture = true, SetHorizTile = true, SetVertTile = true, SetNormalAtlas = true, SetPushedAtlas = true,
-    SetSpacing = true, SetRotation = true, GetNumLines = true, EnableGamePadButton = true, SetLooping = true, IsUserPlaced = true, SetUserPlaced = true, IsMovable = true,
-    SetMaxLines = true, SetChecked = true, GetChecked = true, SetCustomOnMouseUpHandler = true,
+    SetSpacing = true, SetRotation = true, SetPortraitZoom = true, RefreshCamera = true, SetPosition = true, GetNumLines = true, EnableGamePadButton = true, SetLooping = true, IsUserPlaced = true, SetUserPlaced = true, IsMovable = true,
+    SetMaxLines = true, SetJustifyV = true, IsTruncated = true, SetDrawEdge = true, Clear = true, SetChecked = true, GetChecked = true, SetCustomOnMouseUpHandler = true,
     SetTabSelectedCallback = true, AddTab = true, SetTabVisuallySelected = true, GetTabButton = true,
     UpdateTabText = true, UpdateTabWidth = true, MarkDirty = true, SetTab = true,
     AddDoubleLine = true, AddLine = true, HighlightText = true, SetFocus = true, SetOwner = true, GetOwner = true,
@@ -432,14 +421,17 @@ W.METHODS = {
     SetBlendMode = true, CreateMaskTexture = true, AddMaskTexture = true, RemoveMaskTexture = true, GetDrawLayer = true,
     GetThumbTexture = true, SetPortraitToAsset = true, SetToplevel = true, SetID = true, GetID = true, GetObjectType = true,
     SetSelectionText = true, SetIsDefaultCallback = true, SetDefaultCallback = true, ValidateResetState = true, SetStatusBarColor = true,
+    GetFontObject = true, GetFontString = true,
     SetSpellByID = true, SetDisplayInfo = true, SetCreature = true, HasFocus = true, IsForbidden = true, SetFontHeight = true, GetStringWidth = true, CreateAnimationGroup = true, CreateAnimation = true, SetFromAlpha = true, SetToAlpha = true, SetToFinalAlpha = true, Play = true, Stop = true, SetDuration = true, SetOffset = true, IsPlaying = true, SetSpacing = true, GetVerticalScroll = true,
 }
 -- Methods the addon checks for before using (Blizzard's may lack them): absent here, so the
 -- path without them is what runs.
 W.PROBED = { GetBagID = true }
 W.missing = {}
-W.OPTIONAL = { ForeverPlusPlusAPI = true, PlumberDB = true, WilduToolsDB = true, Auctionator = true, Baganator = true, ForeverTweaksDB = true, ForeverTweaksCharDB = true,
-    ForeverCoreDB = true, ForeverCoreCharDB = true, ForeverCompendiumDB = true, ForeverCompendiumCharDB = true, NWB_CurrentLayer = true, LibQuestieDB = true,
+W.OPTIONAL = { ForeverPlusPlusAPI = true, ForeverPlusPlusCharDB = true, GetAttackPowerForStat = true, GetRangedAttackPowerForStat = true,
+    GetCritChanceFromStat = true, GetDodgeChanceFromAttribute = true, GetSpellCritChanceFromStat = true, UnitHPPerStamina = true,
+    MANA_PER_INTELLECT = true, BLOCK_VALUE_PER_STRENGTH = true, QuickJoinToastButton = true, ForeverPlusPlusDB = true, PlumberDB = true, WilduToolsDB = true, Auctionator = true, Baganator = true, ForeverGearboxDB = true, ForeverGearboxCharDB = true, ForeverTweaksDB = true, ForeverTweaksCharDB = true, ForeverCompendiumDB = true, ForeverCompendiumCharDB = true,
+    ForeverCoreDB = true, ForeverCoreCharDB = true, ForeverCodexDB = true, ForeverCodexCharDB = true, NWB_CurrentLayer = true, LibQuestieDB = true, Spoken = true, SpokenCompendium = true, VoiceOver = true,
     BAGANATOR_CONFIG = true, BAGANATOR_CURRENT_PROFILE = true,
     QuestScrollFrame = true, QuestLogQuests_Update = true, GossipFrame = true, QuestFrameGreetingPanel = true,
     QuestFrameGreetingPanel_OnShow = true, QuestInfo_Display = true, QuestFrameProgressPanel_OnShow = true, QuestInfoFrame = true,
@@ -458,11 +450,26 @@ end
 -- once), then its files in TOC order, each addon with a namespace of its own. Returns its
 -- namespace. W.addons lists every addon loaded, in order: login fires ADDON_LOADED for each.
 W.addons, W.namespaces = {}, {}
+-- Addons the stand-in game has a stand-in for (tests/stubs/), loaded instead of a folder.
+local STUB_ADDONS = { ForeverPlusPlus = "foreverplusplus" }
+
 function W.LoadAddon(root, name)
     if W.namespaces[name] then return W.namespaces[name] end
+    if STUB_ADDONS[name] then
+        stub(STUB_ADDONS[name])
+        W.namespaces[name] = {}
+        W.addons[#W.addons + 1] = name
+        W.loaded[name] = true
+        return W.namespaces[name]
+    end
     local toc = assert(io.open(root .. "/" .. name .. "/" .. name .. ".toc")):read("*a")
     for dependency in (toc:match("## Dependencies: ([^\r\n]+)") or ""):gmatch("[^,%s]+") do
         W.LoadAddon(root, dependency)
+    end
+    -- Forever++ is an optional dependency of Forever Gearbox: loaded first, as the game does when
+    -- it's installed, unless a test plays without it (W.withoutForeverPlusPlus).
+    for dependency in (toc:match("## OptionalDeps: ([^\r\n]+)") or ""):gmatch("[^,%s]+") do
+        if dependency == "ForeverPlusPlus" and not W.withoutForeverPlusPlus then W.LoadAddon(root, dependency) end
     end
     local ns = {}
     W.namespaces[name] = ns

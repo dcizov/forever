@@ -1,13 +1,13 @@
-# Release: push a tag like v2.0.0 and this packages the suite and publishes a GitHub release.
+# Release: push a tag like v3.0.0 and this packages both addons and publishes a GitHub release.
 #
-# The release carries Forever-<version>.zip (the ForeverCore, ForeverTweaks and ForeverCompendium
-# folders, each as it is in the repository) and release.json, the file addon managers such as
-# WowUp read to find the zip and the game flavour it's for. Its notes are that version's entry in
-# ForeverCore/Changelog.lua. The tag must match every TOC's ## Version, so a release can't ship a
-# version the game would show differently.
+# The release carries Forever-<version>.zip (the ForeverGearbox and ForeverCodex folders, each
+# as it is in the repository, with its copy of the runtime in Shared/) and release.json, the file
+# addon managers such as WowUp read to find the zip and the game flavour it's for. Its notes are
+# that version's entry in ForeverCodex/Changelog.lua. The tag must match every TOC's
+# ## Version, so a release can't ship a version the game would show differently.
 #
 # The same zip also goes to CurseForge (so the CurseForge app, and WowUp's CurseForge source, can
-# install and update it) when ForeverCore's TOC has ## X-Curse-Project-ID and the repository has a
+# install and update it) when ForeverCodex's TOC has ## X-Curse-Project-ID and the repository has a
 # CF_API_KEY secret (an API token from https://legacy.curseforge.com/account/api-tokens). The
 # CF_GAME_VERSION repository variable picks the CurseForge game version to file it under (its
 # name, e.g. 12.0.0); without it, the newest Retail version. Without the ID or the key, the
@@ -36,8 +36,8 @@ jobs:
       - name: Version matches the tag
         id: version
         run: |
-          version=$(grep -m1 '^## Version:' ForeverCore/ForeverCore.toc | sed 's/^## Version:[[:space:]]*//' | tr -d '\r')
-          interface=$(grep -m1 '^## Interface:' ForeverCore/ForeverCore.toc | sed 's/^## Interface:[[:space:]]*//' | tr -d '\r')
+          version=$(grep -m1 '^## Version:' ForeverCodex/ForeverCodex.toc | sed 's/^## Version:[[:space:]]*//' | tr -d '\r')
+          interface=$(grep -m1 '^## Interface:' ForeverCodex/ForeverCodex.toc | sed 's/^## Interface:[[:space:]]*//' | tr -d '\r')
           for toc in */*.toc; do
             other=$(grep -m1 '^## Version:' "$toc" | sed 's/^## Version:[[:space:]]*//' | tr -d '\r')
             if [ "v$other" != "$GITHUB_REF_NAME" ]; then
@@ -52,7 +52,7 @@ jobs:
           lua5.1 - "${{ steps.version.outputs.version }}" > notes.md <<'LUA'
           local version = arg[1]
           local ns = {}
-          assert(loadfile("ForeverCore/Changelog.lua"))("ForeverCore", ns)
+          assert(loadfile("ForeverCodex/Changelog.lua"))("ForeverCodex", ns)
           for _, release in ipairs(ns.changelog) do
             if release.version == version then
               for _, change in ipairs(release.changes) do
@@ -62,15 +62,16 @@ jobs:
               return
             end
           end
-          error("ForeverCore/Changelog.lua has no entry for " .. version)
+          error("ForeverCodex/Changelog.lua has no entry for " .. version)
           LUA
 
       - name: Package
         run: |
           version=${{ steps.version.outputs.version }}
           mkdir -p build
-          for addon in ForeverCore ForeverTweaks ForeverCompendium; do cp -r "$addon" build/; done
-          (cd build && zip -qr "Forever-$version.zip" ForeverCore ForeverTweaks ForeverCompendium)
+          scripts/sync-shared.sh
+          for addon in ForeverGearbox ForeverCodex; do cp -r "$addon" build/; done
+          (cd build && zip -qr "Forever-$version.zip" ForeverGearbox ForeverCodex)
           cat > build/release.json <<JSON
           {
             "releases": [
@@ -98,7 +99,7 @@ jobs:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CF_GAME_VERSION: ${{ vars.CF_GAME_VERSION }}
         run: |
-          project=$(grep -m1 '^## X-Curse-Project-ID:' ForeverCore/ForeverCore.toc | sed 's/^## X-Curse-Project-ID:[[:space:]]*//' | tr -d '\r')
+          project=$(grep -m1 '^## X-Curse-Project-ID:' ForeverCodex/ForeverCodex.toc | sed 's/^## X-Curse-Project-ID:[[:space:]]*//' | tr -d '\r')
           if [ -z "$project" ] || [ -z "$CF_API_KEY" ]; then
             echo "No X-Curse-Project-ID in the TOC or no CF_API_KEY secret: skipping CurseForge."; exit 0
           fi

@@ -1,5 +1,0 @@
-<Bindings>
-	<Binding name="FOREVERCOMPENDIUM_TOGGLE" header="FOREVERCOMPENDIUM" category="ADDONS">
-		ForeverCompendium_ToggleJournal()
-	</Binding>
-</Bindings>

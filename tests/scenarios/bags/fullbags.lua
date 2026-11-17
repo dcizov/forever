@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/bags/fullbags.lua
+    Forever Gearbox - tests/scenarios/bags/fullbags.lua
     Full Bags: which loot is worth taking with full bags, and what to delete for it.
     Run by tests/run.lua (lua5.1 tests/run.lua fullbags), which passes its helpers in.
 ]]
@@ -32,7 +32,7 @@ W.bags[0][3] = { link = "[Quest Note]", quest = true }
 W.bags[0][4] = { link = "[Junk]" }
 
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 local mod = ns.modules.FullBags
 
@@ -97,7 +97,7 @@ W.loot = { { link = "[Gem]" } }
 W.CloseLoot()
 eq(#marked(), 0, "closing the loot window clears the marks")
 _G.Auctionator = { API = { v1 = { GetAuctionPriceByItemLink = function(caller, link)
-    eq(caller, "Forever Tweaks", "Auctionator is told who asks")
+    eq(caller, "Forever Gearbox", "Auctionator is told who asks")
     if link == "[Junk]" then return 50000 end
 end } } }
 local notice = mod.notice[1]
@@ -214,7 +214,7 @@ W.CloseLoot()
 
 -- Auctionator without the by-link call: its price by item ID is used.
 _G.Auctionator = { API = { v1 = { GetAuctionPriceByItemID = function(caller, itemID)
-    eq(caller, "Forever Tweaks", "Auctionator is told who asks (by ID)")
+    eq(caller, "Forever Gearbox", "Auctionator is told who asks (by ID)")
     if itemID == 1 then return 50000 end
 end } } }
 W.loot = { { link = "[Gem]" } }
@@ -371,27 +371,28 @@ eq(mod.db.keep[9], nil, "Alt-click again lets it go")
 check(not lockOn(fang), "lock gone")
 check(suggested({ link = "[Broken Fang]" }), "suggested again")
 
--- /ft keep and /ft unkeep.
-W.Slash("/ft keep [Broken Fang]")
-eq(mod.db.keep[9], true, "/ft keep")
+-- /fg keep and /fg unkeep.
+W.Slash("/fg keep [Broken Fang]")
+eq(mod.db.keep[9], true, "/fg keep")
 W.chat = {}
-W.Slash("/ft keep list")
-check(W.ChatHas("[Broken Fang]"), "/ft keep list lists it by name")
-W.Slash("/ft unkeep [Broken Fang]")
-eq(mod.db.keep[9], nil, "/ft unkeep")
+W.Slash("/fg keep list")
+check(W.ChatHas("[Broken Fang]"), "/fg keep list lists it by name")
+W.Slash("/fg unkeep [Broken Fang]")
+eq(mod.db.keep[9], nil, "/fg unkeep")
 W.chat = {}
-W.Slash("/ft keep")
+W.Slash("/fg keep")
 check(W.ChatHas("No items are kept"), "an empty list says how to keep one")
-W.Slash("/ft keep nonsense")
+W.Slash("/fg keep nonsense")
 check(W.ChatHas("Shift-click"), "a word that isn't an item: usage")
 
--- The keep list on its Settings pane: an item added there while looting leaves the plan at once.
+-- The keep list on its page in Gearbox' settings: an item added there while looting leaves the plan at once.
 W.bags[0][1] = { link = "[Broken Fang]" }
 W.loot = { { link = "[Gem]" } }
 W.OpenLoot()
 eq(marked()[1], "0:1", "looting: the fang is suggested")
 ns:OpenSettings("FullBags")
-local page = ForeverCore.SettingsWindow.Page(ns.member.short).frame
+local page = W.categories[ns.title].frame
+check(page:IsShown(), "on its page in Gearbox' settings, under its options")
 local itemBox = under(page, function(f) return f._kind == "EditBox" and (f:GetText() or "") == "" and f:IsVisible() end)[1]
 local addButton = under(page, function(f) return f._text == ns.L.ITEMLIST_ADD and f:IsVisible() end)[1]
 itemBox:SetText("9")
@@ -428,7 +429,7 @@ _G.Baganator = nil
 
 -- Quests: Full Bags asks ns.QuestLog, whether or not the Quest Items module is on.
 ns:SetEnabled("QuestItems", false)
-W.Slash("/ft unkeep [Broken Fang]")
+W.Slash("/fg unkeep [Broken Fang]")
 W.items["[Old Letter]"] = { id = 17, stack = 1, sell = 0, class = 12 }
 W.quests = { { title = "Fangs", questID = 5, objectives = {
     { type = "item", text = "Broken Fang: 1/5", numFulfilled = 1, numRequired = 5 } } } }

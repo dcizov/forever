@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/merchant.lua
+    Forever Gearbox - tests/stubs/merchant.lua
     The stand-in game's merchant window, loaded by tests/wow.lua. A scenario fills W.merchant
     (index -> { id, link, price, stackCount, numAvailable, maxStack, extended, purchasable }),
     sets W.money and W.owned (itemID -> count in the bags), then calls W.OpenMerchant().
@@ -112,7 +112,9 @@ function GetInventoryItemDurability(slot)
     local d = W.durability[slot]
     if d then return d[1], d[2] end
 end
-function GetInventoryItemLink(_, slot) return W.durability[slot] and ("[Item " .. slot .. "]") or nil end
+-- W.worn[slot]: the link worn there (gear for upgrade judgements); else a durability item's.
+W.worn = {}
+function GetInventoryItemLink(_, slot) return W.worn[slot] or W.durability[slot] and ("[Item " .. slot .. "]") or nil end
 
 -- Minimap tracking (Gathering Tracking): W.tracking = { { spellID, active } }; W.trackingRefused
 -- makes SetTracking error, as the game refusing an addon would.

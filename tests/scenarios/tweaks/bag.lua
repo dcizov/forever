@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/tweaks/bag.lua
+    Forever Gearbox - tests/scenarios/tweaks/bag.lua
     The Button Bag taking buttons and giving them back.
     Run by tests/run.lua (lua5.1 tests/run.lua bag), which passes its helpers in.
 ]]
@@ -26,10 +26,10 @@ function lib.RegisterCallback(owner, event, fn)
 end
 function LibStub(name) if name == "LibDBIcon-1.0" then return lib end end
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 local bag = ns.modules.ButtonBag
-local frame = ForeverTweaksButtonBag
+local frame = ForeverGearboxButtonBag
 -- A failed LibDBIcon registration is logged, not reported, and tried again next time it turns on.
 eq(lib.callbacks.LibDBIcon_IconCreated, nil, "the first registration failed")
 eq(#W.errors, 0, "without an error report")
@@ -43,10 +43,9 @@ check(button._point[1] ~= "CENTER", "the addon can't move it back while bagged")
 eq(bag:Count(), 1, "counted")
 check(bag:DebugLine():find("1", 1, true) ~= nil, "Debug line")
 check(ns:DebugInfo():find(bag:DebugLine(), 1, true) ~= nil, "on the Debug report")
-check(ns.modules.MinimapButton:IsOnMinimap(), "our own button is on the minimap")
-W.Slash("/ft bag")
-check(frame:IsShown(), "/ft bag opens it")
-W.Slash("/ft bag")
+W.Slash("/fg bag")
+check(frame:IsShown(), "/fg bag opens it")
+W.Slash("/fg bag")
 
 -- A layout asked for just before the module turns off doesn't block later ones.
 check(not frame.empty:IsShown(), "laid out with one button")
@@ -65,7 +64,7 @@ W.RunTimers()
 check(not frame.empty:IsShown(), "laid out again when the button shows")
 
 -- Left out from the bag button's menu, then put back in.
-ForeverTweaksBagButton:Fire("OnClick", "RightButton")
+ForeverGearboxBagButton:Fire("OnClick", "RightButton")
 local item = W.menu:Find("Test")
 check(item ~= nil, "listed in the menu")
 item.set()

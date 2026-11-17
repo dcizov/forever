@@ -1,20 +1,24 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/journal.lua
-    The journal window: /fc opens it on its Creatures tab; the list sorts, searches (by name, by
+    Forever Codex - tests/scenarios/compendium/journal.lua
+    The journal window: /codex opens it on its Creatures tab; the list sorts, searches (by name, by
     loot, by quest) and filters, leaves critters out unless asked, keeps pinned creatures first
     (right-click pins); a row shows its creature (model, kind, places, abilities, kills, loot
     rates, quests by their titles, never "Quest 1234" once the game knows the title) and its note
-    is kept; ns.ShowQuest opens the quest log or the giver's Quests tab; the Items page shows
-    what it holds; zones fold; a creature met while it's open shows
+    is kept; ns.ShowQuest opens the quest log on a quest in it, else the journal's quest page (its
+    status, giver, Show on Map; Shift-click links one); a creature's quests have one status icon
+    and their role in words; the Items page shows what it holds (a dropper with a face shows its
+    name); zones fold; a creature met while it's open shows
     up; ns.ShowCreature picks one; turning the module off closes it.
     Run by tests/run.lua (lua5.1 tests/run.lua journal), which passes its helpers in.
 ]]
 
 local T = ...
+local L
 local check, eq, login, finish, root, under = T.check, T.eq, T.login, T.finish, T.root, T.under
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
+L = ns.L
 login()
 local Book, Filter, Journal = ns.Book, ns.CreatureFilter, ns.Journal
 local journal = ns.modules.Journal
@@ -52,12 +56,13 @@ local function names()
     return table.concat(list, ",")
 end
 
-W.Slash("/fc")
-local window = ForeverCompendiumJournal
-check(window and window:IsShown(), "/fc opens the journal")
+W.Slash("/codex")
+local window = ForeverCodexJournal
+check(window and window:IsShown(), "/codex opens the journal")
 eq(names(), "Orgrimmar Grunt,Mottled Boar", "listed last seen first, critters left out")
 local function shownRows() return under(window, function(f) return rawget(f, "entry") ~= nil and f:IsShown() end) end
 local function rowText(row)
+    if row.item.banner then return "{" .. row.banner.name:GetText() .. "}" end
     if row.item.header then return "[" .. row.head.name:GetText() .. "]" end
     return row.entry.name:GetText()
 end
@@ -68,23 +73,42 @@ local function listed()
 end
 local listScroll = shownRows()[1]:GetParent():GetParent()
 function listScroll:GetHeight() return 400 end -- room for every row
+W.maps[1411], W.mapTypes[1414], W.mapNames[1414] = 1414, Enum.UIMapType.Continent, "Kalimdor"
 Journal.Refresh()
-eq(listed(), "[1411],Mottled Boar,[Unknown Place],Orgrimmar Grunt", "under a header per zone (never the world or a continent), an unknown place last")
+eq(listed(), "{Kalimdor},[1411],Mottled Boar,{Unknown Place},Orgrimmar Grunt",
+    "a banner per continent (as the Compendium's) with a header per zone under it, an unknown place last")
 local rows = shownRows()
-rows[1]:Fire("OnClick", "LeftButton")
-eq(listed(), "[1411],[Unknown Place],Orgrimmar Grunt", "a header folds its zone")
+rows[2]:Fire("OnClick", "LeftButton")
+eq(listed(), "{Kalimdor},[1411],{Unknown Place},Orgrimmar Grunt", "a header folds its zone")
 check(journal.db.collapsed["map:1411"], "and stays folded")
+shownRows()[1]:Fire("OnClick", "LeftButton")
+eq(listed(), "{Kalimdor},{Unknown Place},Orgrimmar Grunt", "a banner folds its continent")
 ns.ShowCreature(3100)
-eq(listed(), "[1411],Mottled Boar,[Unknown Place],Orgrimmar Grunt", "showing a creature unfolds its zone")
+eq(listed(), "{Kalimdor},[1411],Mottled Boar,{Unknown Place},Orgrimmar Grunt", "showing a creature unfolds its zone and continent")
+-- Back and Forward in the band over the page, as the quest log's Back: through what you opened.
+local listPage
+for _, p in ipairs(Journal.pages) do if p.key == "creatures" then listPage = p end end
+local gruntRow
+for _, row in ipairs(shownRows()) do if rowText(row) == "Orgrimmar Grunt" then gruntRow = row end end
+gruntRow:Fire("OnClick", "LeftButton")
+local gruntID = listPage.Selected()
+check(gruntID ~= 3100 and Journal.CanBack(), "a creature clicked after one linked: Back can go to it")
+Journal.Back()
+eq(listPage.Selected(), 3100, "Back: the one before")
+check(Journal.CanForward(), "and Forward is there")
+Journal.Forward()
+eq(listPage.Selected(), gruntID, "Forward: back again")
+check(not Journal.CanForward(), "nothing further ahead")
+check(type(Journal.Back) == "function" and type(Journal.Forward) == "function", "history still exists without a button strip")
 ns:SetOption("Journal", "groupZones", false)
 eq(listed(), "Orgrimmar Grunt,Mottled Boar", "no headers when grouping is off")
 ns:SetOption("Journal", "groupZones", true)
-local tabs = under(window, function(f) return f._template == "LargeSideTabButtonTemplate" and f:IsShown() end)
-eq(#tabs, 4, "a side tab for each page: Creatures, Items, Trophies, Badges")
-check(tabs[1]:GetChecked() and not tabs[2]:GetChecked(), "the open page's tab checked")
-W.ClickSideTab(tabs[2])
-check(tabs[2]:GetChecked(), "a side tab opens its page")
-W.ClickSideTab(tabs[1])
+local tabs = under(window, function(f) return f._template == "PanelTabButtonTemplate" and f:IsShown() end)
+eq(#tabs, 5, "a tab along the foot for each page: Creatures, NPCs, Items, Trophies, Badges")
+eq(window.selectedTab, 1, "the open page's tab chosen")
+tabs[2]:Fire("OnClick")
+eq(window.selectedTab, 2, "a tab opens its page")
+tabs[1]:Fire("OnClick")
 
 -- Sorting, searching and filtering.
 ns:SetOption("Journal", "sort", "level")
@@ -125,7 +149,7 @@ eq(names(), "Orgrimmar Grunt,Mottled Boar", "pinned first")
 check(grunt.pinned, "pinned")
 Journal.Refresh()
 rows = shownRows()
-eq(rowText(rows[1]) .. "," .. rowText(rows[2]), "[Pinned],Orgrimmar Grunt", "pinned ones under their own header")
+eq(rowText(rows[1]) .. "," .. rowText(rows[2]), "{Pinned},Orgrimmar Grunt", "pinned ones under their own banner")
 rows[2]:Fire("OnClick", "RightButton")
 eq(grunt.pinned, nil, "right-click unpins")
 
@@ -174,13 +198,26 @@ eq(select(5, slots[11]:GetPoint()), -42, "the eleventh starts the second")
 eq(select(4, slots[11]:GetPoint()), 0, "at the left edge")
 local searchBox = under(window, function(f) return f._template == "SearchBoxTemplate" and f:IsVisible() end)[1]
 eq(searchBox:GetParent()._template, "InsetFrameTemplate", "the search box sits at the top of the list's inset, as in the Mount Journal")
+-- A search is forgotten when the journal closes: it opens again on the whole list.
+searchBox:SetText("boar")
+searchBox:Fire("OnTextChanged")
+eq(ns.CreatureFilter.terms[1], "boar", "searching")
+window:Hide()
+eq(searchBox:GetText(), "", "closed: the search box empty")
+eq(#ns.CreatureFilter.terms, 0, "and the list unfiltered")
+window:Show()
 local portraits = under(window, function(f) return rawget(f, "face") ~= nil and f:IsVisible() end)
 check(#portraits >= 2, "creatures shown with their portraits")
 
 local models = under(window, function(f) return f._template == "ModelWithZoomTemplate" end)
 eq(models[1]._creature, 3100, "its model from its creature ID")
+local cleared = 0
+local clear = models[1].ClearModel
+models[1].ClearModel = function(self) cleared = cleared + 1; return clear(self) end
 ns.ShowCreature(3296)
 eq(models[1]._display, 4259, "a creature with a known model shows that")
+check(cleared > 0, "the last creature's model cleared first (one still loading would stay)")
+models[1].ClearModel = clear
 
 -- Its boxes: wares from the loot box's header, quests by name, and the note on the stage.
 local function viewButton(label)
@@ -210,33 +247,79 @@ note:Fire("OnTextChanged")
 eq(boar.note, "Watch for its charge.", "the note is kept as you type")
 check(not noteButton.icon._desaturated, "the note button lit once it has one")
 
--- A quest: one in the log opens Blizzard's quest log on it; any other its giver's Quests tab.
+-- A quest named in the journal: one in your log opens Blizzard's quest log; any other the
+-- journal's quest page (who gives it, Show on Map); Shift-click on its line links it in chat.
 W.quests = { { questID = 300, title = "Cutting Teeth", level = 4 } }
+Book.QuestRecord(300).title = "Cutting Teeth"
 ns.ShowQuest(300)
-eq(W.openedQuest, 300, "a quest in the log opens in the quest log")
+eq(W.openedQuest, 300, "a quest in your log opens in the quest log")
 W.quests = {}
-Book.QuestRecord(301).giver = { npc = 3296, name = "Orgrimmar Grunt" }
+Book.QuestRecord(301).giver = { npc = 3296, name = "Orgrimmar Grunt", map = 1411, x = 0.5, y = 0.5 }
 ns.ShowQuest(301)
+local questPage = ForeverCodexQuest
+local function pageTexts()
+    local all = {}
+    for _, f in ipairs(under(questPage, function(f) return f._kind == "FontString" and f:IsVisible() end)) do
+        all[#all + 1] = tostring(text(f))
+    end
+    return table.concat(all, "\n")
+end
+shown = pageTexts()
+check(shown:find("A Peon's Burden", 1, true) ~= nil, "any other on the journal's quest page")
+check(shown:find("Orgrimmar Grunt", 1, true) ~= nil, "who gives it")
+local mapButton = under(questPage, function(f) return f._template == "UIPanelButtonTemplate" and f:IsVisible() and text(f) == L.QUESTS_SHOW_MAP end)[1]
+mapButton:Fire("OnClick")
+eq(W.waypoint and W.waypoint.map, 1411, "Show on Map: Blizzard's map pin where its giver stands")
+local giverLine = under(questPage, function(f) return f._kind == "FontString" and f:IsVisible() and tostring(text(f)):find("Orgrimmar Grunt", 1, true) end)[1]
+W.shift = true
+ns.JournalKit.Link("quest", 301, "LeftButton")
+W.shift = false
+eq(W.linked[#W.linked], "quest:301", "Shift-click links a quest in chat")
+giverLine:GetParent():Fire("OnClick", "LeftButton")
+check(shownTexts():find("Orgrimmar", 1, true) ~= nil, "a click on its giver opens the giver's page")
+-- A creature's quests: one icon for where each stands, its role in words at the right.
+ns.ShowCreature(3296, "quests")
 shown = shownTexts()
-check(shown:find("A Peon's Burden", 1, true) ~= nil, "any other on its giver's Quests tab")
-check(shown:find("Orgrimmar Grunt", 1, true) ~= nil, "the giver shown")
+check(shown:find(L.JOURNAL_ROLE_STARTS_SHORT, 1, true) ~= nil, "a creature's quest says what it does for it in words")
+-- Moving: the journal fades (as the game's map does), whole again when you stop.
+local journalWindow = ForeverCodexJournal
+W.Fire("PLAYER_STARTED_MOVING")
+eq(journalWindow:GetAlpha(), 0.5, "faded while you move")
+W.Fire("PLAYER_STOPPED_MOVING")
+eq(journalWindow:GetAlpha(), 1, "whole again when you stop")
+ns:SetOption("Journal", "fade", false)
+W.Fire("PLAYER_STARTED_MOVING")
+eq(journalWindow:GetAlpha(), 1, "Fade While Moving off: never faded")
+W.Fire("PLAYER_STOPPED_MOVING")
+ns:SetOption("Journal", "fade", true)
+eq(ns.JournalText.STATE_ICONS.done, "Interface\\RaidFrame\\ReadyCheck-Ready", "a done quest's tick is the green one")
 
 -- The Items page.
 ns.ShowItem(769)
 shown = shownTexts()
 check(shown:find("Chunk of Boar Meat", 1, true) ~= nil, "the items page shows its item")
 check(shown:find("Mottled Boar", 1, true) ~= nil, "and who drops it")
-local card = under(window, function(f) return f._template == "GameTooltipTemplate" and f:IsShown() end)[1]
-check(card ~= nil, "its own tooltip docked in the page")
+-- A dropper with a known look: its face, and its name beside it (the name was left unplaced).
+Book.Creature(3100).display = 4259
+ns.ShowItem(769)
+local dropper = under(window, function(f) return f._kind == "FontString" and f:IsVisible() and tostring(text(f)):find("Mottled Boar", 1, true) end)[1]
+check(dropper ~= nil and dropper:GetPoint() ~= nil, "a dropper with a face still shows its name")
+check(dropper:GetParent().icon._portrait == 4259, "and its face")
+Book.Creature(3100).display = nil
+ns.ShowItem(769)
+check(under(window, function(f) return f._template == "GameTooltipTemplate" and f:IsShown() end)[1] == nil,
+    "no tooltip in the page")
 check(shown:find("[3-5]", 1, true) ~= nil, "a dropper's level beside its name")
-local sourceScroll = under(window, function(f) return f._kind == "FontString" and f:IsVisible() and tostring(text(f)):find("Mottled Boar", 1, true) end)[1]
-while sourceScroll and sourceScroll._kind ~= "ScrollFrame" do sourceScroll = sourceScroll:GetParent() end
-local point, _, _, x = sourceScroll:GetPoint()
-check(point == "TOPLEFT" and x >= 200, "who drops it sits right of the card")
-eq((card:GetPoint()), "TOPLEFT", "the card docked at the left")
+-- What its tooltip says, written on the page: from the link it was seen with, a sell price as money.
+W.itemTips[769] = { { leftText = "Chunk of Boar Meat" }, { leftText = "Binds when picked up", leftColor = { r = 1, g = 1, b = 1 } },
+    { leftText = "Sell Price:", price = 4 } }
 Book.Item(769).link = "|cffffffff|Hitem:769::::::::|h[Chunk of Boar Meat]|h|r"
 ns.ShowItem(769)
-eq(card._hyperlink, Book.Item(769).link, "the card shows the item as it was seen (its link)")
+shown = shownTexts()
+check(shown:find(L.JITEMS_DETAILS, 1, true) ~= nil, "its tooltip's lines as Details")
+check(shown:find("Binds when picked up", 1, true) ~= nil, "each line")
+check(shown:find(ns.MoneyText(4), 1, true) ~= nil, "its sell price as money")
+eq(select(2, shown:gsub("Chunk of Boar Meat", "")) >= 1, true, "its name the page's title")
 
 -- An item you carry: a click on its icon opens Blizzard's bags on it, its buttons aglow.
 W.items["[Chunk of Boar Meat]"] = { id = 769 }
@@ -279,11 +362,12 @@ ns.RecorderCombat.OnPartyKill(ns.modules.Recorder, "Creature-0-0-0-0-3270-000000
 check(not table.concat(news, ","):find("TROPHY", 1, true), "not its second")
 Journal.Show("trophies")
 shown = shownTexts()
-check(shown:find(string.format(ns.L.JOURNAL_COUNT, 1, 1), 1, true) ~= nil, "trophies: the rares tile, 1 of 1 defeated")
-check(shown:find(ns.L.TROPHY_ELITES, 1, true) ~= nil, "a tile for elites too")
-check(shown:find("Elder Mystic Razorsnout", 1, true) ~= nil and shown:find(string.format(ns.L.TROPHY_KILLS, 2), 1, true) ~= nil,
-    "a defeated rare with its kills")
-check(shown:find("Sludge Anomaly", 1, true) ~= nil and shown:find(ns.L.TROPHY_OPEN, 1, true) ~= nil, "a boss not yet defeated")
+check(shown:find(string.format(ns.L.TROPHY_TOTAL, 1, 2), 1, true) ~= nil, "trophies: 1 of the 2 met defeated")
+check(shown:find("Elder Mystic Razorsnout", 1, true) ~= nil
+    and shown:find(string.format(ns.L.TROPHY_SUB, ns.L.TROPHY_RARE, string.format(ns.L.TROPHY_KILLS, 2)), 1, true) ~= nil,
+    "a defeated rare: what it is and its kills")
+check(shown:find("Sludge Anomaly", 1, true) ~= nil
+    and shown:find(string.format(ns.L.TROPHY_SUB, ns.L.TROPHY_BOSS, ns.L.TROPHY_OPEN), 1, true) ~= nil, "a boss not yet defeated")
 check(not shown:find("Mottled Boar", 1, true), "no ordinary creatures")
 Journal.Show("creatures")
 
@@ -295,10 +379,41 @@ W.RunTimers()
 check(names():find("Bloodtalon", 1, true) ~= nil, "a new creature listed")
 check(journal:DebugLine():find(ns.L.JOURNAL_TAB_CREATURES, 1, true) ~= nil, "Debug line names the page")
 
--- Off: closed, and /fc opens its settings instead.
+-- Open On: where you left it (the default), your zone's creatures, or the first pinned one.
+local creaturesPage
+for _, page in ipairs(Journal.pages) do if page.key == "creatures" then creaturesPage = page end end
+Journal.Show("items")
+ns.ToggleJournal()
+ns.ToggleJournal()
+check(ns.JournalKit and window:IsShown(), "open again")
+local shownItems = shownTexts():find(L.JITEMS_DETAILS, 1, true) ~= nil
+check(shownItems, "Where You Left It: back on the Items page")
+ns.ToggleJournal()
+ns:SetOption("Journal", "openOn", "zone")
+W.place = { map = 1411, x = 0.5, y = 0.5 }
+creaturesPage.Select(3296)
+Journal.Show("items")
+ns.ToggleJournal()
+eq(creaturesPage.Selected(), 3102, "Your Zone: on the Creatures page at the first creature listed in the zone you're in")
+check(not journal.db.collapsed["map:1411"], "its zone unfolded")
+ns.ToggleJournal()
+W.place = { map = 9999, x = 0.5, y = 0.5 }
+creaturesPage.Select(3296)
+ns.ToggleJournal()
+eq(creaturesPage.Selected(), 3296, "a zone with no creature known: where you left it")
+ns.ToggleJournal()
+ns:SetOption("Journal", "openOn", "pinned")
+Book.SetPinned(3296, true)
+creaturesPage.Select(3100)
+ns.ToggleJournal()
+eq(creaturesPage.Selected(), 3296, "Pinned Creature: the first pinned one")
+Book.SetPinned(3296, false)
+ns:SetOption("Journal", "openOn", "last")
+
+-- Off: closed, and /codex opens its settings instead.
 ns:SetEnabled("Journal", false)
 check(not window:IsShown(), "closed when turned off")
-W.Slash("/fc")
+W.Slash("/codex")
 check(not window:IsShown(), "not opened while off")
-check(ForeverCore.SettingsWindow.Current() ~= nil, "the settings instead")
+check(ns.SettingsWindow.Current() ~= nil, "the settings instead")
 finish()

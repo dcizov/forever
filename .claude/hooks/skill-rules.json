@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "_comment": "Read by skill-activation.py on every prompt. keywords: case-insensitive whole words/phrases; intentPatterns: case-insensitive regexes; pathPatterns: regexes matched against file paths named in the prompt or IDE selection. 'with' lists skills always suggested alongside. Skill names must match the Skill tool exactly.",
+  "maxSuggestions": 6,
+  "wowGate": {
+    "_comment": "Every WoW domain hit also suggests these first (CLAUDE.md: wow-client-targets for Forever, then wow-api-index).",
+    "with": ["wow-addon-dev:wow-client-targets", "wow-addon-dev:wow-api-index"]
+  },
+  "skills": {
+    "desloppify": {
+      "priority": "high",
+      "wow": false,
+      "keywords": ["desloppify", "tech debt", "technical debt", "health score", "code health scan", "cleanup plan", "strict score"]
+    },
+    "wow-addon-dev:wow-addon-development": {
+      "priority": "medium",
+      "note": "repo rules in CLAUDE.md/README.md win over its generic workflow",
+      "keywords": ["new module", "new addon", "member addon", "port", "porting", "new feature", "localization", "locale", "recipe book", "pet journal"],
+      "intentPatterns": ["\\b(add|create|build|implement|write)\\b.{0,40}\\b(module|feature|addon|option|page|window)\\b"]
+    },
+    "wow-addon-dev:wow-addon-structure": {
+      "priority": "medium",
+      "keywords": ["toc", ".toc", "savedvariables", "saved variables", "load order", "loadondemand", "load on demand", "optionaldeps", "dependencies"]
+    },
+    "wow-addon-dev:wow-api-quests": {
+      "priority": "high",
+      "keywords": ["quest", "quests", "quest log", "questlog", "objective", "objectives", "tracker", "questie", "questiedb", "quest pins", "world quest", "campaign"],
+      "pathPatterns": ["Quest[^/]*\\.lua", "Tracker[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-api-map-navigation": {
+      "priority": "high",
+      "keywords": ["map", "world map", "worldmap", "minimap", "map pin", "pins", "waypoint", "coordinates", "coords", "nameplate", "nameplates", "vignette", "flight path", "taxi", "zone", "pan", "zoom"],
+      "pathPatterns": ["Map[^/]*\\.lua", "MapPins\\.lua", "Places\\.lua"]
+    },
+    "wow-addon-dev:wow-api-items-inventory": {
+      "priority": "high",
+      "keywords": ["item", "items", "bag", "bags", "loot", "merchant", "vendor", "equipment", "gear", "baganator", "inventory", "bank", "upgrade arrows", "itemlink", "item link"],
+      "pathPatterns": ["Bags\\.lua", "Item[^/]*\\.lua", "Equipment\\.lua", "Upgrades\\.lua", "Loot[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-api-events": {
+      "priority": "medium",
+      "keywords": ["event", "events", "payload", "registerevent"],
+      "casePatterns": ["\\b[A-Z][A-Z0-9]+(_[A-Z0-9]+)+\\b"]
+    },
+    "wow-addon-dev:wow-api-lua-environment": {
+      "priority": "high",
+      "keywords": ["taint", "tainted", "secret value", "secret values", "issecretvalue", "secure", "securecall", "securecallfunction", "hooksecurefunc", "combat lockdown", "incombatlockdown", "protected", "c_timer", "restricted"]
+    },
+    "wow-addon-dev:wow-api-widget": {
+      "priority": "medium",
+      "keywords": ["createframe", "frame", "frames", "texture", "fontstring", "setpoint", "anchor", "anchors", "frame level", "strata", "widget"]
+    },
+    "wow-addon-dev:wow-api-framexml": {
+      "priority": "medium",
+      "keywords": ["framexml", "mixin", "mixins", "object pool", "staticpopup", "blizzard frame", "blizzard ui", "callbackregistry", "scrollbox", "dataprovider"]
+    },
+    "wow-addon-dev:wow-native-ui": {
+      "priority": "medium",
+      "keywords": ["window", "button", "buttons", "scroll", "scroll list", "panel", "dropdown", "checkbox", "slider", "nineslice", "backdrop", "atlas", "border", "layout", "settings window", "ui"],
+      "pathPatterns": ["Shared/UI/", "/UI/", "Settings/[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-ui-skinning": {
+      "priority": "medium",
+      "keywords": ["skin", "reskin", "restyle", "look of", "journal look", "spellbook look", "parchment", "theme"],
+      "pathPatterns": ["Journal[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-controller-support": {
+      "priority": "low",
+      "keywords": ["controller", "gamepad", "focus", "keyboard navigation"]
+    },
+    "wow-addon-dev:wow-api-settings-system": {
+      "priority": "medium",
+      "keywords": ["cvar", "cvars", "console variable", "settings category", "registercanvaslayoutcategory", "keybinding", "key binding", "bindings", "edit mode", "editmode", "graphics", "advanced graphics"],
+      "pathPatterns": ["Bindings\\.(xml|lua)", "EditMode\\.lua", "Visuals[^/]*\\.lua", "DynamicLight[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-api-unit-player": {
+      "priority": "medium",
+      "keywords": ["unit", "unitguid", "guid", "aura", "auras", "buff", "debuff", "health", "target", "creature", "npc", "npcs", "unitcanattack", "pet", "guardian", "totem"],
+      "pathPatterns": ["Recorder[^/]*\\.lua", "Creature[^/]*\\.lua", "Book\\.lua"]
+    },
+    "wow-addon-dev:wow-api-combat": {
+      "priority": "medium",
+      "keywords": ["combat", "damage", "threat", "combat log", "encounter"]
+    },
+    "wow-addon-dev:wow-api-social-chat": {
+      "priority": "medium",
+      "keywords": ["chat", "addon message", "sendaddonmessage", "whisper", "channel", "sharing", "share", "transport", "friends"],
+      "pathPatterns": ["Transport\\.lua", "Chat[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-api-spells-abilities": {
+      "priority": "medium",
+      "keywords": ["spell", "spells", "spellbook", "cooldown", "action bar", "actionbar", "cast", "casting", "fishing"]
+    },
+    "wow-addon-dev:wow-api-misc-systems": {
+      "priority": "medium",
+      "keywords": ["tooltip", "tooltips", "gossip", "npc dialog", "player choice", "model", "playermodel", "tutorial", "interaction"],
+      "pathPatterns": ["Tooltip[^/]*\\.lua"]
+    },
+    "wow-addon-dev:wow-api-escape-sequences": {
+      "priority": "low",
+      "keywords": ["color code", "colour code", "texture markup", "atlas markup", "inline icon", "escape sequence", "hyperlink"]
+    },
+    "wow-addon-dev:wow-api-xml-schema": {
+      "priority": "low",
+      "keywords": ["xml", "template", "inherits"]
+    },
+    "wow-addon-dev:wow-lua-api": {
+      "priority": "low",
+      "keywords": ["lua 5.1", "string pattern", "gsub", "string.format", "strsplit"]
+    },
+    "wow-addon-dev:wow-api-collections": {
+      "priority": "medium",
+      "keywords": ["mount", "mounts", "pet journal", "battle pet", "toy", "toys", "heirloom"]
+    },
+    "wow-addon-dev:wow-api-professions": {
+      "priority": "medium",
+      "keywords": ["recipe", "recipes", "profession", "professions", "crafting", "tradeskill", "trade skill"]
+    },
+    "wow-addon-dev:wow-api-currency-economy": {
+      "priority": "medium",
+      "keywords": ["money", "gold", "currency", "auction", "auction house", "mail", "mailbox", "trade"]
+    },
+    "wow-addon-dev:wow-api-reputation": {
+      "priority": "medium",
+      "keywords": ["reputation", "faction", "renown", "paragon"]
+    },
+    "wow-addon-dev:wow-api-achievements": {
+      "priority": "medium",
+      "keywords": ["achievement", "achievements", "statistic", "statistics"]
+    },
+    "wow-addon-dev:wow-api-encounters": {
+      "priority": "medium",
+      "keywords": ["dungeon", "raid", "instance", "scenario", "mythic", "encounter journal", "boss"]
+    },
+    "wow-addon-dev:wow-api-group-lfg": {
+      "priority": "low",
+      "keywords": ["party", "group finder", "lfg", "ready check", "raid marker"]
+    },
+    "wow-addon-dev:wow-api-talents": {
+      "priority": "low",
+      "keywords": ["talent", "talents", "specialization", "legacy tree"]
+    },
+    "wow-addon-dev:wow-api-transmog": {
+      "priority": "low",
+      "keywords": ["transmog", "appearance", "wardrobe", "dye"]
+    },
+    "wow-addon-dev:wow-macro-commands": {
+      "priority": "low",
+      "keywords": ["macro", "macros", "/cast", "/use"]
+    },
+    "wow-addon-dev:wow-curseforge-packaging": {
+      "priority": "medium",
+      "keywords": ["curseforge", "pkgmeta", ".pkgmeta", "packaging", "package the addon"]
+    }
+  }
+}

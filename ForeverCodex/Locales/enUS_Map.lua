@@ -1,0 +1,109 @@
+--[[
+    Forever Codex - Locales/enUS_Map.lua
+    The map modules' strings (Quest Pins, Quest on the Map, Rare Pins, Creature Areas), apart from
+    Locales/enUS_Modules.lua's.
+]]
+
+local _, ns = ...
+local L = ns:NewLocale("enUS")
+
+-- Map pins (Quest Pins, Rare Pins) ---------------------------------------------------------------
+L.PINS_WORLD = "World Map"
+L.PINS_WORLD_TIP = "Shows the pins on the world map."
+L.PINS_MINIMAP = "Minimap"
+L.PINS_MINIMAP_TIP = "Shows the pins near you on the minimap."
+L.PINS_SIZE = "Pin Size"
+L.PINS_SIZE_TIP = "How big the pins are."
+
+-- Quest Pins -------------------------------------------------------------------------------------
+L.QPINS_TITLE = "Quest Pins"
+L.QPINS_DESC = "Shows where your quests are on the world map and the minimap, from what the Recorder learned: who offered you a quest, which creature dropped an item that starts one, who takes it in, and where its objectives went before."
+L.QPINS_SHOW = "Show"
+L.QPINS_SHOW_COUNT = "%d of %d shown"
+L.QPINS_SHOW_TIP = "Which pins to show."
+L.QPINS_GIVERS = "Quest Givers"
+L.QPINS_GIVERS_TIP = "A yellow ! where you were offered a quest you haven't taken or done (blue for a daily). Steps back while Forever++'s Quest Pins is on."
+L.QPINS_AVAILABLE = "Quests You Can Take"
+L.QPINS_AVAILABLE_TIP = "A yellow ! where each quest you can take now starts, from QuestieDB (needs it), by the same rules as Forever++'s Quest Pins. Steps back while Forever++'s Quest Pins is on, so no ! shows twice. Right-click one to add its quests to the journal."
+L.QPINS_ITEMS = "Quest Items"
+L.QPINS_ITEMS_TIP = "Where a creature dropped an item that starts a quest you haven't taken."
+L.QPINS_TURNINS = "Turn-Ins"
+L.QPINS_TURNINS_TIP = "A ? where a quest in your log is turned in: yellow once it's ready, gray until then."
+L.QPINS_OBJECTIVES = "Objectives"
+L.QPINS_OBJECTIVES_TIP = "Where each objective still to do of a quest in your log went up before."
+L.QPINS_CONTINENT = "On Continent Maps"
+L.QPINS_CONTINENT_TIP = "Also shows the givers, quest items and turn-ins of a continent's zones on the continent's map."
+L.QPINS_GIVES = "Offers this quest."
+L.QPINS_ITEM = "%s, dropped by %s, starts this quest."
+L.QPINS_HINT = "Shift-click: show the quest"
+L.QPINS_HINT_LOG = "Shift-click: open the quest in your quest log"
+L.QPINS_HINT_WAYPOINT = "Ctrl-click: set a map pin here"
+L.QPINS_MORE = "and %d more"
+L.QPINS_SPAWNS = "%d possible spawn locations"
+L.QPINS_REQUIRES_LEVEL = "Requires level %d"
+L.QPINS_KINDS = "Quest Kinds"
+L.QPINS_KINDS_TIP = "Which kinds of quests you can take show a !, besides normal ones."
+L.QPINS_KIND_CLASS = "Class"
+L.QPINS_KIND_CLASS_TIP = "Show your class's quests (in your class's colour)."
+L.QPINS_KIND_PROFESSION = "Profession"
+L.QPINS_KIND_PROFESSION_TIP = "Show quests for a profession you have at the rank they need (orange)."
+L.QPINS_KIND_REPEATABLE = "Repeatable"
+L.QPINS_KIND_REPEATABLE_TIP = "Show daily and repeatable quests (blue)."
+L.QPINS_KIND_DUNGEON = "Dungeon and Raid"
+L.QPINS_KIND_DUNGEON_TIP = "Show quests for a dungeon or raid (orange-red)."
+L.QPINS_KIND_HOLIDAY = "Holiday"
+L.QPINS_KIND_HOLIDAY_TIP = "Show holiday and event quests (pink), whether or not the event is on."
+L.QPINS_UPCOMING = "Upcoming Quests"
+L.QPINS_UPCOMING_TIP = "Show quests you're up to three levels short of, faded, with the level they need."
+L.QPINS_CLUSTERS = "Group Spawns"
+L.QPINS_CLUSTERS_TIP = "Show one ! for each group of a giver's spawns close together, at the one nearest you, instead of one at every spawn."
+L.QPINS_COLOR = "Pin Colors"
+L.QPINS_COLOR_TIP = "Color each ! by the kind of its quests, by how hard its first quest is for you, or not at all."
+L.QPINS_COLOR_KIND = "By Kind"
+L.QPINS_COLOR_DIFFICULTY = "By Difficulty"
+L.QPINS_COLOR_PLAIN = "Plain"
+L.QPINS_READY = "Ready to turn in here."
+L.QPINS_NOT_READY = "Turn in here once it's done."
+L.QPINS_OBJECTIVE = "An objective went up here."
+L.QPINS_DEBUG = "%d pins on your map"
+
+-- Quest on the Map -------------------------------------------------------------------------------
+L.QFOCUS_TITLE = "Quest on the Map"
+L.QFOCUS_DESC = "Show a quest from the journal on the world map and the minimap, from QuestieDB (else what you learned of it): where it starts, where it's turned in and where its objectives are. Open it with a quest page's Show on Map, or Ctrl-click a quest in the journal."
+L.QFOCUS_DEBUG = "Showing %s"
+L.QFOCUS_IDLE = "No quest shown"
+
+-- Rare Pins --------------------------------------------------------------------------------------
+L.RPINS_TITLE = "Rare Pins"
+L.RPINS_DESC = "Shows the rare creatures you've met on the world map and the minimap, where you saw each one most."
+L.RPINS_LEVEL = "Rare, level %d"
+L.RPINS_RARE = "Rare"
+L.RPINS_SEEN = "Last seen %s, killed %d"
+L.RPINS_HINT = "Shift-click: open the journal"
+
+-- Creature Areas ---------------------------------------------------------------------------------
+L.AREAS_TITLE = "Creature Areas"
+L.AREAS_DESC = "Draws where creatures live on the world map and the minimap, as soft patches in a color of each one's own: your pinned creatures, the ones a quest in your log wants, and the one whose location you click in the journal."
+L.AREAS_PINNED = "Pinned Creatures"
+L.AREAS_PINNED_TIP = "Draws where your pinned creatures live (the journal's star)."
+L.AREAS_WANTED = "Quest Creatures"
+L.AREAS_WANTED_TIP = "Draws where the creatures a quest in your log has you kill, loot or speak to live."
+L.AREAS_OPACITY = "Opacity"
+L.AREAS_OPACITY_TIP = "How strongly the patches show."
+L.AREAS_HINT = "Right-click: open it in the journal"
+L.AREAS_DEBUG = "%d creatures drawn"
+
+-- OpenMap (Modules/Map/OpenMap.lua)
+L.OPENMAP_TITLE = "OpenMap"
+L.OPENMAP_DESC = "Work with OpenMap the way Questie does: give its Townsfolk and Rare Mobs QuestieDB's NPCs without Questie, put Codex's map layers in its menu, and list the creatures you've met on a dungeon's map. Codex's pins show for every zone in view on OpenMap's map either way."
+L.OPENMAP_TOWNSFOLK = "Townsfolk from QuestieDB"
+L.OPENMAP_TOWNSFOLK_TIP = "Give OpenMap's Townsfolk and Rare Mobs the NPCs QuestieDB knows, so they show without Questie. With Questie loaded, OpenMap uses Questie's own."
+L.OPENMAP_MENU = "Codex in OpenMap's Menu"
+L.OPENMAP_MENU_TIP = "Put Quest Pins, Rare Pins and Creature Areas in OpenMap's menu, to turn them on and off from the map."
+L.OPENMAP_DUNGEONS = "Creatures on Dungeon Maps"
+L.OPENMAP_DUNGEONS_TIP = "List the creatures you've met in a dungeon on its map in OpenMap, the most killed first."
+L.OPENMAP_SECTION = "Forever Codex" -- the heading over Codex's switches in OpenMap's menu
+L.OPENMAP_DUNGEON_TITLE = "Creatures You've Met"
+L.OPENMAP_DUNGEON_LINE = "%s |cff999999(%d killed)|r"
+L.OPENMAP_NEEDED = "Needs OpenMap: install and enable it to use this."
+L.OPENMAP_LOCKED = "Needs OpenMap."

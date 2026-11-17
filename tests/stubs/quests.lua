@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/quests.lua
+    Forever Gearbox - tests/stubs/quests.lua
     The stand-in game's quest log and item tooltips, loaded by tests/wow.lua. A scenario puts
     quests in W.quests ({ title, questID, objectives = { { type = "item", text = "Murloc Eye: 2/3",
     numFulfilled, numRequired } } }), Use: spells in W.itemSpells (link or item ID -> spell) and
@@ -71,12 +71,12 @@ function W.UnitTooltip(guid, unit)
     return tooltip.added
 end
 
--- Nameplates and unit tooltips (Quest Nameplates, Object Names).
+-- Nameplates and unit tooltips (Quest Markers).
 --   W.plates[unit]      = { player = bool }: a nameplate on screen for `unit` ("nameplate1", ...)
 --   W.unitTips[unit]    = the unit tooltip's lines: { { type, text } }
 --   W.cursorTip         = the world cursor's tooltip lines (an object under the soft target)
 --   W.softObject        = { name, unable }: the soft-interact game object, or nil
-Enum.TooltipDataLineType = { QuestObjective = 8, QuestTitle = 17, QuestPlayer = 18, None = 0 }
+Enum.TooltipDataLineType = { QuestObjective = 8, UnitOwner = 16, QuestTitle = 17, QuestPlayer = 18, None = 0 }
 W.plates, W.unitTips, W.plateFrames = {}, {}, {}
 local function plateFor(unit)
     local p = W.plates[unit]

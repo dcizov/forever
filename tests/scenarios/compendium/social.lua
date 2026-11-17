@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/social.lua
+    Forever Codex - tests/scenarios/compendium/social.lua
     Sharing and Badges. The wire format reads back what it wrote and refuses anything else; a
     shared creature goes out in pieces, is asked about, and comes in marked as shared without
     your own counts growing; Receive Shares off takes nothing; Group Sync sends what you learn
@@ -12,7 +12,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, Transport, Badges = ns.Book, ns.Transport, ns.Badges
 local sharing = ns.modules.Sharing
@@ -113,6 +113,16 @@ Badges.ToggleShown("creatures")
 check(Badges.IsShown("kills") and Badges.IsShown("creatures"), "two shown")
 Badges.ToggleShown("deaths")
 check(not Badges.IsShown("deaths"), "a badge not earned can't be shown")
+-- The Badges page: the earned under a heading of theirs (a star on the shown), the rest under another.
+ns.Journal.Open("badges")
+local texts = {}
+for _, f in ipairs(T.under(ForeverCodexJournal, function(f) return f._kind == "FontString" and f:IsVisible() end)) do
+    texts[#texts + 1] = tostring(f:GetText() or "")
+end
+texts = table.concat(texts, "\n")
+check(texts:find(ns.L.BADGES_EARNED, 1, true) and texts:find(ns.L.BADGES_OPEN, 1, true), "earned and still to earn, each a heading")
+check(texts:find(Badges.TierName("kills", 2), 1, true) ~= nil, "an earned badge with its tier")
+ForeverCodexJournal:Hide()
 W.group = "party"
 W.addonMessages = {}
 W.Fire("GROUP_ROSTER_UPDATE")

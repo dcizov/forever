@@ -24,12 +24,19 @@ jobs:
 
       - name: Each addon's TOC lists every one of its files, and every listed file exists
         run: |
-          for addon in ForeverCore ForeverTweaks ForeverCompendium; do
+          for addon in ForeverGearbox ForeverCodex; do
             (cd "$addon"
               grep -E '\.lua\s*$' "$addon.toc" | tr -d '\r' | sed 's#\\#/#g; s/[[:space:]]*$//' | sort > ../listed.txt
               find . -name '*.lua' | sed 's#^\./##' | sort > ../present.txt)
             echo "$addon"; diff listed.txt present.txt
           done
+
+      - name: Each addon's copy of the runtime is the repository's Shared/ (scripts/sync-shared.sh)
+        run: |
+          # Forever Gearbox leaves the settings window (Shared/Settings/) out.
+          diff -r -x Settings Shared ForeverGearbox/Shared && test ! -e ForeverGearbox/Shared/Settings \
+            || { echo "ForeverGearbox/Shared differs: run scripts/sync-shared.sh"; exit 1; }
+          diff -r Shared ForeverCodex/Shared || { echo "ForeverCodex/Shared differs: run scripts/sync-shared.sh"; exit 1; }
 
       - name: Every addon is at the same version
         run: |

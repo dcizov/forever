@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/bags/baganator.lua
+    Forever Gearbox - tests/scenarios/bags/baganator.lua
     Full Bags' Baganator widget, in the order the game sets it up (Baganator loaded first, our
     modules turning on at login), with Baganator's own corner rules: per corner only the first
     widget answering true shows. Full Bags' delete number must win the top left corner over
@@ -22,7 +22,7 @@ end
 W.bags[0][1] = { link = "[Helm C]" } -- the cheapest thing in the bags
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 local B = W.UseBaganator() -- loaded before us (an optional dependency)
 login()
 W.RunTimers()

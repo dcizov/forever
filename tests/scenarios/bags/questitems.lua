@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/bags/questitems.lua
+    Forever Gearbox - tests/scenarios/bags/questitems.lua
     Quest Items: which quest a bag item is for (needed, begins a quest, or left over), the marks
     in Blizzard's bags and Baganator's, the quest log changing, and QuestieDB's item IDs.
     Run by tests/run.lua (lua5.1 tests/run.lua questitems), which passes its helpers in.
@@ -35,11 +35,10 @@ W.quests = {
 }
 
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 local B = W.UseBaganator()
 login()
--- Item Tooltips (its own scenario: tooltips) adds lines to the same tooltips: off here.
-ns:SetEnabled("ItemTooltips", false)
+check(W.loaded.QuestieDB, "QuestieDB (on demand) loaded once Quest Items asked")
 local mod, QuestLog = ns.modules.QuestItems, ns.QuestLog
 check(mod.active, "on by default")
 
@@ -172,7 +171,8 @@ local questie = {
     [10] = { objectives = {}, sourceItemId = 206 },
     [11] = { objectives = { nil, nil, { { 207 } } } },
 }
-_G.LibQuestieDB = { Quest = { Get = function(id, key) return questie[id] and questie[id][key] end } }
+_G.LibQuestieDB = { Quest = { Get = function(id, key) return questie[id] and questie[id][key] end },
+    Item = { Get = function() return nil end } }
 W.Fire("QUEST_LOG_UPDATE")
 W.RunTimers()
 eq(QuestLog.ForBagSlot(1, 3), "needed", "QuestieDB: the package its quest hands you is needed")
@@ -181,7 +181,7 @@ check(markOn(1, 3) and markOn(1, 4), "both marked as needed")
 questie[11] = { objectives = {}, requiredSourceItems = { 207 } }
 QuestLog.Invalidate()
 eq(QuestLog.ForBagSlot(1, 4), "needed", "an item a quest needs that isn't an objective")
-_G.LibQuestieDB = { Quest = { Get = function() error("questie broke") end } }
+_G.LibQuestieDB = { Quest = { Get = function() error("questie broke") end }, Item = { Get = function() error("x") end } }
 QuestLog.Invalidate()
 eq(QuestLog.ForBagSlot(1, 3), "leftover", "QuestieDB failing: back to the names")
 eq(#W.errors, 0, "and its error isn't ours")

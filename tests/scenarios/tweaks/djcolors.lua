@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/tweaks/djcolors.lua
+    Forever Gearbox - tests/scenarios/tweaks/djcolors.lua
     Dungeon Journal Skin's palette follows Panels: rows are filled while the pet list's row art
     isn't there, and clear over it once Panels is ticked (DungeonJournal's window isn't made here,
     so Panels never takes effect on its own).
@@ -15,7 +15,7 @@ local hall = { row = { 0.2, 0.1, 0.05, 0.9 } }
 ForeverDungeonJournal_NS = { THEMES = { ["Hall of Thanes"] = hall } }
 ForeverDungeonJournalFrame = false -- not made yet
 
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 check(ns.modules.DungeonJournalSkin.active, "on")
 eq(hall.row[4], 0, "Panels ticked: rows are clear, for their art")

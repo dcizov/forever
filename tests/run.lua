@@ -4,24 +4,24 @@
     lua5.1 tests/run.lua <name>     runs one
 
     Each scenario loads addons from their TOCs into the stand-in game (tests/wow.lua: W.LoadAddon
-    loads an addon's dependencies first, so a member brings Forever Core), fires the events the
+    loads an addon's dependencies first: Forever Gearbox brings the Forever++ stand-in), fires the events the
     game would, and checks what happens. Exits non-zero on any failure.
 ]]
 
 local root = (arg[0]:match("^(.*)/tests/[^/]*$")) or "."
 -- Scenarios by folder in tests/scenarios/, in the order they run: core/ checks the runtime,
--- the suite (members alone and together), saved variables, settings pages and API; tweaks/
--- Forever Tweaks' features, one each, with its on-screen and unit ones in interface/ and its
+-- the two addons (alone and together), saved variables, settings pages and API; tweaks/
+-- Forever Gearbox' features, one each, with its on-screen and unit ones in interface/ and its
 -- quest ones in quests/; bags/ its bag features (Full Bags, Quest Items, Vendor)
--- and how they share Baganator; compendium/ Forever Compendium's.
+-- and how they share Baganator; compendium/ Forever Codex's.
 local GROUPS = {
     { "core", { "suite", "bindings", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api",
-        "changelog", "hints", "updates", "lint" } },
-    { "tweaks", { "chatfeatures", "fpptooltips", "bag", "gathering", "djskin", "djcolors", "covered", "fishingcast", "gathermap", "fishing", "chatfade", "auctionscan", "tooltiptext" } },
-    { "interface", { "layer", "combathelpers", "rotate", "classcolors", "threat", "windows", "performance" } },
-    { "quests", { "questplates", "marks", "dialogue" } },
-    { "bags", { "fullbags", "questitems", "vendor", "baganator" } },
-    { "compendium", { "recorder", "learning", "import", "journal", "archive", "social", "pins", "tooltips", "banner" } },
+        "changelog", "hints", "updates", "standalone", "lint" } },
+    { "tweaks", { "fpppage", "bag", "djskin", "djcolors", "fishing", "chat", "chatsplit" } },
+    { "interface", { "layer", "combathelpers", "performance", "cooldowns", "visuals", "drawer" } },
+    { "quests", { "questmarkers" } },
+    { "bags", { "fullbags", "questitems", "questiedb", "vendor", "baganator", "bagupgrades" } },
+    { "compendium", { "openmap", "recorder", "learning", "import", "journal", "quests", "archive", "social", "pins", "tooltips", "banner" } },
 }
 local SCENARIOS, folderOf = {}, {}
 for _, group in ipairs(GROUPS) do
@@ -107,11 +107,10 @@ local function under(f, test, found)
     return found
 end
 
--- Checks every page and module pane opens without an error: each member's slash, every module's
--- page, and the suite's own pages.
+-- Checks every page and module pane of Forever Codex's settings window opens without an
+-- error: its slash, every module's page, and its own pages.
 local function openEverything(ns)
-    W.Slash("/forever")
-    for _, member in ipairs(ns.members) do W.Slash(member.slash[1] .. " settings") end
+    W.Slash(ns.member.slash[1] .. " settings")
     for _, name in ipairs(ns.order) do ns:OpenSettings(name) end
     for _, page in ipairs({ ns.title, ns.L.DEBUG, ns.L.CHANGELOG, ns.L.ABOUT }) do C_SettingsUtil.OpenSettingsPanel(page) end
     check(W.opened ~= nil, "settings opened")

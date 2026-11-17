@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/chat.lua
+    Forever Gearbox - tests/stubs/chat.lua
     The stand-in game's chat window (Blizzard_ChatFrameBase): ChatFrame1 with its button strip,
     tab and input box, and Blizzard's fades, which set what Mainline's FloatingChatFrame.lua does
     at their end. W.ChatMouse(over) moves the mouse onto or off the chat.

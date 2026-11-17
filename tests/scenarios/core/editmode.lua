@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/core/editmode.lua
+    Forever Gearbox - tests/scenarios/core/editmode.lua
     Edit Mode moves, nudges and snapping.
     Run by tests/run.lua (lua5.1 tests/run.lua editmode), which passes its helpers in.
 ]]
@@ -9,9 +9,9 @@ local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 local ns
 
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 login()
-local perf, display = ns.modules.Performance, ForeverTweaksPerformance
+local perf, display = ns.modules.Performance, ForeverGearboxPerformance
 local function selections()
     local list = {}
     for _, f in ipairs(W.frames) do
@@ -22,7 +22,7 @@ end
 local selection = selections()[1]
 check(selection ~= nil, "selection box made")
 local changed = {}
-ForeverTweaksAPI.v1.RegisterCallback("OPTION_CHANGED", function(_, name, key) changed[name .. "." .. key] = true end)
+ForeverGearboxAPI.v1.RegisterCallback("OPTION_CHANGED", function(_, name, key) changed[name .. "." .. key] = true end)
 -- Stand-in sizes: the display 100x20 and the quest tracker 100x20, both centered at (50, 10).
 -- The display hangs by its BOTTOMRIGHT from the tracker's TOP (50, 20).
 selection.info.moveTo(500.4, 300)
@@ -33,7 +33,7 @@ check(changed["Performance.x"] and changed["Performance.y"], "both coordinates r
 EditModeManagerFrame:EnterEditMode()
 check(selection:IsShown(), "selection shows in Edit Mode")
 selection:Fire("OnMouseDown", "LeftButton")
-local dialog = ForeverCoreEditModeDialog
+local dialog = ForeverGearboxEditModeDialog
 check(dialog and dialog:IsShown(), "picking it opens the dialog")
 dialog:Fire("OnKeyDown", "RIGHT")
 eq(perf.db.x, 51, "arrow key nudges a pixel")

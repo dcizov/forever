@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/tweaks/fishing.lua
+    Forever Gearbox - tests/scenarios/tweaks/fishing.lua
     Fishing: the line shown only with a pole in hand (skill, bonus, the zone's skill, lure
     countdown, a full rank), the no-lure warning (only with a lure in the bags, once a minute), the
     skill-too-low warning (once a zone), the lure-running-out warning (once a lure), and the
@@ -17,11 +17,11 @@ W.profs[4] = { name = "Fishing", rank = 150, maxRank = 225, modifier = 5, line =
 W.mapID = 1429 -- Elwynn Forest: needs 1
 W.items["[Shiny Bauble]"] = { id = 6529, stack = 20, class = 0 }
 
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 local mod = ns.modules.Fishing
 check(mod.active, "on by default")
-local display = _G.ForeverTweaksFishing
+local display = _G.ForeverGearboxFishing
 local function line() return display.display:GetLine() end
 local function changeGear(slot, item)
     W.equipped[slot] = item

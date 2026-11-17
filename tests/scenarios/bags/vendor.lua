@@ -1,7 +1,9 @@
 --[[
-    Forever Tweaks - tests/scenarios/bags/vendor.lua
-    Vendor: Autobuy (Alt-click to pick a count, buying what's missing in bundles and stacks, never
-    beyond the money or the merchant's stock, never extended-cost items), Shift skipping it,
+    Forever Gearbox - tests/scenarios/bags/vendor.lua
+    Vendor: Auto Buy (Alt-click to pick a count, buying what's missing in whole bundles that reach it
+    and in stacks, never beyond the money, the merchant's stock or the bags' room, never
+    extended-cost items; ammo as a kind: every arrow counts, the best arrows the merchant sells
+    that you can use are bought), Shift skipping it,
     pausing and the bag counts on its page, Ask First, and the Restock button.
     Run by tests/run.lua (lua5.1 tests/run.lua vendor), which passes its helpers in.
 ]]
@@ -11,7 +13,7 @@ local under = T.under -- every frame under one that passes a test (tests/run.lua
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 local mod = ns.modules.Vendor
 check(mod.active, "on by default (Autobuy)")
@@ -20,10 +22,13 @@ check(mod.active, "on by default (Autobuy)")
 local function plan(...) return table.concat(mod.PlanPurchase(...), ",") end
 eq(plan(45, 1, 10, -1, 10000, 20), "20,20,5", "45 missing, sold one at a time, 20 a purchase")
 eq(plan(45, 5, 50, -1, 10000, 20), "20,20,5", "whole bundles of 5")
-eq(plan(43, 5, 50, -1, 10000, 20), "20,20", "43 missing buys 40: never more than kept, bundles can't be split")
-eq(plan(9, 5, 50, -1, 10000, 20), "5", "keep 20 water sold in 5s with 11 in the bags: buys 5")
+eq(plan(43, 5, 50, -1, 10000, 20), "20,20,5", "43 missing buys 45: whole bundles that reach it")
+eq(plan(31, 5, 50, -1, 10000, 20), "20,15", "keep 50 water sold in 5s with 19 in the bags: 35, so 54")
+eq(plan(31, 200, 100, -1, 10000, 1000), "200", "keep 50 arrows with 19: a bundle of 200")
 eq(plan(5, 1, 10, -1, 10000, 20), "5", "keep 20 runes with 15 in the bags: buys 5")
-eq(plan(3, 5, 50, -1, 10000, 20), "", "fewer missing than a bundle: nothing")
+eq(plan(3, 5, 50, -1, 10000, 20), "5", "fewer missing than a bundle: one bundle")
+eq(plan(100, 1, 10, -1, 10000, 20, 42), "20,20,2", "no more than the bags have room for")
+eq(plan(31, 5, 50, -1, 10000, 20, 12), "10", "room for 12: two bundles of 5")
 eq(plan(100, 1, 10, 3, 10000, 20), "3", "the merchant has only 3")
 eq(plan(100, 1, 10, -1, 55, 20), "5", "money for only 5")
 eq(plan(400, 200, 100, -1, 10000, 1000), "400", "arrows come in 200s")
@@ -73,7 +78,7 @@ W.owned[2512] = 600
 W.OpenMerchant()
 local byIndex = {}
 for _, b in ipairs(W.bought) do byIndex[b.index] = (byIndex[b.index] and byIndex[b.index] .. "," or "") .. b.units end
-eq(byIndex[2], "20,5", "28 water missing: 25 bought (whole 5s), as 20 and 5")
+eq(byIndex[2], "20,10", "28 water missing: 30 bought (whole 5s), as 20 and 10")
 eq(byIndex[1], "400", "400 arrows missing: two bundles in one purchase")
 eq(byIndex[3], nil, "an extended-cost item is never bought")
 
@@ -100,14 +105,14 @@ W.OpenMerchant()
 W.shift = false
 eq(#W.bought, 0, "Shift: nothing bought")
 
--- /ft autobuy lists the items.
-W.Slash("/ft autobuy")
-check(W.ChatHas("1000 x [Rough Arrow]"), "/ft autobuy lists what's kept")
+-- /fg autobuy lists the items.
+W.Slash("/fg autobuy")
+check(W.ChatHas("1000 x [Rough Arrow]"), "/fg autobuy lists what's kept")
 
--- Its Settings pane: the Autobuy list, edited without a merchant.
+-- Its list on its page in Gearbox' settings: the Autobuy list, edited without a merchant.
 ns:OpenSettings("Vendor")
-eq(ForeverCore.SettingsWindow.Current(), ns.member.short, "Vendor's pane on the Forever Tweaks page")
-local page = ForeverCore.SettingsWindow.Page(ns.member.short).frame
+local page = W.categories[ns.title].frame
+check(page:IsShown(), "the list on its page, under its options")
 local function listed(text)
     return #under(page, function(f) return f._kind == "FontString" and f._text == text and f:IsShown() end) > 0
 end
@@ -163,6 +168,16 @@ for _, b in ipairs(removes) do
 end
 eq(mod.db.buy[159], nil, "removed on the page")
 check(not listed("[Refreshing Spring Water]"), "and gone from the list")
+-- An item the game hasn't loaded: its ID until its name comes, then its name.
+mod.db.buy[2515] = 200
+mod:ListChanged()
+check(listed("item:2515"), "an item not loaded yet shows its ID")
+W.items["[Sharp Arrow]"] = { id = 2515 }
+W.Fire("GET_ITEM_INFO_RECEIVED", 2515, true)
+W.Advance(0.1)
+check(listed("Sharp Arrow"), "its name once the game has it")
+mod.db.buy[2515] = nil
+mod:ListChanged()
 
 -- Pausing an item on the page: listed, grayed, not bought, its tooltip quiet.
 local function rowOf(id)
@@ -180,8 +195,8 @@ W.OpenMerchant()
 local boughtArrows = false
 for _, b in ipairs(W.bought) do boughtArrows = boughtArrows or b.index == 1 end
 eq(boughtArrows, false, "a paused item isn't bought")
-W.Slash("/ft autobuy")
-check(W.ChatHas("(paused)"), "/ft autobuy says it's paused")
+W.Slash("/fg autobuy")
+check(W.ChatHas("(paused)"), "/fg autobuy says it's paused")
 arrows.on:SetChecked(true)
 arrows.on:Fire("OnClick")
 eq(mod.db.paused[2512], nil, "ticked again: bought again")
@@ -208,7 +223,7 @@ W.owned[2512] = 600
 W.OpenMerchant()
 eq(#W.popups, 0, "no question")
 eq(#W.bought, 0, "nothing bought on opening")
-local restock = _G.ForeverTweaksRestockButton
+local restock = _G.ForeverGearboxRestockButton
 check(restock and restock:IsShown(), "the Restock button shows in the merchant window")
 eq(select(2, restock:GetPoint()), MerchantSellAllJunkButton, "beside Sell All Junk")
 eq(select(4, MerchantSellAllJunkButton:GetPoint()), -182, "no repairs: Sell All Junk moves left, the pair clear of the buyback item")
@@ -232,7 +247,7 @@ W.MerchantTab(1)
 check(restock:IsShown(), "back on the merchant tab")
 restock:Fire("OnClick", "RightButton")
 check(ns.modules.Vendor.WindowShown(), "right-click opens the Autobuy window")
-local autobuy = ForeverTweaksAutobuyWindow
+local autobuy = ForeverGearboxAutobuyWindow
 check(#under(autobuy, function(f) return f._text == ns.L.VENDOR_LIST_HEADER end) > 0, "the Autobuy list in it")
 restock:Fire("OnClick", "RightButton")
 check(not ns.modules.Vendor.WindowShown(), "right-click again closes it")
@@ -257,5 +272,47 @@ eq(mod.active, false, "the module is off")
 W.OpenMerchant()
 eq(#W.bought, 0, "off: nothing bought")
 eq(#W.popups, 0, "and nothing asked")
-eq(_G.ForeverTweaksRestockButton:IsShown(), false, "no Restock button")
+eq(_G.ForeverGearboxRestockButton:IsShown(), false, "no Restock button")
+-- Best Ammo: arrows are a kind. Rough Arrows listed, the merchant sells Rough and Sharp Arrows
+-- (and Jagged ones you can't use yet): every arrow in the bags counts, the Sharp ones are bought.
+W.CloseMerchant()
+W.items["[Rough Arrow]"] = { id = 2512, class = 6, subclass = 2, stack = 200, minLevel = 1, level = 5, family = 1 }
+W.items["[Sharp Arrow]"] = { id = 2515, class = 6, subclass = 2, stack = 200, minLevel = 10, level = 15, family = 1 }
+W.items["[Jagged Arrow]"] = { id = 3030, class = 6, subclass = 2, stack = 200, minLevel = 40, level = 40, family = 1 }
+W.items["[Heavy Shot]"] = { id = 2519, class = 6, subclass = 3, stack = 200, minLevel = 1, level = 5, family = 2 }
+W.unitInfo.player = W.unitInfo.player or {}
+W.unitInfo.player.level = 26
+W.merchant = {
+    { id = 2512, link = "[Rough Arrow]", price = 100, stackCount = 200, maxStack = 1000 },
+    { id = 2515, link = "[Sharp Arrow]", price = 500, stackCount = 200, maxStack = 1000 },
+    { id = 3030, link = "[Jagged Arrow]", price = 2000, stackCount = 200, maxStack = 1000 },
+    { id = 2519, link = "[Heavy Shot]", price = 100, stackCount = 200, maxStack = 1000 },
+}
+ns:SetEnabled("Vendor", true)
+mod.db.buy = { [2512] = 1000 }
+ns:SetOption("Vendor", "ask", false)
+ns:SetOption("Vendor", "auto", true)
+mod.db.paused = {}
+W.owned = { [2512] = 300, [2515] = 400, [2519] = 600 }
+W.money = 100000
+W.OpenMerchant()
+eq(#W.bought, 1, "one kind of arrow bought")
+eq(W.bought[1] and W.bought[1].index, 2, "the best arrows you can use: Sharp, not Rough or Jagged (level 40)")
+eq(W.bought[1] and W.bought[1].units, 400, "300 Rough and 400 Sharp count toward 1000: 300 more, in whole 200s")
+W.CloseMerchant()
+ns:SetOption("Vendor", "ammo", false)
+W.OpenMerchant()
+eq(W.bought[1] and W.bought[1].index, 1, "Best Ammo off: the listed Rough Arrows")
+eq(W.bought[1] and W.bought[1].units, 800, "counting only themselves: 700 short, so 800")
+W.CloseMerchant()
+ns:SetOption("Vendor", "ammo", true)
+-- A full quiver and bags: no room, nothing bought.
+for bag = 0, NUM_BAG_FRAMES do
+    W.bags[bag] = {}
+    for slot = 1, 4 do W.bags[bag][slot] = { link = "[Heavy Shot]", count = 200 } end
+end
+W.OpenMerchant()
+eq(#W.bought, 0, "no room in the bags: nothing bought")
+W.CloseMerchant()
+W.bags = {}
 finish()

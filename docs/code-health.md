@@ -4,32 +4,28 @@ What two rounds of [desloppify](https://github.com/peteromallet/desloppify) revi
 found, the rules that came out of them, and the decisions that are deliberate. Read this before
 refactoring; follow the rules when writing new code. CLAUDE.md has the short version.
 
-## The suite
+## The two addons
 
-Paths below are Forever Core's (`ForeverCore/Core/`, `UI/`, `Settings/`) unless they name a
-member's: `Lib/OtherAddons.lua`, `Migrations.lua`, `UI/BagButtons.lua`, `UI/ItemList.lua`,
-`UI/Restyle.lua`, `Settings/Addons.lua` and `Modules/` are Forever Tweaks'; `Lib/Book.lua` and
-`Modules/Journal/` Forever Compendium's.
+Paths below are the runtime's (`Shared/Core/`, `Shared/UI/`) unless they name an addon's:
+`Lib/OtherAddons.lua`, `Migrations.lua`, `Core/Plugin.lua`, `UI/BagButtons.lua`, `UI/ItemList.lua`,
+`UI/Restyle.lua` and `Modules/` are Forever Gearbox'; `Lib/Book.lua`, `Settings/`, `UI/MapPins.lua`
+and `Modules/Journal/` Forever Codex's.
 
-- Every member is laid out the same way: `Part.lua`, `Locales/`, `Migrations.lua` at its root;
-  `Lib/` for the libraries several of its modules share (none a module itself); `UI/` for shared
-  on-screen pieces; `Modules/<Category>/` with one folder per category in its `Part.lua`, each
-  module's helper files beside it. Forever Core keeps `Core/` for the runtime.
-
-- A member's namespace reads through to the core's (`Core/Members.lua`). Core code never reads a
-  field a member sets on its own namespace (`ns.Book`, `ns.ToggleJournal`): what the core needs of
-  a member comes through `ns:NewMember`'s info (`open`, `openLabel`, `categories`) or
-  `ns:AddSettingsPage`. Read a member's own table with `rawget(member.ns, key)` (its changelog).
-- `ns.member` is the core's in a core file and the member's in a member's file. Core code tells
-  the core apart with `member == ns.member`; tests holding a member's namespace use
-  `ForeverCore.member`.
-- Saved variables, layouts and migrations are each member's (`member.saved`, `member.layout`,
-  `ns:Migrate` from its own files). A step that moves something to the core gets `coreDB` as its
-  second argument and fills keys into the core's tables rather than replacing them: the core's
-  modules already hold them.
-- Only Forever Core speaks for the suite: one minimap button, one Update Notice, one settings
-  category. A new member adds `Part.lua` first in its TOC, `## Dependencies: ForeverCore`, and its
-  folder to `scripts/link.sh`, the workflows and the `suite` test scenario.
+- Each addon carries the runtime (`Shared/`) in its own namespace: edit the repository's
+  `Shared/`, never an addon's copy, then `scripts/sync-shared.sh`. Runtime code never names an
+  addon (`ns.name`, `ns.title`, `ns.member`) and never reads a field an addon sets on its
+  namespace (`ns.Book`, `ns.Plugin`); an addon that needs to change what the runtime does replaces
+  a documented hook (`Store.SettingsOf`, `ns:OpenSettings`, `ns:SetEnabled`, `ns:ResetAll` in
+  Gearbox' `Core/Plugin.lua`).
+- Every addon is laid out the same way: `Shared/`, `Part.lua`, `Locales/`, `Migrations.lua`,
+  `Init.lua` at its root; `Lib/` for the libraries several of its modules share (none a module
+  itself); `UI/` for shared on-screen pieces; `Modules/<Category>/` with one folder per category in
+  its `Part.lua`, each module's helper files beside it.
+- `ns.member` is the addon's one member; `ns.db` its own top-level settings.
+- Forever Gearbox has no settings UI: its modules are Forever++'s (`Core/Plugin.lua`). A module
+  option or notice Forever++ can't draw is translated there, never special-cased in a module; the
+  `plugin` scenario registers every module against a stand-in that checks as Forever++ does.
+  Forever++ owns on/off: nothing in Gearbox writes `db.enabled`.
 
 ## Rules to follow
 
@@ -104,7 +100,7 @@ reintroducing the same findings.
   not reported as ours). What several modules ask of one addon is a function in
   `Lib/OtherAddons.lua` (Baganator's in `UI/BagButtons.lua`), not a lookup in each module.
 - `PLAYER_REGEN_DISABLED` fires before `InCombatLockdown()` turns true: track combat from the event
-  name (see Gathering Session's Hide in Combat).
+  name.
 
 **Chat**
 - A module says something by itself with `M:Print(...)` (silent while its Chat Messages option is
@@ -117,7 +113,7 @@ reintroducing the same findings.
   a threshold. (Core.lua was trimmed twice and grew back before it was split into Core.lua and
   Module.lua.)
 - `Modules/<Category>/` folders follow each module's `category`. A module file is named after its
-  key (`GatherSession.lua` for `GatherSession`). What several modules ask of another addon
+  key (`FullBags.lua` for `FullBags`). What several modules ask of another addon
   (Auctionator's prices) is in `Lib/OtherAddons.lua`, not in one module's helper.
 - A module split into files uses one of two shapes, and only these:
   - **A part** (loads after the module; most of them: `ItemPrices.lua`, `ProfessionObjects.lua`,
@@ -127,11 +123,11 @@ reintroducing the same findings.
     file names `ns.<Module>Shared`, captured as `local Shared = assert(ns.<Module>Shared, ...)`:
     functions and constants only, never state (each file keeps its own).
   - **A helper the module uses** (loads before it: `FullBagsPlan.lua`, `FishingState.lua`,
-    `QuestNameplatesRead.lua`): plain functions on `ns.<Name>`, captured by the module with an
+    `QuestMarkersRead.lua`): plain functions on `ns.<Name>`, captured by the module with an
     `assert`.
-- A library several modules share lives in the addon's `Lib/` (Tweaks' `QuestLog.lua`,
-  Compendium's `Book.lua`); `Lib/` loads before every module, so it's captured bare. A table
-  captured from another file under `Modules/` (Compendium's `ns.JournalKit`, `ns.JournalText`,
+- A library several modules share lives in the addon's `Lib/` (Gearbox' `QuestLog.lua`,
+  Codex's `Book.lua`); `Lib/` loads before every module, so it's captured bare. A table
+  captured from another file under `Modules/` (Codex's `ns.JournalKit`, `ns.JournalText`,
   `ns.Journal`, by the journal's pages, the quest pins and the badges page) is captured with an
   `assert`, one per line, so a wrong TOC order fails loudly instead of indexing nil.
 - Locale keys use a prefix unique to one module that isn't a category's name (`BUTTONBAG_`, not
@@ -155,12 +151,18 @@ Reviewers flagged each of these; each was checked and kept on purpose.
 |---|---|
 | `LAYER_CHANGED` doesn't fire for the first layer read in a session | Public, append-only API; the layer scenario tests it; documented in the `API.lua` header (call `GetLayer` for the first). |
 | `api.GetOption` returns a module's data tables (copied) | Public, append-only API; the header promises tables are copied and the api scenario reads `ButtonBag.ignored` through it. |
-| Forever Core's two modules are in `ForeverCore/Modules/Settings/`, beside `ForeverCore/Settings/` | Since the suite split the core's modules (Minimap Button, Update Notice) are its only ones, in its one category, `settings`; the folder follows the category like every member's. `Settings/` holds pages, `Modules/Settings/` modules. (Before the split they sat in Tweaks' Map/ and Interface/ folders.) |
-| The suite's release notes in `ForeverCore/Changelog.lua`; each member's own `Changelog.lua` is pre-suite history | One suite version, one list of releases (the Changelog page shows both). |
-| Forever Tweaks' `UI/BagButtons.lua` in `UI/`, not `Modules/Bags/` | `UI/` is the home of on-screen pieces several modules share. |
-| Helper files beside their module, no per-feature subfolders | A few helpers (FullBagsPlan.lua, VendorButton.lua, FishingState.lua, FishingZones.lua, DungeonJournalPages.lua, QuestNameplatesRead.lua), each named for its module; subfolders add depth for no gain. |
+| Forever Codex's two "settings" modules are in `Modules/Settings/`, beside `Settings/` | Since the suite split the core's modules (Minimap Button, Update Notice) are its only ones, in its one category, `settings`; the folder follows the category like every member's. `Settings/` holds pages, `Modules/Settings/` modules. (Before the split they sat in Gearbox' Map/ and Interface/ folders.) |
+| Both addons' release notes in `ForeverCodex/Changelog.lua` (Forever Gearbox has none of its own, and its pre-suite history is only in git) | One suite version, one list of releases (the Changelog page shows both). |
+| Forever Gearbox' `UI/BagButtons.lua` in `UI/`, not `Modules/Bags/` | `UI/` is the home of on-screen pieces several modules share. |
+| Helper files beside their module, no per-feature subfolders | A few helpers (FullBagsPlan.lua, VendorButton.lua, FishingState.lua, FishingZones.lua, DungeonJournalPages.lua, QuestMarkersRead.lua), each named for its module; subfolders add depth for no gain. |
 | `ns:On(event, owner, fn)` vs `ns:After(owner, ...)` argument order | Key-first registrars (`On`, `Off`) vs owner-first ones (`After`, `OnChanged`, `OnNews`) is a consistent rule; reordering 36 call sites is churn. |
-| Features other addons also have (Repair & Sell Junk, Durability Warning, Gathering Tracking; more to come) | Reverses 1.6.0's "remove what other addons do": Forever Tweaks should work for players with only it. Each such feature lists its `covers` and asks `OtherAddons.CoveredBy` when it acts, so it stays idle while Forever++/WilduTools/Plumber's own is on. Module names of removed modules (`Durability`, `CastBar`, `FiveSecondRule`, `RangeIndicator`, `ErrorMessages`, `NameplateQuests`, `GatherTracking`, ...) aren't reused: the `removed` scenario checks their old settings stay gone. Their successors' files are named after the new keys (`DurabilityWarning.lua`, `GatheringTracking.lua`). |
+| Features other addons also have (Repair & Sell Junk, Durability Warning, Gathering Tracking; more to come) | Reverses 1.6.0's "remove what other addons do": Forever Gearbox should work for players with only it. Each such feature lists its `covers` and asks `OtherAddons.CoveredBy` when it acts, so it stays idle while Forever++/WilduTools/Plumber's own is on. Module names of removed modules (`Durability`, `CastBar`, `FiveSecondRule`, `RangeIndicator`, `ErrorMessages`, `NameplateQuests`, `GatherTracking`, ...) aren't reused: the `removed` scenario checks their old settings stay gone. Their successors' files are named after the new keys (`DurabilityWarning.lua`, `GatheringTracking.lua`). |
+| The runtime in each addon (`ForeverGearbox/Shared/`, `ForeverCodex/Shared/`), copied from `Shared/` | The user wanted each addon on its own (3.0.0): no ForeverCore to install. One source of truth, copied by `scripts/sync-shared.sh`; the `lint` scenario and CI fail on a copy that differs; desloppify excludes the copies so they aren't counted as duplication. |
+| Forever Gearbox' modules are Forever++ plugin modules, with Forever++'s three control kinds | Forever++ has no settings-page API; `RegisterModule` is its only way in (experimental in 1.6.x: a change there lands in `Core/Plugin.lua` only). What Forever++ can't draw is translated, not dropped silently: list panes open in windows, conflicts are notices. |
+| Tracker never replaces anything of Blizzard's objective tracker: a `hooksecurefunc` after `LayoutBlock` setting alpha, and watch-list changes through `C_QuestLog` | Replacing its methods (BetterTracker's way, ours until 3.1.0) put addon code in the tracker's update, and under Midnight's secret values that tainted all of it: its scenario section failed reading auras. Zone headings, sorting, hidden objectives, scrolling and width can't be had without that, so they're gone (Forever++ sorts and filters by zone through the watch list). Never call its `MarkDirty`/`Update`. |
+| Forever Gearbox draws into Forever++'s Settings page (`UI/ForeverPage.lua`): a raw `hooksecurefunc` on `Settings.RegisterCanvasLayoutCategory`, frames found by shape (`entries` stacks, the pane's `SetHeight`), rows added to Forever++'s own stacks | The user wanted Gearbox' additions on the Forever++ module they extend (Quest Tracker, Upgrade Arrows, Quest Nameplates, Fishing Cast), without changing Forever++'s files; its plugin API can only add modules. Nothing of Forever++'s is called or written but its stacks' `entries`; if its page changes shape, the section just doesn't show and the modules keep working (`Core/Attach.lua`, `/fg`). The hook isn't a module's (`M:Hook` is only live while a module is on). The `fpppage` scenario checks it on a stand-in of the page. |
+| Quest Markers hides Forever++'s own mark on a Blizzard nameplate (alpha 0) where it draws its own | The user wanted Plumber/Platynator-style marks in Forever++'s Quest Nameplates; two marks on one plate would be worse. Its box is found by shape (a child of the UnitFrame with just `icon` and `text`), alpha is given back when ours goes, and Custom Nameplates Only leaves Blizzard's plates to Forever++. |
+| No `added` on Forever++'s page | Forever++ compares `added` with its own version (1.6.x): a Gearbox version (3.0.0) reads as unreleased and the NEW label never goes. |
 | desloppify ignores `orphaned::*` and `test_coverage::*` | The game loads every file from the `.toc`, so no file has "importers", and `tests/wow.lua` loads every file into all scenarios. Both detectors are wrong for a WoW addon. (Costs about 0.1 strict.) |
 
 ## Still open

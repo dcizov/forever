@@ -1,0 +1,26 @@
+{
+  "extraKnownMarketplaces": {
+    "wow-addon-api-agents": {
+      "source": {
+        "source": "github",
+        "repo": "JBurlison/WoWAddonAPIAgents"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "wow-addon-dev@wow-addon-api-agents": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/skill-activation.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

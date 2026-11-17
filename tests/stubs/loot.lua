@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/loot.lua
+    Forever Gearbox - tests/stubs/loot.lua
     The stand-in game's items, bags and loot window, loaded by tests/wow.lua.
 ]]
 
@@ -11,6 +11,16 @@
 
 W.items, W.bags, W.loot = {}, {}, {}
 NUM_BAG_FRAMES, NUM_CONTAINER_FRAMES = 4, 13
+BACKPACK_CONTAINER, NUM_BAG_SLOTS = 0, 4
+-- WoW's bit library (bit.band for bag families).
+bit = { band = function(a, b)
+    local result, place = 0, 1
+    while a > 0 and b > 0 do
+        if a % 2 == 1 and b % 2 == 1 then result = result + place end
+        a, b, place = math.floor(a / 2), math.floor(b / 2), place * 2
+    end
+    return result
+end }
 local BAG_SIZE = 4
 
 C_Item = {
@@ -21,7 +31,7 @@ C_Item = {
         end
         if not item then return nil end
         local name = link:match("^%[(.*)%]$") or link -- the scenarios' links are "[Name]"
-        return name, link, item.quality or 1, item.level or 1, 1, "", "", item.stack, item.equipLoc or "", 0, item.sell,
+        return name, link, item.quality or 1, item.level or 1, item.minLevel or 1, "", "", item.stack, item.equipLoc or "", 0, item.sell,
             item.class or 15, item.subclass or 0,
             0, 0, nil, item.reagent or false
     end,
@@ -32,6 +42,11 @@ C_Item = {
         end
         if not item then return nil end
         return item.id, nil, nil, item.equipLoc, nil, item.class, item.subclass
+    end,
+    -- Which bags take it (a quiver arrows: 1, an ammo pouch bullets: 2), as a bit mask.
+    GetItemFamily = function(id)
+        for _, it in pairs(W.items) do if it.id == id then return it.family or 0 end end
+        return 0
     end,
     IsEquippableItem = function(link) local item = W.items[link]; return item and item.equippable or false end,
     GetItemIconByID = function(id) return 200000 + id end,
@@ -46,6 +61,10 @@ C_Container = {
         local used = 0
         for _ in pairs(W.bags[bag] or {}) do used = used + 1 end
         return BAG_SIZE - used, 0
+    end,
+    GetContainerItemID = function(bag, slot)
+        local entry = W.bags[bag] and W.bags[bag][slot]
+        return entry and W.items[entry.link] and W.items[entry.link].id or nil
     end,
     GetContainerItemInfo = function(bag, slot)
         local entry = W.bags[bag] and W.bags[bag][slot]
@@ -276,6 +295,14 @@ function W.OpenLoot()
     end
     LootFrame:Show()
     W.Fire("LOOT_OPENED", false)
+end
+-- The game's order with auto loot: LOOT_READY (the window's slots all there), then the slots
+-- taken (`take`: how many, from the first), then LOOT_OPENED on what's left.
+function W.AutoLoot(take)
+    W.lootCount = #W.loot
+    W.Fire("LOOT_READY", true)
+    for slot = 1, take or #W.loot do W.loot[slot] = false end
+    W.Fire("LOOT_OPENED", true)
 end
 -- Takes loot slot `slot` (it goes into the bags elsewhere) and redraws.
 function W.TakeLoot(slot)

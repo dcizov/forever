@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/archive.lua
+    Forever Codex - tests/scenarios/compendium/archive.lua
     The Archive: exports read back what they wrote (notes with "|" and line breaks included) as
     one paste-safe line, and refuse text that was cut or changed; an import is counted, asked
     about, and merged without doubling counts or losing your note; backups keep the three
@@ -11,7 +11,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, Codec, Archive, L = ns.Book, ns.Codec, ns.Archive, ns.L
 
@@ -46,10 +46,10 @@ other.creatures[300] = { name = "Kobold Vermin", kills = 1, zones = {}, loot = {
 local creatures, new = Archive.Count(other)
 eq(creatures .. "/" .. new, "2/1", "counted: two creatures, one new")
 Archive.ShowImport()
-ForeverCompendiumImport.edit:SetText(Archive.Read(text) and Codec.Armor(Codec.Encode(other)))
+ForeverCodexImport.edit:SetText(Archive.Read(text) and Codec.Armor(Codec.Encode(other)))
 local popups = #W.popups
 local importButton
-for _, child in ipairs(rawget(ForeverCompendiumImport, "_children") or {}) do
+for _, child in ipairs(rawget(ForeverCodexImport, "_children") or {}) do
     if child._text == L.ARCHIVE_IMPORT_BUTTON or (child.GetText and child:GetText() == L.ARCHIVE_IMPORT_BUTTON) then importButton = child end
 end
 check(importButton ~= nil, "an Import button")
@@ -63,15 +63,15 @@ eq(mine.looted, 4, "the loot of the book that looted more")
 eq(mine.note, "my own note", "your note kept")
 check(mine.pinned, "its pin")
 eq(mine.zones[1429] and mine.zones[1429].cells[12], 3, "its places")
-ForeverCompendiumImport.edit:SetText("not an export")
+ForeverCodexImport.edit:SetText("not an export")
 importButton:Fire("OnClick")
-eq(ForeverCompendiumImport.status:GetText(), L.ARCHIVE_NOT_EXPORT, "text that isn't an export says so")
-ForeverCompendiumImport.edit:SetText(text:sub(1, -5))
+eq(ForeverCodexImport.status:GetText(), L.ARCHIVE_NOT_EXPORT, "text that isn't an export says so")
+ForeverCodexImport.edit:SetText(text:sub(1, -5))
 importButton:Fire("OnClick")
-eq(ForeverCompendiumImport.status:GetText(), L.ARCHIVE_DAMAGED, "a cut export says it's damaged")
-ForeverCompendiumImport.edit:SetText(Codec.Armor(Codec.Encode({ v = 2, creatures = {} })))
+eq(ForeverCodexImport.status:GetText(), L.ARCHIVE_DAMAGED, "a cut export says it's damaged")
+ForeverCodexImport.edit:SetText(Codec.Armor(Codec.Encode({ v = 2, creatures = {} })))
 importButton:Fire("OnClick")
-eq(ForeverCompendiumImport.status:GetText(), L.ARCHIVE_NEWER, "a newer export says to update")
+eq(ForeverCodexImport.status:GetText(), L.ARCHIVE_NEWER, "a newer export says to update")
 
 -- Backups: the three latest; a restore puts things back, the present backed up first.
 for _ = 1, 4 do Archive.Backup() end

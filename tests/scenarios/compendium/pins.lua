@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/pins.lua
+    Forever Codex - tests/scenarios/compendium/pins.lua
     Quest Pins and Rare Pins on the world map and the minimap: givers only for quests not taken
     or done, turn-ins grey until ready, objectives only while unfinished (at their busiest
     places), quests at one spot sharing a pin, each kind's checkbox, redrawing as the log
@@ -11,7 +11,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, Places = ns.Book, ns.Places
 local MAP = 1411
@@ -76,6 +76,29 @@ check(heard.OpenMap_ViewChanged ~= nil and heard.OpenMap_StitchedChanged ~= nil,
 heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 2)
 W.RunTimers()
 eq(#ofKind("giver"), 1, "drawn again as the view moves")
+-- Its stitched map, as Questie's pins are there: the zone beside the one underneath (999, right of
+-- it on the stitched world) has its pins drawn too, carried onto the map underneath.
+W.maps[MAP], W.maps[999], W.maps[1414] = 1414, 1414, 947
+W.mapTypes[1414], W.mapTypes[947] = Enum.UIMapType.Continent, Enum.UIMapType.World
+local LEFT = { [MAP] = 0, [999] = 0.5 }
+OpenMapAPI.IsStitched = function() return true end
+OpenMapAPI.GetView = function() return 0.5, 0.5, 1 end
+OpenMapAPI.WorldFromMap = function(mapID, x, y) if LEFT[mapID] then return LEFT[mapID] + x * 0.5, y end end
+OpenMapAPI.MapFromWorld = function(mapID, u, v) if mapID == MAP then return u / 0.5, v end end
+heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 1)
+W.RunTimers()
+local beside
+for _, pin in ipairs(ofKind("giver")) do
+    if pin.spec.entries[1] and pin.spec.entries[1].questID == 5 then beside = pin end
+end
+check(beside ~= nil, "OpenMap: the next zone's quest giver on its stitched map")
+eq(beside and beside._point[4], 1.5 * WorldMapFrame.ScrollContainer.Child:GetWidth(), "where it is on the stitched world")
+eq(#ofKind("giver"), 2, "and the zone underneath's still")
+OpenMapAPI.IsStitched = function() return false end
+heard.OpenMap_StitchedChanged("OpenMap_StitchedChanged", false)
+W.RunTimers()
+eq(#ofKind("giver"), 1, "Blizzard's own map: only its zone's")
+W.maps[MAP], W.maps[999], W.maps[1414] = nil, nil, nil
 OpenMapAPI = nil
 ns:SetOption("QuestPins", "size", 20)
 W.RunTimers()
@@ -86,13 +109,33 @@ W.Fire("QUEST_LOG_UPDATE")
 W.RunTimers()
 eq(ofKind("ender")[1].spec.gray, false, "yellow once ready")
 
--- The tooltip names each quest and what it's there for.
+-- The tooltip, as Forever++'s: "[level] Title" for each quest, then what it's there for; what
+-- clicks do only while Shift is held.
 local tipLines = {}
 function GameTooltip:AddLine(text) tipLines[#tipLines + 1] = text end
+function GameTooltip:AddDoubleLine(left) tipLines[#tipLines + 1] = left end
 givers[1]:Fire("OnEnter")
-eq(tipLines[1], "Offered (5)", "the tooltip names the first quest and its level")
-eq(tipLines[2], ns.L.QPINS_GIVES, "and what it's there for")
-eq(tipLines[4], "Also Offered (5)", "then the next quest at it")
+eq(tipLines[1], "[5] Offered", "the tooltip names the first quest and its level")
+eq(tipLines[2], "[5] Also Offered", "then the next quest at it")
+eq(tipLines[3], ns.L.QPINS_GIVES, "then what it's there for")
+check(tipLines[#tipLines] ~= ns.L.QPINS_HINT, "no click hints without Shift")
+givers[1]:Fire("OnLeave")
+tipLines = {}
+W.shift = true
+givers[1]:Fire("OnEnter")
+eq(tipLines[#tipLines], ns.L.QPINS_HINT, "with Shift: Shift-click shows the quest")
+check(givers[1]:IsMouseClickEnabled(), "and the pin takes clicks while it's held")
+givers[1]:Fire("OnLeave")
+check(not givers[1]:IsMouseClickEnabled(), "clicks go through to the map otherwise")
+-- A quest in your log: its pin says the quest log, and a Shift-click opens it there.
+tipLines = {}
+local objective = ofKind("objective")[1]
+objective:Fire("OnEnter")
+eq(tipLines[#tipLines], ns.L.QPINS_HINT_LOG, "its tooltip: the quest log")
+objective:Fire("OnClick", "LeftButton")
+eq(W.openedQuest, 4, "a Shift-click opens it in your quest log")
+objective:Fire("OnLeave")
+W.shift = false
 
 -- Each kind's checkbox.
 ns:SetOption("QuestPins", "objectives", false)
@@ -114,6 +157,22 @@ W.place = { map = MAP, x = 0.45, y = 0.62 }
 W.Fire("ZONE_CHANGED")
 W.RunTimers()
 eq(#pins("quest", "Frame"), 1, "the turn-in you stand at, on the minimap")
+-- Rotate Minimap: turning moves the pins, without setting their art again (that lagged).
+local turning = pins("quest", "Frame")[1]
+local arts = 0
+local setAtlas = turning.icon.SetAtlas
+turning.icon.SetAtlas = function(self, ...) arts = arts + 1; return setAtlas(self, ...) end
+W.cvars.rotateMinimap = "1"
+W.place = { map = MAP, x = 0.452, y = 0.622 } -- a step away, so turning swings it round
+W.Advance(0.05)
+local before = { select(4, turning:GetPoint()) }
+W.facing = 1.2
+W.Advance(0.05)
+local after = { select(4, turning:GetPoint()) }
+check(before[1] ~= after[1] or before[2] ~= after[2], "turning moves the pin")
+eq(arts, 0, "its art isn't set again")
+turning.icon.SetAtlas = setAtlas
+W.cvars.rotateMinimap, W.facing = nil, nil
 W.place = { map = MAP, x = 0.95, y = 0.05 }
 W.Advance(0.3)
 eq(#pins("quest", "Frame"), 0, "out of reach once you walk away")
@@ -131,7 +190,7 @@ local x, y = Places.CellCenter(Places.Cell(0.6, 0.2))
 eq(rares[1] and rares[1].spec.x, x, "where it was seen most")
 eq(rares[1] and rares[1].spec.y, y, "(both ways)")
 rares[1]:Fire("OnClick", "RightButton")
-check(ForeverCompendiumJournal:IsShown(), "a right-click opens the journal")
+check(ForeverCodexJournal:IsShown(), "a right-click opens the journal")
 
 -- Above the map: Blizzard's own map art and pins start at frame level 2000, so a holder just
 -- over the canvas would be drawn under the map (the pins never showed in game).
@@ -153,7 +212,9 @@ local dailyPin
 for _, pin in ipairs(ofKind("giver")) do
     if pin.spec.entries[1].questID == 20 then dailyPin = pin end
 end
-eq(dailyPin and dailyPin.icon._atlas, "QuestDaily", "a daily's giver is blue")
+eq(dailyPin and dailyPin.icon._atlas, "QuestNormal", "a daily's giver: the !")
+eq(dailyPin and dailyPin.spec.color and dailyPin.spec.color[3], 1, "tinted blue, as a repeatable quest's")
+check(dailyPin and dailyPin.icon._desaturated, "the yellow taken out first")
 tipLines = {}
 dailyPin:Fire("OnEnter")
 check(tipLines[1] and tipLines[1]:find("Daily Chores", 1, true), "its title from the game, not its number")

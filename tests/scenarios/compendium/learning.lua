@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/learning.lua
+    Forever Codex - tests/scenarios/compendium/learning.lua
     What the Recorder learns beyond meeting creatures (2.3.0): a creature's title and looks, the
     spells it casts, what it resists, your deaths to it, the reputation its kills give, the money
     its corpses carry, an item it drops that starts a quest, a vendor's wares, a quest window's
@@ -12,7 +12,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book = ns.Book
 local news = {}
@@ -30,12 +30,19 @@ local rec = Book.Creature(3267)
 eq(rec.title, nil, "a level line is no title")
 eq(rec.display, 1960, "its look")
 check(rec.displays and rec.displays[1960], "kept among its looks")
+-- A friendly NPC: not met on sight, met when you talk to it (an NPC, not a creature).
 local keeper = W.Creature("mouseover", 3934, "Innkeeper Boorand", { level = 30, reaction = 5 })
 W.unitTips.mouseover = { { 0, "Innkeeper Boorand" }, { 0, "Innkeeper" } }
 W.displays[keeper.guid] = 3000
 W.Fire("UPDATE_MOUSEOVER_UNIT")
+eq(Book.Creature(3934), nil, "a friendly NPC isn't met on sight")
+W.unitInfo.npc, W.unitTips.npc = keeper, W.unitTips.mouseover
+W.Fire("GOSSIP_SHOW")
 W.RunTimers()
-eq(Book.Creature(3934).title, "Innkeeper", "a title under its name")
+eq(Book.Creature(3934).title, "Innkeeper", "met when talked to: a title under its name")
+check(Book.IsNpc(Book.Creature(3934)), "an NPC")
+check(Book.Creature(3934).services.gossip, "what you dealt with it for")
+eq(Book.Creature(3934).display, 3000, "its look read while talking to it (unit npc)")
 
 -- Combat: a spell it casts, a resist, your death to it, reputation after a kill.
 W.spells[5938] = "Shiv"
@@ -63,7 +70,8 @@ W.Advance(5)
 W.Fire("CHAT_MSG_COMBAT_FACTION_CHANGE", "Your Orgrimmar reputation has increased by 250.")
 eq(rec.rep.Orgrimmar.total, 5, "reputation long after a kill isn't its")
 
--- Loot: money, and an item that starts a quest.
+-- Loot: money, and an item that starts a quest (from its corpse: a living one is Pick Pocket's).
+raider.dead = true
 W.lootSource = raider.guid
 W.loot = { { money = true, count = 37 }, { link = "[Tattered Note]", count = 1, quest = true, questID = 888 } }
 W.items["[Tattered Note]"] = { id = 7700, quality = 1 }
@@ -87,6 +95,15 @@ W.merchant = { { id = 159, link = "Refreshing Spring Water", price = 25, stackCo
 W.Fire("MERCHANT_SHOW")
 local wares = Book.Creature(3934).wares
 eq(wares and wares[159] and wares[159].stack, 5, "what it sells, by the stack")
+check(Book.Creature(3934).services.vendor, "a vendor now")
+eq(Book.Creature(3934).dealt, 1, "talked to, then bought from, in one visit: dealt with once")
+W.Advance(61)
+W.Fire("GOSSIP_SHOW")
+eq(Book.Creature(3934).dealt, 2, "a visit later: twice")
+W.Creature("npc", 3935, "Barkeep Morag", { reaction = 5 })
+W.Fire("MERCHANT_SHOW")
+check(Book.Creature(3935) and Book.Creature(3935).wares[159], "a vendor never seen before: met at its window, with its wares")
+W.unitInfo.npc = keeper
 eq(wares[4565].limited, true, "limited stock marked")
 
 -- A quest window's rewards, and quests from the log with their titles and objectives.

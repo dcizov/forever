@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/frames.lua
+    Forever Gearbox - tests/stubs/frames.lua
     The stand-in game's frames, loaded first by tests/wow.lua: CreateFrame and W.NewFrame, the
     methods the addon relies on behaving like the game's, and a generic answer for any other
     method named like a game method (Get*/Is* return plain defaults, everything else records what
@@ -116,7 +116,18 @@ function Frame:SetPoint(point, ...)
     self._point = { point, ... }
 end
 function Frame:GetChildren() return unpack(self._children or {}) end
-function Frame:GetRegions() end
+-- Its font strings and textures, in the order made (the game keeps them apart from child frames;
+-- here GetChildren lists them too).
+function Frame:GetRegions()
+    local regions = {}
+    for _, child in ipairs(self._children or {}) do
+        if child._kind == "FontString" or child._kind == "Texture" then regions[#regions + 1] = child end
+    end
+    return unpack(regions)
+end
+function Frame:GetObjectType() return self._kind or "Frame" end
+function Frame:SetScrollChild(child) self._scrollChild = child end
+function Frame:GetScrollChild() return self._scrollChild end
 function Frame:GetFont() return self._fontFile or "Fonts\\FRIZQT__.TTF", self._fontSize or 12, self._fontFlags or "" end
 function Frame:SetFont(file, size, flags) self._fontFile, self._fontSize, self._fontFlags = file, size, flags end
 function Frame:SetValue(v) self._value = v end
@@ -167,7 +178,12 @@ function Frame:GetEditBox() return self.EditBox end
 function Frame:SetupMenu(fn) self._menu = fn end
 function Frame:SetColorTexture(r, g, b, a) self._color = { r, g, b, a } end
 function Frame:SetAlpha(a) self._alpha = a end
+function Frame:GetAlpha() return self._alpha or 1 end
 function Frame:EnableMouse(on) self._mouse = on and true or false end
+-- Hover and clicks apart (a map pin that lets clicks through to the map).
+function Frame:SetMouseMotionEnabled(on) self._motion = on and true or false end
+function Frame:SetMouseClickEnabled(on) self._clicks = on and true or false end
+function Frame:IsMouseClickEnabled() return self._clicks ~= false end
 -- A dropdown's button text from its selections (WowStyle1Dropdown's DropdownSelectionTextMixin).
 function Frame:SetSelectionText(fn) self._selectionText = fn end
 function Frame:GetSelectionText() return self._selectionText and self._selectionText({}) end
@@ -218,7 +234,8 @@ end
 
 -- Children a template makes that aren't capitalized (the stand-in makes capitalized ones on
 -- first use): ActionButtonTemplate's icon texture (Blizzard_ActionBar/Mainline/ActionButtonTemplate.xml).
-local TEMPLATE_CHILDREN = { ActionButtonTemplate = { icon = "Texture" }, SmallActionButtonTemplate = { icon = "Texture" } }
+local TEMPLATE_CHILDREN = { ActionButtonTemplate = { icon = "Texture" }, SmallActionButtonTemplate = { icon = "Texture" },
+    ButtonFrameTemplate = { Inset = "Frame", CloseButton = "Button" } }
 
 -- Blizzard_SharedXML/Backdrop.lua: BackdropTemplate's methods, copied onto each frame made from
 -- it (so a hook on the mixin reaches frames made after it). Colour calls do nothing once cleared.

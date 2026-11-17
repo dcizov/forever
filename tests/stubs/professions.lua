@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/stubs/professions.lua
+    Forever Gearbox - tests/stubs/professions.lua
     The stand-in game's professions, worn gear, weapon enchants, item tooltips, spells and error
     text, loaded by tests/wow.lua after loot.lua (it adds to its C_Item).
       W.profs[i]    = { name, rank, maxRank, modifier, line, icon }: 1 and 2 the primary
@@ -13,10 +13,23 @@
 
 W.profs, W.equipped, W.tooltips, W.uiErrors, W.maps = {}, {}, {}, {}, {}
 W.mapTypes = {} -- map ID -> Enum.UIMapType (3, a zone, unless set)
+W.mapNames = {} -- map ID -> its name (none unless set)
 
 C_Map = {
     GetBestMapForUnit = function() return W.mapID end,
-    GetMapInfo = function(id) return { mapID = id, parentMapID = W.maps[id], mapType = W.mapTypes[id] or 3 } end,
+    GetMapInfo = function(id)
+        return { mapID = id, parentMapID = W.maps[id], mapType = W.mapTypes[id] or 3, name = W.mapNames[id] }
+    end,
+    -- The maps whose parent (W.maps) is `id`, of `mapType` (any without).
+    GetMapChildrenInfo = function(id, mapType)
+        local list = {}
+        for child, parent in pairs(W.maps) do
+            if parent == id and (not mapType or (W.mapTypes[child] or 3) == mapType) then
+                list[#list + 1] = { mapID = child, name = W.mapNames[child] or tostring(child), mapType = W.mapTypes[child] or 3 }
+            end
+        end
+        return list
+    end,
 }
 
 function GetProfessions()
@@ -105,8 +118,12 @@ C_SpellBook = {
     GetSpellBookItemInfo = function(slot) local s = W.spellbook[slot]; return s and { spellID = s.spellID, isPassive = false } end,
     IsSpellBookItemHarmful = function(slot) return W.spellbook[slot] and W.spellbook[slot].harmful or false end,
 }
+-- By ID (the spellbook's, then W.spells' names) or by name (W.spells).
 C_Spell.GetSpellInfo = function(id)
     for _, s in ipairs(W.spellbook) do if s.spellID == id then return { spellID = id, minRange = 0, maxRange = s.maxRange } end end
+    for spellID, name in pairs(W.spells) do
+        if spellID == id or name == id then return { spellID = spellID, name = name, iconID = 100000 + spellID } end
+    end
 end
 C_Spell.IsSpellInRange = function(id) return W.inRange[id] end
 C_Spell.EnableSpellRangeCheck = function(id, on) W.rangeChecks[id] = on or nil end
@@ -122,17 +139,7 @@ function UIErrorsFrame:SetMessageTypeEnabled(messageType, enabled) BLACK_LISTED_
 
 -- The world map and the minimap's reach (Gathering Map). W.mapSizes[mapID] = { width, height } in
 -- yards; WorldMapFrame shows W.worldMapID; W.indoors, W.facing.
-WorldMapFrame = W.NewFrame("Frame", "WorldMapFrame", UIParent)
-WorldMapFrame._shown = false
-WorldMapFrame.ScrollContainer = W.NewFrame("ScrollFrame", nil, WorldMapFrame)
-WorldMapFrame.ScrollContainer.Child = W.NewFrame("Frame", nil, WorldMapFrame.ScrollContainer)
-function WorldMapFrame.ScrollContainer.Child:GetWidth() return 1000 end
-function WorldMapFrame.ScrollContainer.Child:GetHeight() return 700 end
-W.canvasScale = 1
-function WorldMapFrame:GetMapID() return W.worldMapID end
-function WorldMapFrame:GetCanvasScale() return W.canvasScale end
-function WorldMapFrame:OnMapChanged() end
-function WorldMapFrame:OnCanvasScaleChanged() end
+-- (WorldMapFrame: tests/stubs/worldmap.lua.)
 W.mapSizes = {}
 C_Map.GetMapWorldSize = function(mapID) local s = W.mapSizes[mapID]; if s then return s[1], s[2] end return 0, 0 end
 W.indoors, W.facing = false, 0

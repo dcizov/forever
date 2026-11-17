@@ -1,0 +1,111 @@
+## Interface: 16001
+## Title: |cffd4a017Forever|r Codex
+## Notes: A journal of the creatures you meet, their loot, and where your quests are. /codex
+## Author: wtFAQ
+## Version: 3.3.0
+## Dependencies: ForeverGearbox
+## OptionalDeps: QuestieDB, Spoken, Spoken_Quests, OpenMap, Questie
+## SavedVariables: ForeverCodexDB, ForeverCompendiumDB, ForeverCoreDB
+## SavedVariablesPerCharacter: ForeverCodexCharDB, ForeverCompendiumCharDB
+## IconTexture: Interface\AddOns\ForeverCodex\Media\Icon
+## X-Note: ForeverCompendiumDB and ForeverCompendiumCharDB (its saved variables as Forever Compendium) are taken over once (Part.lua), and ForeverCoreDB read once, to bring over Forever Core's settings (Migrations.lua); then they're cleared
+
+# The runtime it carries (Shared/, the same in Forever Gearbox), then the addon's member (Part.lua),
+# its strings, its saved variables' layout steps and its release notes
+Shared\Core\Core.lua
+Shared\Core\Members.lua
+Shared\Core\Module.lua
+Shared\Locales\enUS_Core.lua
+Shared\Core\Store.lua
+Shared\Core\Options.lua
+Shared\Core\Profiler.lua
+Shared\Core\DebugReport.lua
+Shared\Core\Slash.lua
+Shared\Core\Commands.lua
+Shared\Core\Bindings.lua
+Shared\UI\Kit.lua
+Shared\UI\KitRows.lua
+Shared\UI\Windows.lua
+Shared\UI\Popups.lua
+Shared\UI\EditMode.lua
+Shared\UI\Widgets.lua
+Shared\UI\Controls.lua
+Shared\Lib\QuestieDB.lua
+Part.lua
+Locales\enUS.lua
+Locales\enUS_Modules.lua
+Locales\enUS_Map.lua
+Locales\enUS_Journal.lua
+Migrations.lua
+Changelog.lua
+
+# The libraries several modules share: where things were seen, the journal's sounds, the book of what was learned
+# and its merging, the quests the Quests page lists (QuestieDB and the book), tables as text, and addon messages
+Lib\Places.lua
+Lib\Sound.lua
+Lib\Book.lua
+Lib\BookMerge.lua
+Lib\QuestIndex.lua
+Lib\QuestGivers.lua
+Lib\Spoken.lua
+Lib\Codec.lua
+Lib\Transport.lua
+# The on-screen pieces modules share, then the settings window and its pages
+UI\List.lua
+UI\MapPins.lua
+UI\Bags.lua
+Shared\Settings\Section.lua
+Shared\Settings\Debug.lua
+Shared\Settings\ChangelogPage.lua
+Shared\Settings\About.lua
+Shared\Settings\General.lua
+Shared\Settings\ModulesPage.lua
+Shared\Settings\Window.lua
+Shared\Settings\Modules.lua
+
+# Modules: one line per file, grouped by category (each folder is a category)
+Modules\Settings\MinimapButton.lua
+Modules\Settings\Updates.lua
+Modules\Recorder\RecorderLoot.lua
+Modules\Recorder\RecorderQuests.lua
+Modules\Recorder\RecorderCombat.lua
+Modules\Recorder\RecorderNpcs.lua
+Modules\Recorder\Recorder.lua
+Modules\Data\ImportCreatures.lua
+Modules\Data\ImportQuests.lua
+Modules\Data\Import.lua
+Modules\Data\Archive.lua
+Modules\Journal\JournalText.lua
+Modules\Journal\JournalKit.lua
+Modules\Journal\JournalPage.lua
+Modules\Journal\JournalLines.lua
+Modules\Journal\JournalSpells.lua
+Modules\Journal\JournalLists.lua
+Modules\Journal\CreatureFilter.lua
+Modules\Journal\Journal.lua
+Modules\Journal\CreatureOverview.lua
+Modules\Journal\CreatureNotes.lua
+Modules\Journal\CreatureDetail.lua
+Modules\Journal\CreatureLootBox.lua
+Modules\Journal\CreatureQuestBox.lua
+Modules\Journal\CreatureBoxes.lua
+Modules\Journal\CreaturesPage.lua
+Modules\Journal\Npcs\NpcDetail.lua
+Modules\Journal\Npcs\NpcsPage.lua
+Modules\Journal\QuestPage.lua
+Modules\Journal\ItemsPage.lua
+Modules\Journal\TrophiesPage.lua
+Modules\Map\QuestPinLook.lua
+Modules\Map\QuestPins.lua
+Modules\Map\QuestFocus.lua
+Modules\Map\RarePins.lua
+Modules\Map\CreatureAreas.lua
+Modules\Map\OpenMap.lua
+Modules\Tooltips\TooltipLines.lua
+Modules\Social\Sharing.lua
+Modules\Social\Badges.lua
+Modules\Social\BadgesPage.lua
+Modules\Notifications\Banner.lua
+
+# Start everything
+Init.lua

@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/tweaks/djskin.lua
+    Forever Gearbox - tests/scenarios/tweaks/djskin.lua
     Dungeon Journal Skin on a stand-in DungeonJournal: its palette swapped and put back, the
     window's backdrops cleared and Blizzard's layouts drawn, icon borders on pooled loot rows, and
     turning a part off asking to reload. (Every other scenario runs without DungeonJournal, where
@@ -107,7 +107,7 @@ for _, row in ipairs({ first, bossRow }) do
     function row:SetHighlightAtlas(atlas, ...) self._highlight = atlas; return set(self, atlas, ...) end
 end
 
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverGearbox")
 local maker = CreateFrame("Frame") -- made after ours, so it hears PLAYER_LOGIN after ours
 maker:RegisterEvent("PLAYER_LOGIN")
 maker:SetScript("OnEvent", function() ForeverDungeonJournalFrame = frame end)

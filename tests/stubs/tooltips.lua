@@ -1,7 +1,7 @@
 --[[
     Forever suite - tests/stubs/tooltips.lua
     The stand-in game's tooltip data processing (pre, post and line calls), colors and the item,
-    profession and auction house calls Forever Tweaks' Tooltips category uses, loaded by
+    profession and auction house calls Forever Gearbox' Tooltips category uses, loaded by
     tests/wow.lua after the other stubs.
       W.knownSpells[spellID] = true: a spell the player knows (Pick Lock)
       W.compare, W.cannotUse, W.compared, W.itemStats: see below
@@ -19,6 +19,7 @@ local function color(r, g, b)
 end
 TOOLTIP_DEFAULT_COLOR = color(1, 1, 1)
 GRAY_FONT_COLOR, HIGHLIGHT_FONT_COLOR = color(0.5, 0.5, 0.5), color(1, 1, 1)
+GREEN_FONT_COLOR = color(0.1, 1, 0.1)
 NORMAL_FONT_COLOR.WrapTextInColorCode = TOOLTIP_DEFAULT_COLOR.WrapTextInColorCode
 C_ClassColor = { GetClassColor = function(token) return color(0.5, 0.5, 1) end }
 LOCALIZED_CLASS_NAMES_MALE, LOCALIZED_CLASS_NAMES_FEMALE = { MAGE = "Mage" }, { MAGE = "Mage" }
@@ -45,7 +46,9 @@ function InRepairMode() return false end
 function UnitFactionGroup() return "Horde" end
 -- Units for unit tooltips: W.unitInfo (tests/stubs/units.lua) says who they are.
 function UnitSelectionColor() return 1, 0.1, 0.1 end
-function UnitIsUnit(a, b) return a == b end
+-- W.unitIs: a token another unit is too ({ target = "nameplate1", mouseover = ... }).
+W.unitIs = {}
+function UnitIsUnit(a, b) return a == b or W.unitIs[a] == b or W.unitIs[b] == a end
 function UnitPVPName(unit) return UnitName(unit) end
 function UnitIsInMyGuild() return false end
 function GetGuildInfo() return nil end
@@ -53,13 +56,40 @@ function UnitClass(unit)
     local u = W.unitInfo[unit]
     if u and u.class then return u.class, u.class end
 end
+-- Gear judgements (Forever Gearbox' Lib/Upgrades.lua): dual wielding, combat ratings (none worn:
+-- the table's rates), and talents (W.talentSpent: points per tab, in order; none by default).
+W.dualWield = false
+function CanDualWield() return W.dualWield end
+CR_HIT_MELEE, CR_HIT_SPELL, CR_CRIT_MELEE, CR_CRIT_SPELL, CR_HASTE_MELEE, CR_EXPERTISE = 6, 8, 9, 11, 18, 24
+CR_DODGE, CR_PARRY, CR_BLOCK = 3, 4, 5
+function GetCombatRating() return 0 end
+function GetCombatRatingBonus() return 0 end
+W.talentSpent = {}
+C_ClassTalents = { GetActiveConfigID = function() return next(W.talentSpent) and 1 or nil end }
+C_Traits = {
+    GetConfigInfo = function() return { treeIDs = { 1 } } end,
+    GetGroupDisplayInfoByTreeID = function()
+        local groups = {}
+        for i in ipairs(W.talentSpent) do groups[i] = { groupID = 100 + i, orderIndex = i } end
+        return groups
+    end,
+    GetGroupCurrencyInfo = function(_, ids)
+        return { { currencyInfos = { { spent = W.talentSpent[ids[1] - 100] or 0 } } } }
+    end,
+}
 -- W.compare: Shift held for Compare Items; W.cannotUse[itemID]: gear the player can't use;
 -- W.compared: the links C_TooltipComparison.CompareItem was asked to compare.
 W.cannotUse, W.compared = {}, {}
 function IsModifiedClick(action) return action == "COMPAREITEMS" and W.compare == true end
 C_CVar.GetCVarBool = function() return false end
 C_PlayerInfo = { CanUseItem = function(id) return not W.cannotUse[id] end }
-C_TooltipComparison = { CompareItem = function(item) W.compared[#W.compared + 1] = item.hyperlink end }
+C_TooltipComparison = { CompareItem = function(item) W.compared[#W.compared + 1] = item.hyperlink end,
+    -- The client's own comparison (Upgrade Arrows in Baganator): no answer here, so the slot rules decide.
+    GetItemComparisonInfo = function() return nil end }
+C_Item.GetItemLinkByGUID = function() return nil end
+-- The player's attributes (each 50), for the stat weights worked out from the character sheet's
+-- conversions; those functions themselves are probed (W.OPTIONAL) and missing here.
+function UnitStat() return 50, 50 end
 function GameTooltip_ShowCompareItem() end
 function GameTooltip_SetDefaultAnchor() end
 FriendsListSocialCardMixin = { BuildTooltip = function() end }

@@ -1,0 +1,98 @@
+## Interface: 16001
+## Title: |cffd4a017Forever|r Gearbox
+## Notes: Small quality-of-life tweaks for WoW Forever. With Forever++ its modules are on Forever++'s Modules page; without it, on its own page in Settings > AddOns. /fg
+## Author: wtFAQ
+## Version: 3.3.0
+## OptionalDeps: ForeverPlusPlus, Baganator, Auctionator, Chattynator, MinimapButtonButton, !WilduTools, Plumber, QuestieDB, ForeverDungeonJournal
+## SavedVariables: ForeverGearboxDB, ForeverTweaksDB
+## SavedVariablesPerCharacter: ForeverGearboxCharDB, ForeverTweaksCharDB
+## IconTexture: Interface\AddOns\ForeverGearbox\Media\Icon
+## X-Note: ForeverTweaksDB and ForeverTweaksCharDB (its saved variables as Forever Tweaks) are taken over once (Part.lua), then cleared
+
+# The runtime it carries (Shared/, the same in Forever Codex, but for its settings window: Shared/Settings/
+# isn't copied here), then the addon's member (Part.lua), its strings, its saved variables' layout steps,
+# the libraries several modules share (Lib\), the UI pieces they share (UI\), the bridge to Forever++
+# (Core\Plugin.lua), Forever++'s rows (UI\ForeverRows.lua) and its own Settings page without Forever++ (Settings\)
+Shared\Core\Core.lua
+Shared\Core\Members.lua
+Shared\Core\Module.lua
+Shared\Locales\enUS_Core.lua
+Shared\Core\Store.lua
+Shared\Core\Options.lua
+Shared\Core\Profiler.lua
+Shared\Core\DebugReport.lua
+Shared\Core\Slash.lua
+Shared\Core\Commands.lua
+Shared\Core\Bindings.lua
+Shared\UI\Kit.lua
+Shared\UI\KitRows.lua
+Shared\UI\Windows.lua
+Shared\UI\Popups.lua
+Shared\UI\EditMode.lua
+Shared\UI\Widgets.lua
+Shared\UI\Controls.lua
+Shared\Lib\QuestieDB.lua
+Part.lua
+Locales\enUS.lua
+Locales\enUS_Modules.lua
+Locales\enUS_Shared.lua
+Locales\enUS_Interface.lua
+Locales\enUS_Quests.lua
+Migrations.lua
+Lib\OtherAddons.lua
+Lib\QuestLog.lua
+Lib\ChatWindows.lua
+Lib\ItemStats.lua
+Lib\Equipment.lua
+Lib\Upgrades.lua
+UI\BagButtons.lua
+UI\ItemList.lua
+UI\Restyle.lua
+Core\Attach.lua
+Core\Plugin.lua
+UI\ForeverRows.lua
+UI\ForeverPage.lua
+Settings\AlonePage.lua
+Settings\Alone.lua
+
+# Modules: one line per file, grouped by category (each folder is a category)
+Modules\Interface\Performance.lua
+Modules\Interface\FiveSecond.lua
+Modules\Interface\PlayerCastBar.lua
+Modules\Interface\LayerInfo.lua
+Modules\Interface\CooldownLayout.lua
+Modules\Interface\DrawerFlyout.lua
+Modules\Interface\Drawer.lua
+Modules\Interface\DrawerEditor.lua
+Modules\Interface\Visuals.lua
+Modules\Interface\DynamicLight.lua
+Modules\Interface\VisualsPage.lua
+Modules\Interface\DynamicLightPage.lua
+Modules\Chat\ChatButtons.lua
+Modules\Chat\ChatTabs.lua
+Modules\Chat\ChatInput.lua
+Modules\Chat\ChatFade.lua
+Modules\Quests\QuestItems.lua
+Modules\Quests\QuestMarkersRead.lua
+Modules\Quests\QuestMarkers.lua
+# (Bags: FullBagsPlan before FullBags)
+Modules\Bags\FullBagsPlan.lua
+Modules\Bags\FullBags.lua
+Modules\Bags\BaganatorUpgrades.lua
+Modules\Merchant\Vendor.lua
+Modules\Merchant\VendorButton.lua
+Modules\Merchant\VendorWindow.lua
+Modules\Gathering\FishingZones.lua
+Modules\Gathering\FishingState.lua
+Modules\Gathering\Fishing.lua
+Modules\Map\ButtonBag.lua
+# (Addons: tweaks to other addons, offered while that addon is loaded)
+Modules\Addons\ForeverPlusPlus.lua
+Modules\Addons\DungeonJournalPages.lua
+Modules\Addons\DungeonJournalSkin.lua
+
+# Public API
+API.lua
+
+# Start everything
+Init.lua

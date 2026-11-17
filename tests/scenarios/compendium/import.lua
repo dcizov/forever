@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/import.lua
+    Forever Codex - tests/scenarios/compendium/import.lua
     Bestiary Import: with Forever Bestiary's saved variables loaded, its creatures come in by
     creature ID (from their models or its name index, or a creature of that name already in the
     journal; one named only by quest text is left out), counts take the larger of the two (never
@@ -13,7 +13,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, Places = ns.Book, ns.Places
 local import = ns.modules.Import

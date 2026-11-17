@@ -1,16 +1,15 @@
 --[[
-    Forever Tweaks - tests/scenarios/core/upgrade.lua
-    0.9.0's saved variables moved to today's layout.
+    Forever Gearbox - tests/scenarios/core/upgrade.lua
+    0.9.0's saved variables moved to today's layout: settings and data kept in Gearbox' own.
     Run by tests/run.lua (lua5.1 tests/run.lua upgrade), which passes its helpers in.
 ]]
 
 local T = ...
-local under = T.under -- every frame under one that passes a test (tests/run.lua)
-local check, eq, login, finish, openEverything, root = T.check, T.eq, T.login, T.finish, T.openEverything, T.root
+local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 local ns
 
 -- Saved by 0.9.0: everything flat in db.modules, defaults left out (layout 3).
-ForeverTweaksDB = {
+ForeverGearboxDB = {
     layout = 3, debug = false,
     modules = {
         ViewDistance = { enabled = true, farclip = 7000, saved = { farclip = "1000" } },
@@ -22,7 +21,7 @@ ForeverTweaksDB = {
     },
 }
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 -- A module older than the 0.9.0 install, for the NEW labels.
 ns:NewModule("TestOld", {
     category = "map", added = "0.5.0", -- older than the 0.9.0 install: no NEW label
@@ -30,16 +29,17 @@ ns:NewModule("TestOld", {
     options = { { key = "size", type = "slider", label = "Size", min = 5, max = 20, step = 1 } },
 })
 login()
-local db = ForeverTweaksDB
+local db = ForeverGearboxDB
 eq(db.version, ns.member.layout, "layout version")
 eq(db.modules, nil, "old modules table gone")
 eq(db.layout, nil, "old layout key gone")
 eq(db.installed, "0.9.0", "an upgrade counts as installed at 0.9.0")
-eq(db.settings.ButtonBag.columns, 8, "setting carried over")
-eq(db.data.ButtonBag.ignored.SomeAddon, true, "data carried over")
-eq(db.settings.ViewDistance, nil, "View Distance (removed in 1.4.0) gone")
-eq(db.settings.Performance.bogus, nil, "unknown key dropped")
-eq(db.settings.Performance.colors, nil, "wrong type dropped")
+local own = db.settings
+eq(own.ButtonBag.columns, 8, "setting carried over, in Gearbox' own")
+eq(db.data.ButtonBag.ignored.SomeAddon, true, "data carried over, kept in Gearbox' own")
+eq(own.ViewDistance, nil, "View Distance (removed in 1.4.0) gone")
+eq(own.Performance.bogus, nil, "unknown key dropped")
+eq(own.Performance.colors, nil, "wrong type dropped")
 eq(ns.modules.Performance.db.latency, "both", "module reads its setting")
 eq(ns.modules.Performance.db.fps, true, "module reads a default")
 eq(W.cvars.statusText, "0", "a removed module leaves its CVar alone")
@@ -49,36 +49,15 @@ check(ns:IsNewer("1.0.0", "0.9.0") and not ns:IsNewer("0.9.0", "1.0.0") and ns:I
 -- Displays and Edit Mode.
 local perf = ns.modules.Performance
 W.RunTimers()
-check(ForeverTweaksPerformance ~= nil, "FPS display made")
+check(ForeverGearboxPerformance ~= nil, "FPS display made")
 EditModeManagerFrame:EnterEditMode()
 check(ns.EditMode.IsActive(), "Edit Mode active")
 EditModeManagerFrame:ExitEditMode()
 ns:SetOption("Performance", "x", 50)
 eq(perf.db.x, 50, "x slider")
 ns:ResetOption("Performance", "x")
-check(perf.db.x ~= 50 and ns.Store.IsDefault(perf, "x"), "x reset to default")
+check(perf.db.x ~= 50 and own.Performance.x == nil, "x reset to default")
 
--- NEW labels: on what's newer than the version the player last saw it in (here the 0.9.0
--- install), until its page has been built.
-eq(ns.member.db.seenModules.FullBags, nil, "Full Bags (1.3.0) not seen yet")
-
--- Settings pages and the Debug report.
-openEverything(ns)
-local function hasNewLabel(page, title)
-    -- (Its title is there twice: its row in the list and its pane's header.)
-    local titles = under(ForeverCore.SettingsWindow.Page(page).frame, function(f) return f._kind == "FontString" and f._text == title end)
-    if #titles == 0 then return nil end
-    for _, text in ipairs(titles) do
-        for _, sibling in ipairs({ text:GetParent():GetChildren() }) do
-            if sibling._template == "NewFeatureLabelTemplate" then return true end
-        end
-    end
-    return false
-end
-eq(hasNewLabel(ns.member.short, ns.modules.FullBags.title), true, "a module added since the install: NEW")
-eq(hasNewLabel(ns.member.short, "TestOld"), false, "one older than the install: no NEW")
-eq(ns.member.db.seenModules.FullBags, ns.version, "a module shown is marked seen")
-check(not ns:IsNewer(ns.modules.FullBags.added, ns.member.db.seenModules.FullBags), "so its NEW label goes next time")
 local info = ns:DebugInfo()
 check(info:find("TestOld", 1, true) ~= nil, "debug info lists modules")
 check(info:find("\n\nLog:\n", 1, true) ~= nil, "a blank line before the log")

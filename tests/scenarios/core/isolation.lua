@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/core/isolation.lua
+    Forever Gearbox - tests/scenarios/core/isolation.lua
     Errors in one handler, timer or hook don't stop the others; module timers, hooks, news
     and option checks.
     Run by tests/run.lua (lua5.1 tests/run.lua isolation), which passes its helpers in.
@@ -10,7 +10,7 @@ local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 local ns
 
 W.Strict()
-ns = W.LoadAddon(root, "ForeverTweaks")
+ns = W.LoadAddon(root, "ForeverGearbox")
 login()
 -- An error in one handler doesn't stop the next one.
 local a, b = { name = "A" }, { name = "B" }

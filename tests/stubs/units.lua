@@ -4,8 +4,9 @@
     tests/wow.lua after the other stubs (it replaces their simpler unit functions; a unit without
     W.unitInfo answers as those did: W.units' GUIDs, W.unitExists, the one creature name).
       W.unitInfo[unit] = { guid, name, level, classification, creatureType, family, reaction,
-                           player, controlled, tapped, connected, class }: what the unit
-                           functions answer for `unit`
+                           player, controlled, tapped, connected, class, attackable }: what the
+                           unit functions answer for `unit` (attackable: UnitCanAttack, by
+                           default whether its reaction is 4 or less)
       W.place           = { map, x, y }: the player's place (nil: no map, as in an instance)
       W.subzone         = the subzone's name
       W.questWindow     = { questID, title }: the quest window open now (QUEST_DETAIL and so on)
@@ -38,7 +39,12 @@ function UnitName(unit)
     if u then return u.name end
     if next(W.unitInfo) == nil then return simpleName(unit) end
 end
-UnitLevel = field("level", 0)
+local unitLevel = field("level", 0)
+-- The player's level: W.playerLevel when a scenario sets it (else 0, as before).
+function UnitLevel(unit)
+    if unit == "player" and W.playerLevel and not info(unit) then return W.playerLevel end
+    return unitLevel(unit)
+end
 UnitClassification = field("classification", "normal")
 UnitCreatureType = field("creatureType", nil)
 UnitCreatureFamily = field("family", nil)
@@ -48,6 +54,15 @@ function UnitIsPlayer(unit)
     return simplePlayer(unit)
 end
 UnitPlayerControlled = field("controlled", false)
+-- Another player's pet or guardian (W.Creature(..., { otherPet = true })).
+UnitIsOtherPlayersPet = field("otherPet", false)
+-- A creature unit's own `dead` when it has one (a corpse targeted), else the target's (W.targetDead).
+local simpleDead = UnitIsDead
+function UnitIsDead(unit)
+    local u = info(unit)
+    if u and u.dead ~= nil then return u.dead end
+    return simpleDead(unit)
+end
 UnitIsTapDenied = field("tapped", false)
 UnitIsConnected = field("connected", true)
 -- Threat: W.threat = { isTanking, status, scaledPercent, rawPercent } on the target (nil: none).
@@ -55,6 +70,13 @@ function UnitDetailedThreatSituation() if W.threat then return unpack(W.threat) 
 -- Blizzard's unit frames call it when a frame's unit changes; Class Colors hooks it.
 function UnitFrame_Update(frame) return frame end
 function UnitReaction(unit) local u = info(unit); return u and u.reaction or nil end
+local simpleCanAttack = UnitCanAttack
+function UnitCanAttack(from, unit)
+    local u = info(unit)
+    if not u then return simpleCanAttack(from, unit) end
+    if u.attackable ~= nil then return u.attackable end
+    return not u.player and (u.reaction or 2) <= 4
+end
 
 -- Makes a creature unit: W.Creature("target", 3296, "Grunt", { level = 12 }).
 function W.Creature(unit, npcID, name, extra)
@@ -132,3 +154,8 @@ function W.FrameMethods:SetCreature(id) self._creature, self._display = id, nil 
 function W.FrameMethods:ClearModel() self._unit, self._display, self._creature = nil, nil, nil end
 
 C_QuestLog.IsOnQuest = function(questID) return C_QuestLog.GetLogIndexForQuestID(questID) ~= nil end
+
+-- The player's buffs: W.buffs = { { name = "Torch" }, ... }.
+W.buffs = {}
+C_UnitAuras = C_UnitAuras or {}
+C_UnitAuras.GetBuffDataByIndex = function(unit, i) if unit == "player" then return W.buffs[i] end end

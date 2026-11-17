@@ -1,5 +1,5 @@
 --[[
-    Forever Compendium - tests/scenarios/compendium/tooltips.lua
+    Forever Codex - tests/scenarios/compendium/tooltips.lua
     Tooltip Lines: kills and looted on a creature's tooltip, its quests (counts for, takes in,
     offers) by what the log says, an item's likeliest sources with their rates, the index made
     again after new loot, each checkbox, and nothing while off.
@@ -10,7 +10,7 @@ local T = ...
 local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
-local ns = W.LoadAddon(root, "ForeverCompendium")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local Book, L = ns.Book, ns.L
 

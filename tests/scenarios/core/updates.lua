@@ -1,5 +1,5 @@
 --[[
-    Forever Tweaks - tests/scenarios/core/updates.lua
+    Forever Codex - tests/scenarios/core/updates.lua
     Update Notice: telling the guild and a group joined, hearing a newer version (said once, and
     again at the next login until updated once two players said it; one far ahead ignored), answering an older one, the once-a-minute limit, no
     messages in combat or while the game locks them, and Share Your Version off.
@@ -11,7 +11,7 @@ local check, eq, login, finish, root = T.check, T.eq, T.login, T.finish, T.root
 
 W.Strict()
 W.inGuild = true
-local ns = W.LoadAddon(root, "ForeverTweaks")
+local ns = W.LoadAddon(root, "ForeverCodex")
 login()
 local mod = ns.modules.Updates
 check(mod.active, "on by default")
@@ -62,21 +62,21 @@ eq(mod:NewerVersion(), nil, "a version far ahead of any real one is ignored")
 hear(next2, "GUILD", "Someone")
 eq(mod:NewerVersion(), next2, "a newer version heard")
 check(said("Forever " .. next2 .. " is out"), "it says so in chat")
-eq(ForeverCoreDB.data.Updates.newest.version, nil, "one player's word: this session only")
+eq(ForeverCodexDB.data.Updates.newest.version, nil, "one player's word: this session only")
 local lines = #W.chat
 hear(next2, "PARTY", "Someone")
-eq(ForeverCoreDB.data.Updates.newest.version, nil, "the same player again doesn't count twice")
+eq(ForeverCodexDB.data.Updates.newest.version, nil, "the same player again doesn't count twice")
 local hidden = "SecretName"
 W.secrets[hidden] = true
 W.Fire("CHAT_MSG_ADDON", "ForeverTweaks", "v:" .. next2, "PARTY", hidden)
-eq(ForeverCoreDB.data.Updates.newest.version, nil, "a sender the game keeps secret doesn't count")
+eq(ForeverCodexDB.data.Updates.newest.version, nil, "a sender the game keeps secret doesn't count")
 hear(next2, "PARTY", "Another")
 eq(#W.chat, lines, "said once a session")
-eq(ForeverCoreDB.data.Updates.newest.version, next2, "two players: kept for the account, said again at the next login")
+eq(ForeverCodexDB.data.Updates.newest.version, next2, "two players: kept for the account, said again at the next login")
 hear(next1, "PARTY", "Third")
 hear(next1, "PARTY", "Fourth")
 eq(mod:NewerVersion(), next2, "an older one than heard before doesn't replace it")
-eq(ForeverCoreDB.data.Updates.newest.version, next2, "nor the one kept")
+eq(ForeverCodexDB.data.Updates.newest.version, next2, "nor the one kept")
 hear("garbage", "PARTY")
 W.Fire("CHAT_MSG_ADDON", "OtherAddon", "v:" .. next3, "PARTY", "Someone")
 eq(mod:NewerVersion(), next2, "other prefixes and bad text are ignored")
