@@ -177,6 +177,10 @@ function Frame:CreateFontString(name) return W.NewFrame("FontString", name, self
 function Frame:GetEditBox() return self.EditBox end
 function Frame:SetupMenu(fn) self._menu = fn end
 function Frame:SetColorTexture(r, g, b, a) self._color = { r, g, b, a } end
+-- Texture:SetGradient (SimpleTextureBaseAPI): the orientation and a colour mixin at each end.
+function Frame:SetGradient(orientation, minColor, maxColor)
+    self._gradient = { orientation, minColor, maxColor }
+end
 function Frame:SetAlpha(a) self._alpha = a end
 function Frame:GetAlpha() return self._alpha or 1 end
 function Frame:EnableMouse(on) self._mouse = on and true or false end

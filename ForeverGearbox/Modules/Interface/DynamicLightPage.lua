@@ -226,8 +226,8 @@ function LightPage.AddTo(stack)
     Page.AddOptionRow(stack, "dynamicStrength", Page.Enabled)
     Kit.AddHeaderRow(stack, L.VISUALS_SKY)
     addSkyRows(stack)
-    -- The sky rows stay independent of Dynamic Light's time curve; the lines beneath them are part
-    -- of Dynamic Light and hide while it is off.
+    -- The sky rows are always there (the rest of Dynamic Light's hide while it's off); their time
+    -- curve is Dynamic Light's while that's on, else their own three hours (Visuals.lua).
     local from = #stack.entries + 1
     -- What it sets now and why, in a box of its own between the rows (not a row's label).
     local now = Kit.AddInfoRow(stack, "", 8)

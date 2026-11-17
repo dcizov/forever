@@ -19,8 +19,9 @@ for name, value in pairs({ giQuality = "1", RenderFormat = "1", volumeFog = "1",
 end
 W.cvarDefaults.groundEffectDensity = "40"
 
--- Saved before 3.3.0: Loot Sparkles kept with the Outline Mode it set.
-ForeverGearboxDB = { version = 15, settings = {}, data = { Visuals = { values = {
+-- Saved before 3.3.0: Loot Sparkles kept with the Outline Mode it set, and the sky's old static
+-- alpha (the whole gradient's, before the Day/Night Alpha and Gradient Intensity split).
+ForeverGearboxDB = { version = 15, settings = { Visuals = { skyGradientAlpha = 0.4 } }, data = { Visuals = { values = {
     outlineModeShowLootEffectWhenDisabled = 1, graphicsOutlineMode = 0, giQuality = 2 } } } }
 W.Strict()
 local ns = W.LoadAddon(root, "ForeverGearbox")
@@ -55,6 +56,62 @@ eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. ",Changelog,About",
     "on: one Advanced Graphics page, before Forever++'s last two")
 eq(V.module.db.values.outlineModeShowLootEffectWhenDisabled, nil, "3.3.0: the old loot sparkle isn't kept any more")
 eq(V.module.db.values.graphicsOutlineMode, nil, "nor the Outline Mode it set")
+
+-- The sky gradient: a real vertical gradient (not a flat fill), its alpha from the hour and the
+-- two toggles, the sky's own hours when Dynamic Light is off, and the fade following the clock.
+local skyTex = _G.ForeverGearboxVisualsSky:GetRegions()
+local function near(a, b, what) check(math.abs((a or -1) - b) < 1e-6, what .. ": expected " .. b .. ", got " .. tostring(a)) end
+-- 0.4 before: the look it had at night comes back as Night Alpha 0.5 x Intensity 0.8.
+near(V.module.db.skyGradientIntensity, 0.8, "the old static alpha carried over against Night Alpha")
+eq(V.module.db.skyGradientAlpha, nil, "the old static alpha is gone")
+W.gameTime = { 22, 0 }
+V.UpdateSky()
+check(skyTex._gradient ~= nil, "the texture is given a gradient, not a flat colour")
+eq(skyTex._gradient[1], "VERTICAL", "the gradient runs vertically")
+near(skyTex._gradient[2].a, 0.5 * 0.8 * 0.9, "the top is a little dimmer than the bottom")
+near(skyTex._gradient[3].a, 0.5 * 0.8, "Night Alpha, done to the intensity, at night")
+near(V.SkyAlpha(), 0.4, "night: Night Alpha x Intensity")
+ns:SetOption("Visuals", "skyNightOnly", false)
+near(V.SkyAlpha(), 0.4, "Night Only off at night: the same, the gate was already 1")
+W.gameTime = { 12, 0 }
+near(V.SkyAlpha(), 0.25 * 0.8, "Night Only off by day: Day Alpha x Intensity")
+ns:SetOption("Visuals", "skyNightOnly", true)
+near(V.SkyAlpha(), 0, "Night Only on by day: hidden")
+V.UpdateSky()
+near(skyTex._gradient[3].a, 0, "and the gradient is fully transparent")
+-- The clock moving on updates the gradient by itself (a ticker), as the tooltip promises.
+ns:SetOption("Visuals", "skyNightOnly", false)
+V.UpdateSky()
+W.gameTime = { 22, 0 }
+W.Advance(60)
+near(skyTex._gradient[3].a, 0.4, "the clock moved to night: the gradient follows it")
+ns:SetOption("Visuals", "skyNightOnly", true)
+-- Dynamic Time Scaling off: one steady alpha, whatever the hour.
+ns:SetOption("Visuals", "skyNightOnly", false)
+ns:SetOption("Visuals", "skyDynamicTime", false)
+W.gameTime = { 12, 0 }
+near(V.SkyAlpha(), 0.8, "Time Scaling off: steady, done to the intensity")
+ns:SetOption("Visuals", "skyDynamicTime", true)
+ns:SetOption("Visuals", "skyNightOnly", true)
+-- Dynamic Light off: the Sky section's own Sunset (it has 20, Dynamic Light 20 too: 14 shows).
+ns:SetOption("Visuals", "skySunsetHour", 14)
+W.gameTime = { 16, 0 }
+eq(V.SkyAlpha(), 0.4, "the Sky section's own Sunset sets dusk while Dynamic Light is off")
+ns:SetOption("Visuals", "skySunsetHour", 20)
+-- Dynamic Light on: its Time section's curve (Twilight 1.5 h, not the sky's 1 h) sets dusk.
+ns:SetOption("Visuals", "dynamic", true)
+W.gameTime = { 7, 0 }
+check(V.SkyAlpha() > 0.01, "Dynamic Light on at 07:00: its 1.5 h twilight still has the sky in dawn")
+ns:SetOption("Visuals", "dynamic", false)
+eq(V.SkyAlpha(), 0, "Dynamic Light off: the sky's own 1 h twilight is done by 07:00")
+W.gameTime = { 12, 0 }
+eq(V.SkyAlpha(), 0, "back to noon")
+-- Indoors (as asked, default on): nothing, whatever the hour.
+ns:SetOption("Visuals", "skyNightOnly", false)
+W.indoors = true
+near(V.SkyAlpha(), 0, "indoors: hidden")
+W.indoors = false
+ns:SetOption("Visuals", "skyNightOnly", true)
 
 -- A setting, and what goes with it (Indirect Lighting turns the 16-bit render format on).
 local gi

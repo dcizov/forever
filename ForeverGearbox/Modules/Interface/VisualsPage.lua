@@ -102,36 +102,6 @@ local function settingRow(stack, def)
     row:SetScript("OnEnter", function(self) Kit.ShowTooltip(self, def.label, tip()) end)
 end
 
-local function addSkyRows(stack)
-    local mod = Visuals().module
-    local start = #stack.entries + 1
-    local function check(key, label, tip)
-        local row = Kit.AddCheckRow(stack, label, function() return mod.db[key] end,
-            function(checked) ns:SetOption(mod.name, key, checked) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    local function slider(key, label, tip, min, max, step, format)
-        local row = Kit.AddSliderRow(stack, label, { min = min, max = max, step = step, format = format },
-            function() return mod.db[key] end,
-            function(value) ns:SetOption(mod.name, key, value) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    check("skyEnabled", L.VISUALS_SKY_ENABLE, L.VISUALS_SKY_ENABLE_TIP)
-    check("skyDynamicTime", L.VISUALS_SKY_DYNAMIC, L.VISUALS_SKY_DYNAMIC_TIP)
-    check("skyNightOnly", L.VISUALS_SKY_NIGHT_ONLY, L.VISUALS_SKY_NIGHT_ONLY_TIP)
-    check("skyHideFlyingOrIndoors", L.VISUALS_SKY_HIDE, L.VISUALS_SKY_HIDE_TIP)
-    slider("skyGradientHeight", L.VISUALS_SKY_HEIGHT, L.VISUALS_SKY_HEIGHT_TIP, 120, 500, 10, "%d px")
-    slider("skyDayAlpha", L.VISUALS_SKY_DAY, L.VISUALS_SKY_DAY_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyNightAlpha", L.VISUALS_SKY_NIGHT, L.VISUALS_SKY_NIGHT_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyGradientIntensity", L.VISUALS_SKY_GRADIENT, L.VISUALS_SKY_GRADIENT_TIP, 0, 1, 0.05, "%.2f")
-    slider("skySunriseHour", L.VISUALS_SKY_SUNRISE, L.VISUALS_SKY_SUNRISE_TIP, 0, 24, 0.5, "%.1f h")
-    slider("skySunsetHour", L.VISUALS_SKY_SUNSET, L.VISUALS_SKY_SUNSET_TIP, 0, 24, 0.5, "%.1f h")
-    slider("skyTwilightHours", L.VISUALS_SKY_TWILIGHT, L.VISUALS_SKY_TWILIGHT_TIP, 0, 6, 0.25, "%.2f h")
-    for i = start + 1, #stack.entries do
-        stack.entries[i].shown = function() return mod.db.skyEnabled end
-    end
-end
-
 local function fillVisuals(frame)
     local V = Visuals()
     local stack = Kit.NewRowPage(frame, L.VISUALS_TITLE)

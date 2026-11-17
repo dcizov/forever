@@ -10,7 +10,7 @@
 
 local _, ns = ...
 
-local pairs, ipairs, type, next, tonumber = pairs, ipairs, type, next, tonumber
+local pairs, ipairs, type, next, tonumber, math = pairs, ipairs, type, next, tonumber, math
 local match = string.match
 
 -- 0.1 to 0.9 kept each module's table flat in db.modules (settings and data together), and
@@ -297,13 +297,28 @@ ns:Migrate(19, function(db) forgetModules(db, { "Tracker", "DialogueKeys" }) end
 ns:Migrate(20, function(db) db.takeOverFpp = true end)
 
 -- 3.3.0 sky gradient decoupling: the static alpha was folded into a dedicated intensity slider and
--- the night-only gate moved to its own setting, so older saved values are carried over once.
+-- the night-only gate moved to its own setting, so older saved values are carried over once. Both
+-- are settings (db.settings, never the module's data), and the old alpha was the gradient's whole
+-- alpha while the new intensity multiplies Day Alpha and Night Alpha: it's carried over against
+-- Night Alpha, so the look the gradient had at night stays as it was.
 ns:Migrate(21, function(db)
-    local visuals = type(db.data) == "table" and db.data.Visuals
-    if type(visuals) ~= "table" then return end
-    if visuals.skyGradientIntensity == nil and visuals.skyGradientAlpha ~= nil then
-        visuals.skyGradientIntensity = visuals.skyGradientAlpha
+    local settings = type(db.settings) == "table" and db.settings.Visuals
+    local data = type(db.data) == "table" and db.data.Visuals
+    -- An early cut of this step kept it in the module's data, where nothing reads it.
+    local old = type(settings) == "table" and tonumber(settings.skyGradientAlpha)
+        or type(data) == "table" and tonumber(data.skyGradientIntensity or data.skyGradientAlpha)
+    if old then
+        db.settings = type(db.settings) == "table" and db.settings or {}
+        settings = db.settings.Visuals
+        if type(settings) ~= "table" then
+            settings = {}
+            db.settings.Visuals = settings
+        end
+        if settings.skyGradientIntensity == nil then
+            local nightAlpha = tonumber(settings.skyNightAlpha) or 0.5
+            settings.skyGradientIntensity = math.min(1, math.max(0, old / math.max(0.05, nightAlpha)))
+        end
     end
-    visuals.skyGradientAlpha = nil
-    if visuals.skyNightOnly == nil then visuals.skyNightOnly = true end
+    if type(settings) == "table" then settings.skyGradientAlpha = nil end
+    if type(data) == "table" then data.skyGradientAlpha, data.skyGradientIntensity = nil, nil end
 end)

@@ -14,7 +14,7 @@ ns:NewMember(addonName, ns, {
     -- Its saved variables until 3.3.0, when it was Forever Tweaks: taken over once (Store.Init).
     formerSaved = "ForeverTweaksDB",
     formerCharSaved = "ForeverTweaksCharDB",
-    layout = 20,     -- Migrations.lua has the steps up to it
+    layout = 21,     -- Migrations.lua has the steps up to it
     charLayout = 2,
     slash = { "/fg", "/gearbox", "/forevergearbox" },
     -- Forever++'s Modules page groups them its own way (Core/Plugin.lua: CATEGORY).

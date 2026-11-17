@@ -54,7 +54,7 @@ local ns = W.LoadAddon(root, "ForeverCodex") -- Codex first, as the game would (
 W.LoadAddon(root, "ForeverGearbox")
 login()
 
-eq(ForeverGearboxDB.version, 20, "Gearbox: at the newest layout")
+eq(ForeverGearboxDB.version, 21, "Gearbox: at the newest layout")
 eq(ForeverCodexDB.version, 5, "Codex: at the newest layout")
 eq(ForeverCompendiumDB, nil, "Forever Compendium's saved variables taken over and cleared")
 eq(ForeverTweaksCharDB, nil, "and Forever Tweaks' character ones")

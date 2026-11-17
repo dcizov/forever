@@ -15,6 +15,10 @@
         "graphics..." variables) or a login overwrites it.
       * Dynamic Light and the image: while it's on it sets Brightness, Contrast and Gamma (`light`);
         the page's are yours, for while it's off. Blizzard Default and Before turn it off too.
+      * The sky (Sky, under Dynamic Light): a top-screen gradient whose alpha is Day Alpha by day and
+        Night Alpha by night, faded with the clock, `skyNightOnly` masking the day and
+        `skyGradientIntensity` setting how strong it is at all. Its time curve is Dynamic Light's
+        from Sunrise to Twilight while that's on, else the Sky section's own three.
     A change in combat waits for it to end. A setting another addon makes its own (`conflict`: an
     addon loaded) is left to it. Loot sparkles are Forever++'s Quest Item Sparkles (3.3.0 took
     them out of here).
@@ -181,126 +185,95 @@ function Visuals.Has(cvar) return C_CVar.GetCVar(cvar) ~= nil end
 
 local skyFrame
 local skyTexture
+local skyTicker
 local skyFade = 0
 local skyFadeTarget = 0
 local SKY_FADE_SPEED = 4
+local SKY_CLOCK = 60 -- seconds between looks at the game's clock (the fade with the time of day)
+local skyClock      -- the minute the gradient was last worked out for
 
-local function skyTimeAlpha()
-    local db = M.db
-    local light = ns.DynamicLight
-    -- Hybrid: Dynamic Light sets the time curve (sunrise, sunset, twilight), while the sky's
-    -- Day Alpha and Night Alpha remain independent ramp endpoints that can be tuned separately.
-    local sunrise = light and light.Value and light.Value("sunrise") or (db.skySunriseHour or 6)
-    local sunset = light and light.Value and light.Value("sunset") or (db.skySunsetHour or 20)
-    local twilight = light and light.Value and light.Value("twilight") or (db.skyTwilightHours or 1)
-    local dayAlpha = db.skyDayAlpha or 0.25
-    local nightAlpha = db.skyNightAlpha or 0.5
-
+local function skyHour()
     local hour, minute = GetGameTime()
-    local now = (hour or 12) + ((minute or 0) / 60)
-
-    local dawnStart = sunrise - twilight
-    local dawnEnd = sunrise + twilight
-    local duskStart = sunset - twilight
-    local duskEnd = sunset + twilight
-
-    if now >= dawnEnd and now <= duskStart then
-        return dayAlpha
-    elseif now > dawnStart and now < dawnEnd then
-        local t = (now - dawnStart) / (dawnEnd - dawnStart)
-        return nightAlpha + (dayAlpha - nightAlpha) * t
-    elseif now > duskStart and now < duskEnd then
-        local t = (now - duskStart) / (duskEnd - duskStart)
-        return dayAlpha + (nightAlpha - dayAlpha) * t
-    end
-    return nightAlpha
+    return (hour or 12) + ((minute or 0) / 60)
 end
 
-local function skyNightGate()
+-- The sky's time curve: Dynamic Light's while it's running (its Time section sets Sunrise, Sunset
+-- and Twilight), else the Sky section's own three, so the page's rows are the ones in use.
+local function skyCurve()
     local db = M.db
-    if not db.skyNightOnly then return 1 end
     local light = ns.DynamicLight
-    local sunrise = light and light.Value and light.Value("sunrise") or (db.skySunriseHour or 6)
-    local sunset = light and light.Value and light.Value("sunset") or (db.skySunsetHour or 20)
-    local twilight = light and light.Value and light.Value("twilight") or (db.skyTwilightHours or 1)
-    local dayAlpha = db.skyDayAlpha or 0.25
-    local nightAlpha = db.skyNightAlpha or 0.5
-    local hour, minute = GetGameTime()
-    local now = (hour or 12) + ((minute or 0) / 60)
-    local dawnStart = sunrise - twilight
-    local dawnEnd = sunrise + twilight
-    local duskStart = sunset - twilight
-    local duskEnd = sunset + twilight
-
-    if now >= dawnEnd and now <= duskStart then
-        return 0
-    elseif now > dawnStart and now < dawnEnd then
-        local t = (now - dawnStart) / (dawnEnd - dawnStart)
-        return math.max(0, math.min(1, 1 - t))
-    elseif now > duskStart and now < duskEnd then
-        local t = (now - duskStart) / (duskEnd - duskStart)
-        return math.max(0, math.min(1, t))
-    elseif now < dawnStart or now > duskEnd then
-        return 1
+    if light and light.IsRunning and light.IsRunning() then
+        return light.Value("sunrise"), light.Value("sunset"), light.Value("twilight")
     end
+    return db.skySunriseHour or 6, db.skySunsetHour or 20, db.skyTwilightHours or 1
+end
 
-    local base = skyTimeAlpha()
-    local span = math.max(0.05, nightAlpha - dayAlpha)
-    return math.max(0, math.min(1, (base - dayAlpha) / span))
+-- How far into the dark the hour is: 0 in full day, 1 in full night, in between through dawn and
+-- dusk. The time ramp's weight, and Night Only's gate.
+local function skyDarkness()
+    local sunrise, sunset, twilight = skyCurve()
+    local dawnStart, dawnEnd = sunrise - twilight, sunrise + twilight
+    local duskStart, duskEnd = sunset - twilight, sunset + twilight
+    local now = skyHour()
+    if now >= dawnEnd and now <= duskStart then return 0 end
+    if now > dawnStart and now < dawnEnd then return 1 - (now - dawnStart) / (dawnEnd - dawnStart) end
+    if now > duskStart and now < duskEnd then return (now - duskStart) / (duskEnd - duskStart) end
+    return 1
+end
+
+-- Day Alpha by day and Night Alpha by night, between them through dawn and dusk.
+local function skyTimeAlpha()
+    local db = M.db
+    local dayAlpha, nightAlpha = db.skyDayAlpha or 0.25, db.skyNightAlpha or 0.5
+    return dayAlpha + (nightAlpha - dayAlpha) * skyDarkness()
+end
+
+-- Whether the sky has no place on screen now: off, or (as asked) flying or indoors.
+local function skyHidden()
+    local db = M.db
+    if not db.skyEnabled then return true end
+    if not db.skyHideFlyingOrIndoors then return false end
+    local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
+    local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
+    return fly or inside
 end
 
 function Visuals.SkyAlpha()
     local db = M.db
-    if not db.skyEnabled then return 0 end
-    local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
-    local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
-    if db.skyHideFlyingOrIndoors and (fly or inside) then return 0 end
-
-    local intensity = db.skyGradientIntensity or 0.65
+    if not db or skyHidden() then return 0 end
     local alpha = db.skyDynamicTime and skyTimeAlpha() or 1
-    return alpha * (db.skyNightOnly and skyNightGate() or 1) * intensity
+    -- Night Only masks the day rather than adding strength: it is 1 all night, 0 all day.
+    if db.skyNightOnly then alpha = alpha * skyDarkness() end
+    return alpha * (db.skyGradientIntensity or 0.65)
 end
 
+-- A vertical wash from the top colour to near-black, dimmer at the top: Forever has
+-- Texture:SetGradient, taking a colour mixin at each end.
 local function skySetGradient(alpha)
     if not skyTexture then return end
-    local topR, topG, topB = 0.35, 0.48, 0.72
-    local bottomR, bottomG, bottomB = 0.02, 0.06, 0.16
-    if rawget(skyTexture, "SetGradient") and rawget(_G, "CreateColor") then
-        local top = _G.CreateColor(topR, topG, topB, alpha * 0.9)
-        local bottom = _G.CreateColor(bottomR, bottomG, bottomB, alpha)
-        skyTexture:SetGradient("VERTICAL", top, bottom)
-        return
-    end
-    if rawget(skyTexture, "SetGradientAlpha") then
-        skyTexture:SetGradientAlpha("VERTICAL", topR, topG, topB, alpha * 0.9, bottomR, bottomG, bottomB, alpha)
-        return
-    end
-    skyTexture:SetColorTexture(bottomR, bottomG, bottomB, alpha)
+    skyTexture:SetGradient("VERTICAL", CreateColor(0.35, 0.48, 0.72, alpha * 0.9),
+        CreateColor(0.02, 0.06, 0.16, alpha))
+end
+
+-- The clock moved on: the sky's fade with the time of day (a minute is close enough).
+local function skyTick()
+    if not (skyFrame and M.db and M.db.skyEnabled and M.db.skyDynamicTime) then return end
+    local hour, minute = GetGameTime()
+    local now = (hour or 12) * 60 + (minute or 0)
+    if now == skyClock then return end
+    skyClock = now
+    Visuals.UpdateSky()
 end
 
 function Visuals.UpdateSky()
     if not skyFrame or not skyTexture or not M.db then return end
     skyFrame:SetHeight(M.db.skyGradientHeight or 250)
 
-    local fadeTarget = 1
-    if not M.db.skyEnabled then
-        fadeTarget = 0
-    else
-        local fly = rawget(_G, "IsFlying") and _G.IsFlying() or false
-        local inside = rawget(_G, "IsIndoors") and _G.IsIndoors() or false
-        if M.db.skyHideFlyingOrIndoors and (fly or inside) then fadeTarget = 0 end
-    end
-    skyFadeTarget = fadeTarget
-    if fadeTarget > 0 then
-        skyFrame:Show()
-    end
+    local visible = not skyHidden()
+    skyFadeTarget = visible and 1 or 0
+    if visible then skyFrame:Show() end
 
-    local alpha = Visuals.SkyAlpha()
-    if fadeTarget <= 0 or alpha <= 0 then
-        skySetGradient(0)
-        return
-    end
-    skySetGradient(alpha)
+    skySetGradient(visible and Visuals.SkyAlpha() or 0)
 end
 
 function Visuals.StartSky()
@@ -335,11 +308,15 @@ function Visuals.StartSky()
         skyFrame:Hide()
     end
     Visuals.UpdateSky()
+    M:CancelTimer(skyTicker)
+    skyTicker = M:NewTicker(SKY_CLOCK, skyTick)
 end
 
 function Visuals.StopSky()
+    M:CancelTimer(skyTicker)
+    skyTicker, skyClock = nil, nil
     if skyFrame then
-        skyFadeTarget = 0
+        skyFade, skyFadeTarget = 0, 0
         skyFrame:Hide()
         skyFrame:SetAlpha(0)
     end
