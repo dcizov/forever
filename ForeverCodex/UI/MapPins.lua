@@ -34,8 +34,10 @@
     while Ctrl or Shift is held over them, when the module's click takes it; the tooltip is drawn
     again when Shift goes up or down, for hints shown only with it.
 
-    MapPins.World(mod, opts) and MapPins.Minimap(mod, opts), where opts has:
-      specs(mapID)            the pins on `mapID` (asked only while shown)
+        MapPins.World(mod, opts) and MapPins.Minimap(mod, opts), where opts has:
+            specs(mapID, host, kind) the pins on `mapID` (asked only while shown), for world map
+                                                            (`kind` = "world", `host` = map shown) or minimap
+                                                            (`kind` = "minimap", `host` = nil)
       shown()                 whether this layer draws at all (the module being on is checked too)
       size()                  the pins' size in px
       tooltip(pin, spec)      fills and shows GameTooltip
@@ -277,7 +279,7 @@ local function drawWorld(layer)
         local zones = api and stitchedZones(api, host) or { host }
         for _, mapID in ipairs(zones) do
             local share = api and widthOnHost(api, mapID, host) or 1
-            for _, spec in ipairs(layer.opts.specs(mapID)) do
+            for _, spec in ipairs(layer.opts.specs(mapID, host, "world")) do
                 local x, y = spec.x, spec.y
                 if mapID ~= host then x, y = onHost(api, mapID, host, x, y) end
                 if x then
@@ -428,7 +430,7 @@ function updateMinimap(layer)
     local mod = layer.mod
     if not wanted(layer) or IsInInstance() then return stopMinimap(layer) end
     local mapID = here()
-    layer.specs, layer.specsMap, layer.seen = mapID and layer.opts.specs(mapID) or nil, mapID, nil
+    layer.specs, layer.specsMap, layer.seen = mapID and layer.opts.specs(mapID, nil, "minimap") or nil, mapID, nil
     if not (layer.specs and #layer.specs > 0) then return stopMinimap(layer) end
     if not layer.holder then
         layer.holder = CreateFrame("Frame", nil, Minimap)

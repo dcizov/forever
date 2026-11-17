@@ -60,10 +60,15 @@ eq(#givers, 1, "two quests from one giver: one pin; done ones and other maps: no
 eq(givers[1] and #givers[1].spec.entries, 2, "both quests at it")
 eq(givers[1] and givers[1].icon._atlas, "QuestNormal", "a !")
 local enders = ofKind("ender")
-eq(#enders, 1, "the taken quest's turn-in")
-eq(enders[1] and enders[1].spec.gray, true, "grey until ready")
+eq(#enders, 0, "world map: turn-ins step back to Blizzard's own markers")
 eq(#ofKind("objective"), 2, "the unfinished objective's places, not the finished one's")
 eq(#ofKind("giver"), 1, "a taken quest's giver isn't shown")
+ns:SetOption("QuestPins", "nativeTurnIns", false)
+W.RunTimers()
+eq(#ofKind("ender"), 1, "world map: Codex turn-ins can be shown when stepping back is off")
+ns:SetOption("QuestPins", "nativeTurnIns", true)
+W.RunTimers()
+eq(#ofKind("ender"), 0, "world map: stepping back on hides Codex turn-ins again")
 
 -- OpenMap: above its stitched art, and drawn again as its view moves.
 local heard = {}
@@ -94,6 +99,11 @@ end
 check(beside ~= nil, "OpenMap: the next zone's quest giver on its stitched map")
 eq(beside and beside._point[4], 1.5 * WorldMapFrame.ScrollContainer.Child:GetWidth(), "where it is on the stitched world")
 eq(#ofKind("giver"), 2, "and the zone underneath's still")
+W.worldMapID = 1414
+heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 1)
+W.RunTimers()
+eq(#pins("quest"), 0, "OpenMap stitched continent host: no Quest Pins (zone view only)")
+W.worldMapID = MAP
 OpenMapAPI.IsStitched = function() return false end
 heard.OpenMap_StitchedChanged("OpenMap_StitchedChanged", false)
 W.RunTimers()
@@ -103,11 +113,11 @@ OpenMapAPI = nil
 ns:SetOption("QuestPins", "size", 20)
 W.RunTimers()
 
--- Ready: the turn-in goes yellow once the log says so.
+-- Ready: still tracked for minimap pins.
 W.questsReady[4] = true
 W.Fire("QUEST_LOG_UPDATE")
 W.RunTimers()
-eq(ofKind("ender")[1].spec.gray, false, "yellow once ready")
+eq(#ofKind("ender"), 0, "world map turn-ins stay stepped back when ready")
 
 -- The tooltip, as Forever++'s: "[level] Title" for each quest, then what it's there for; what
 -- clicks do only while Shift is held.
@@ -149,7 +159,7 @@ W.RunTimers()
 eq(#pins("quest"), 0, "World Map off: none")
 ns:SetOption("QuestPins", "worldMap", true)
 W.RunTimers()
-eq(#ofKind("ender"), 1, "back on")
+eq(#pins("quest"), 0, "back on: turn-ins still step back and givers are off")
 
 -- The minimap: what's within reach of where you stand.
 W.mapSizes[MAP] = { 4000, 3000 }
@@ -194,13 +204,14 @@ check(ForeverCodexJournal:IsShown(), "a right-click opens the journal")
 
 -- Above the map: Blizzard's own map art and pins start at frame level 2000, so a holder just
 -- over the canvas would be drawn under the map (the pins never showed in game).
+ns:SetOption("QuestPins", "givers", true)
+W.RunTimers()
 local anyPin = pins("quest")[1]
 check(anyPin and anyPin:GetParent():GetFrameLevel() > 2000, "pins drawn above the map's own")
 
 -- Quest titles from the game for a quest known only by number; a daily giver's blue mark;
 -- an item that starts a quest; a zone's pins on its continent's map.
 W.questsReady[4] = nil
-ns:SetOption("QuestPins", "givers", true)
 local daily = Book.QuestRecord(20)
 daily.giver, daily.daily = { npc = 3150, map = MAP, x = 0.8, y = 0.2 }, true
 W.questTitles[20] = "Daily Chores"
@@ -224,10 +235,7 @@ W.mapRects[MAP] = { [12] = { 0.5, 0.75, 0.25, 0.5 } }
 W.worldMapID = 12
 ns:SetOption("QuestPins", "size", 22)
 W.RunTimers()
-local onContinent = ofKind("giver")
-check(#onContinent >= 1, "givers on the continent's map")
-local first = onContinent[1] and onContinent[1].spec
-check(first and first.x >= 0.5 and first.x <= 0.75, "placed in the zone's part of it")
+eq(#pins("quest"), 0, "continent view: no Quest Pins")
 eq(#ofKind("objective"), 0, "objectives stay on the zone's own map")
 W.worldMapID = MAP
 ns:SetOption("QuestPins", "size", 20)

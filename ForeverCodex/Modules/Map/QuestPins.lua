@@ -18,9 +18,9 @@
     Quests at the same spot share one pin; point at it for each one and what it's there for.
     Clicks go through to the map; Ctrl+click puts Blizzard's map pin there, Shift+click opens its
     first quest where ns.ShowQuest does (your quest log while it's in it; a giver's quests are
-    discovered first). On a continent's map the givers, quest items and turn-ins of its zones
-    show too. Drawn again when the quest log changes and when the Recorder learns a quest's place
-    or title.
+    discovered first). By default, turn-ins on the world map step back to Blizzard's own marker
+    (and Region Icons, which follows it), so the ? is not doubled. Drawn again when the quest log
+    changes and when the Recorder learns a quest's place or title.
 ]]
 
 local _, ns = ...
@@ -51,6 +51,7 @@ local M = ns:NewModule("QuestPins", {
     added = "2.1.0",
     defaults = {
         givers = true, available = true, items = true, turnIns = true, objectives = true, continent = true,
+        nativeTurnIns = true,
         worldMap = true, size = 16, minimap = true, minimapSize = 14,
         color = "kind", clusters = true, upcoming = true,
         kindClass = true, kindProfession = true, kindRepeatable = false, kindDungeon = false, kindHoliday = false,
@@ -61,6 +62,8 @@ local M = ns:NewModule("QuestPins", {
           added = "3.1.0" },
         { key = "items", type = "checkbox", label = L.QPINS_ITEMS, tooltip = L.QPINS_ITEMS_TIP, group = GROUP, added = "2.3.0" },
         { key = "turnIns", type = "checkbox", label = L.QPINS_TURNINS, tooltip = L.QPINS_TURNINS_TIP, group = GROUP },
+                { key = "nativeTurnIns", type = "checkbox", label = L.QPINS_NATIVE_TURNINS, tooltip = L.QPINS_NATIVE_TURNINS_TIP,
+                    group = GROUP },
         { key = "objectives", type = "checkbox", label = L.QPINS_OBJECTIVES, tooltip = L.QPINS_OBJECTIVES_TIP, group = GROUP },
         { key = "kindClass", type = "checkbox", label = L.QPINS_KIND_CLASS, tooltip = L.QPINS_KIND_CLASS_TIP, group = KINDS,
           added = "3.2.0" },
@@ -167,6 +170,12 @@ local function isContinent(mapID)
     return info ~= nil and info.mapType ~= nil and info.mapType < ZONE_TYPE
 end
 
+-- Whether `mapID` is a zone map (cities too): Quest Pins only draw while the host map is one.
+local function isZoneMap(mapID)
+    local info = C_Map.GetMapInfo(mapID)
+    return info ~= nil and info.mapType == ZONE_TYPE
+end
+
 -- Whether Forever++'s Quest Pins draws the "!" now (ours step back).
 local function forPlusPlusPins()
     local api = ForeverPlusPlusAPI and ForeverPlusPlusAPI.v1
@@ -232,9 +241,12 @@ local function addOffered(pins, byKey, questID, rec, mapID, rects, shown)
     end
 end
 
--- The pins on `mapID`.
-local function pinsOn(mapID)
+-- The pins on `mapID`: `host` is the world map's current map while drawing there, nil on minimap;
+-- `kind` is "world" or "minimap".
+local function pinsOn(mapID, host, kind)
     local db, pins, byKey = M.db, {}, {}
+    host = host or mapID
+    if not isZoneMap(host) then return pins end
     local log = questsInLog()
     local rects = db.continent and isContinent(mapID) and {} or nil
     local available, shown = {}, {}
@@ -243,7 +255,7 @@ local function pinsOn(mapID)
         local objectives = log[questID]
         if objectives then
             local ender = rec.ender
-            if db.turnIns and ender then
+            if db.turnIns and ender and (kind ~= "world" or not db.nativeTurnIns) then
                 local x, y = spotOn(ender, mapID, rects)
                 if x then
                     addTo(pins, byKey, "ender", x, y, { questID = questID, ready = C_QuestLog.ReadyForTurnIn(questID) }, ender)
