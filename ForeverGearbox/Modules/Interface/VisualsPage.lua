@@ -3,14 +3,14 @@
     The Advanced Graphics page (Visuals.lua), its own entry under Forever++ in Settings while the
     module is on, as Forever++'s Console Variables page is. Rows as the suite's other Settings pages
     (Kit.NewRowPage: a gold label left and Blizzard's control right):
-      * The graphics settings in two columns (Kit.AddColumns): Look (Preset: Visuals.PRESETS,
-        "Custom" once a value is changed by hand; Protect Values), Image (with a line while Dynamic
-        Light sets Brightness, Contrast and Gamma) and World Detail on the left; Lighting &
-        Atmosphere and Camera & Interaction on the right. A row per setting this client has (a
-        slider or a checkbox); one another addon makes its own (Visuals.Conflict) is greyed and its
-        tooltip says why.
-      * Then Dynamic Light across the page, well apart under a divider and a big heading of its
-        own (DynamicLightPage.lua).
+      * The graphics settings in one column, a section after another: Look (Preset:
+        Visuals.PRESETS, "Custom" once a value is changed by hand; Protect Values), Image (with a
+        line while Dynamic Light sets Brightness, Contrast and Gamma), World Detail, Lighting &
+        Atmosphere, Camera & Interaction. A row per setting this client has (a slider or a
+        checkbox); one another addon makes its own (Visuals.Conflict) is greyed and its tooltip says
+        why.
+      * Then Dynamic Light, well apart under a divider and a big heading of its own
+        (DynamicLightPage.lua).
     With Forever++ the entry is found as Forever++ gives its own to Blizzard's Settings
     (Settings.RegisterAddOnCategory, hooked as it's called at Forever++'s login, after this file
     loads; matched by its title as UI/ForeverPage.lua does), and kept in its list of pages as
@@ -24,18 +24,13 @@
 local _, ns = ...
 local L, Kit, Controls = ns.L, ns.Kit, ns.Controls
 
-local ipairs, format, math, type, unpack = ipairs, string.format, math, type, unpack
+local ipairs, format, math, type = ipairs, string.format, math, type
 
 local Page = {}
 ns.VisualsPage = Page
 
 local owner = { name = "Visuals page" } -- what this file's work is charged to
-local ROW_CONTROL = 200   -- where a full-width row's control starts (Kit's PAGE_CONTROL)
-local COLUMN_CONTROL = 125 -- and a column's
--- Which column each part of the graphics settings is in: Look, Image, World Detail on the left;
--- Lighting & Atmosphere, Camera & Interaction on the right. Dynamic Light comes after both,
--- across the page.
-local RIGHT = { new = true, view = true }
+local ROW_CONTROL = 200   -- where a row's control starts (Kit's PAGE_CONTROL)
 
 local wanted -- whether ours is listed (the module is on)
 local refreshers = {}
@@ -105,9 +100,8 @@ end
 local function fillVisuals(frame)
     local V = Visuals()
     local stack = Kit.NewRowPage(frame, L.VISUALS_TITLE)
-    local left, right = unpack(Kit.AddColumns(stack, 2, COLUMN_CONTROL, 24))
-    Kit.AddHeaderRow(left, L.VISUALS_KEEP)
-    local preset = Kit.AddDropdownRow(left, L.VISUALS_PRESET, function(root)
+    Kit.AddHeaderRow(stack, L.VISUALS_KEEP)
+    local preset = Kit.AddDropdownRow(stack, L.VISUALS_PRESET, function(root)
         for _, p in ipairs(V.PRESETS) do
             local radio = root:CreateRadio(p.label, function(key) return V.module.db.preset == key end,
                 function(key) V.ApplyPreset(key) end, p.key)
@@ -120,25 +114,24 @@ local function fillVisuals(frame)
         return L.VISUALS_PRESET_CUSTOM
     end, L.VISUALS_PRESET_TIP)
     Page.AddRefresh(preset.Refresh)
-    Page.AddOptionRow(left, "protect")
+    Page.AddOptionRow(stack, "protect")
     local light
     for _, section in ipairs(V.SECTIONS) do
-        local column = RIGHT[section.key] and right or left
         local rows = {}
         for _, def in ipairs(V.SETTINGS) do
             if def.section == section.key and V.Has(def.cvar) then rows[#rows + 1] = def end
         end
         if #rows > 0 then
-            Kit.AddHeaderRow(column, section.title)
+            Kit.AddHeaderRow(stack, section.title)
             if section.key == "image" then
-                Kit.AddTextRow(column, L.VISUALS_DAYTIME, "GameFontNormalSmall", 4)
-                Kit.ShowWhen(column, Page.Enabled)
+                Kit.AddTextRow(stack, L.VISUALS_DAYTIME, "GameFontNormalSmall", 4)
+                Kit.ShowWhen(stack, Page.Enabled)
             end
-            for _, def in ipairs(rows) do settingRow(column, def) end
+            for _, def in ipairs(rows) do settingRow(stack, def) end
         end
         light = light or section.light
     end
-    -- Dynamic Light: a part of the page of its own, under both columns.
+    -- Dynamic Light: a part of the page of its own, under the settings.
     if light then ns.DynamicLightPage.AddTo(stack) end
     Page.AddRefresh(function() Kit.Layout(stack) end)
     Kit.Layout(stack)

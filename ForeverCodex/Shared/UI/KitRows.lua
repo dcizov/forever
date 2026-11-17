@@ -1,10 +1,10 @@
 --[[
     Forever runtime - Shared/UI/KitRows.lua
     Kit's row pages (Shared/UI/Kit.lua): a scrolling stack under a page's title, of headings, text,
-    a part's big heading (AddPartRow), a boxed line about what's going on now (AddInfoRow), side by
-    side columns (AddColumns), and rows with a gold label on the left and Blizzard's control at
-    PAGE_CONTROL (or a column's own `control`): buttons, checkbox, slider, dropdown, text box, a
-    link to copy. The home, Settings, Debug and Advanced Graphics pages are made of them.
+    a part's big heading (AddPartRow), a boxed line about what's going on now (AddInfoRow), and rows
+    with a gold label on the left and Blizzard's control at PAGE_CONTROL (or a stack's own
+    `control`): buttons, checkbox, slider, dropdown, text box, a link to copy. The home, Settings,
+    Debug and Advanced Graphics pages are made of them.
 
     Layout and approach adapted from Forever++ by xIGBClutchIx (MIT License),
     https://github.com/xIGBClutchIx/ForeverPlusPlus
@@ -58,7 +58,7 @@ function Kit.AddTextRow(stack, text, font, gap)
     return row
 end
 
--- Where a row's control starts on `stack`: its own `control` (a column, Kit.AddColumns), else PAGE_CONTROL.
+-- Where a row's control starts on `stack`: its own `control` (a narrower layout), else PAGE_CONTROL.
 local function controlLeft(stack) return stack.control or PAGE_CONTROL end
 
 -- A big heading opening a part of a page of its own (a line across, then the title), well apart
@@ -97,32 +97,6 @@ function Kit.AddInfoRow(stack, text, gap)
     row:SetText(text)
     Kit.AddEntry(stack, row, nil, gap or 10)
     return row
-end
-
--- Side by side columns on `stack` (count of them, `gap` apart), each a stack of its own whose rows
--- put their controls `control` in. Laid out with the stack (Kit.Layout); returns the columns.
-function Kit.AddColumns(stack, count, control, gap)
-    gap = gap or 20
-    local holder = CreateFrame("Frame", nil, stack)
-    local width = math.floor((stack:GetWidth() - gap * (count - 1)) / count)
-    holder:SetWidth(stack:GetWidth())
-    local columns = {}
-    for i = 1, count do
-        local column = Kit.NewStack(holder, width, 0)
-        column.control = control
-        column:SetPoint("TOPLEFT", (i - 1) * (width + gap), 0)
-        columns[i] = column
-    end
-    Kit.AddEntry(stack, holder, nil, 0)
-    stack.entries[#stack.entries].layout = function()
-        local tallest = 1
-        for _, column in ipairs(columns) do
-            Kit.Layout(column)
-            tallest = math.max(tallest, column:GetHeight())
-        end
-        holder:SetHeight(tallest)
-    end
-    return columns
 end
 
 local function labeledRow(stack, label, height)

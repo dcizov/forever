@@ -37,11 +37,13 @@ local LOGIN_AGAIN = 5     -- seconds after login to put them back again (account
 local Visuals = {}
 ns.Visuals = Visuals
 
--- The page's sections, in order; Dynamic Light's come after Lighting (`light`: VisualsPage.lua).
+-- The page's sections, in order, one under another; Dynamic Light's come after Lighting
+-- (`light`: VisualsPage.lua).
 Visuals.SECTIONS = {
     { key = "image", title = L.VISUALS_IMAGE },
+    { key = "world", title = L.VISUALS_WORLD },
     { key = "new", title = L.VISUALS_NEW, light = true },
-    { key = "world", title = L.VISUALS_WORLD }, { key = "view", title = L.VISUALS_VIEW },
+    { key = "view", title = L.VISUALS_VIEW },
 }
 
 local function cvarDefault(cvar) return tonumber(C_CVar.GetCVarDefault(cvar)) or 0 end

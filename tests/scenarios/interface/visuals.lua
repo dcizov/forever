@@ -329,12 +329,16 @@ local function shownRows()
     for _, entry in ipairs(stack.entries) do if entry.frame:IsShown() then n = n + 1 end end
     return n
 end
--- The graphics settings in two columns, Dynamic Light under them across the page.
-local columns = stack.entries[1].frame._children
-local function rowsIn(column) return #column.entries end
-check(#columns == 2 and rowsIn(columns[1]) >= 10 and rowsIn(columns[2]) >= 8,
-    "Look, Image and World Detail left; Lighting and Camera right")
-check(#stack.entries >= 40, "then Dynamic Light across the page")
+-- One column: every section one under another, each row as wide as the page, and Dynamic Light
+-- under them all.
+local holders, wide = 0, 0
+for _, entry in ipairs(stack.entries) do
+    if rawget(entry.frame, "entries") then holders = holders + 1 end -- a side-by-side column
+    if entry.frame:GetWidth() == stack:GetWidth() then wide = wide + 1 end
+end
+eq(holders, 0, "no side-by-side columns")
+check(wide >= #stack.entries - 2, "every row spans the page: " .. wide .. " of " .. #stack.entries)
+check(#stack.entries >= 40, "every section, then Dynamic Light, in the one stack")
 local offRows = shownRows()
 -- The Sky toggle stays visible while the rest of the sky rows are hidden.
 local skyShown = shownRows()
