@@ -168,6 +168,10 @@ local M = ns:NewModule("Visuals", {
 })
 Visuals.module = M
 
+M:AddCommand("dynamiclight", nil, L.VISUALS_DLIGHT_CMD_DESC, function()
+    if ns.DynamicLightPage and ns.DynamicLightPage.Open then ns.DynamicLightPage.Open() end
+end)
+
 ---------------------------------------------------------------------------
 -- Setting values
 ---------------------------------------------------------------------------

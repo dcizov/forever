@@ -1,14 +1,14 @@
 --[[
     Forever Gearbox - Modules/Interface/DynamicLightPage.lua
-    Dynamic Light's section of the Advanced Graphics page (VisualsPage.lua; DynamicLight.lua's
-    values), a part of the page of its own under a divider and a big heading: on and off and
-    Strength, a boxed line saying what it sets now and why (DynamicLight.Status, kept up as it
-    changes), Reset; then, only while it's on, each of its sections (SECTIONS): Time,
-    Day (with a button taking your own Brightness, Contrast and Gamma as its start), Zones (a zone
-    picked from every zone and city of Kalimdor and the Eastern Kingdoms, yours by default: its
-    strength and, if you like, its own Day light), Night, Indoors and Caves, Cities, Light Sources,
-    Strength. A level (dusk, midnight, a cave...) is three rows: its brightness, contrast and gamma.
-    Each control sets the value at once (DynamicLight.SetValue), so the screen shows what it does.
+    Dynamic Light's own page under Advanced Graphics (VisualsPage.lua; DynamicLight.lua's values):
+    heading, intro, on and off and Strength, a boxed line saying what it sets now and why
+    (DynamicLight.Status, kept up as it changes), Reset; then, only while it's on, each of its
+    sections (SECTIONS): Time, Day (with a button taking your own Brightness, Contrast and Gamma as
+    its start), Zones (a zone picked from every zone and city of Kalimdor and the Eastern Kingdoms,
+    yours by default: its strength and, if you like, its own Day light), Night, Indoors and Caves,
+    Cities, Light Sources, Strength. A level (dusk, midnight, a cave...) is three rows: its
+    brightness, contrast and gamma. Each control sets the value at once (DynamicLight.SetValue), so
+    the screen shows what it does.
 ]]
 
 local _, ns = ...
@@ -225,33 +225,6 @@ local function addRows(stack, spec)
     end
 end
 
-local function addSkyRows(stack)
-    local mod = ns.Visuals.module
-    local start = #stack.entries + 1
-    local function check(key, label, tip)
-        local row = Kit.AddCheckRow(stack, label, function() return mod.db[key] end,
-            function(checked) ns:SetOption(mod.name, key, checked) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    local function slider(key, label, tip, min, max, step, format)
-        local row = Kit.AddSliderRow(stack, label, { min = min, max = max, step = step, format = format },
-            function() return mod.db[key] end,
-            function(value) ns:SetOption(mod.name, key, value) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    check("skyEnabled", L.VISUALS_SKY_ENABLE, L.VISUALS_SKY_ENABLE_TIP)
-    check("skyDynamicTime", L.VISUALS_SKY_DYNAMIC, L.VISUALS_SKY_DYNAMIC_TIP)
-    check("skyNightOnly", L.VISUALS_SKY_NIGHT_ONLY, L.VISUALS_SKY_NIGHT_ONLY_TIP)
-    check("skyHideFlyingOrIndoors", L.VISUALS_SKY_HIDE, L.VISUALS_SKY_HIDE_TIP)
-    slider("skyGradientHeight", L.VISUALS_SKY_HEIGHT, L.VISUALS_SKY_HEIGHT_TIP, 120, 500, 10, "%d px")
-    slider("skyDayAlpha", L.VISUALS_SKY_DAY, L.VISUALS_SKY_DAY_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyNightAlpha", L.VISUALS_SKY_NIGHT, L.VISUALS_SKY_NIGHT_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyGradientIntensity", L.VISUALS_SKY_GRADIENT, L.VISUALS_SKY_GRADIENT_TIP, 0, 1, 0.05, "%.2f")
-    for i = start + 1, #stack.entries do
-        stack.entries[i].shown = function() return mod.db.skyEnabled end
-    end
-end
-
 -- The picked zone's map (yours while none is picked) and its name.
 local function pickedZone()
     local mapID = picked or DL().Zone()
@@ -318,10 +291,6 @@ function LightPage.AddTo(stack)
     addProfiles(stack)
     Page.AddOptionRow(stack, "dynamic")
     Page.AddOptionRow(stack, "dynamicStrength", Page.Enabled)
-    Kit.AddHeaderRow(stack, L.VISUALS_SKY)
-    addSkyRows(stack)
-    -- The sky rows stay independent of Dynamic Light's time curve; the lines beneath them are part
-    -- of Dynamic Light and hide while it is off.
     local from = #stack.entries + 1
     -- What it sets now and why, in a box of its own between the rows (not a row's label).
     local now = Kit.AddInfoRow(stack, "", 8)
@@ -340,4 +309,19 @@ function LightPage.AddTo(stack)
         if section.zones then addZones(stack) end
     end
     whileOn(stack, from)
+end
+
+function LightPage.Fill(frame)
+    local stack = Kit.NewRowPage(frame, L.DLIGHT_TITLE)
+    LightPage.AddTo(stack)
+    Page.AddRefresh(function() Kit.Layout(stack) end)
+    Kit.Layout(stack)
+    frame:HookScript("OnShow", Page.Redraw)
+    Page.Redraw()
+end
+
+function LightPage.Open()
+    if ns.VisualsPage and ns.VisualsPage.OpenDynamicLight then
+        return ns.VisualsPage.OpenDynamicLight()
+    end
 end

@@ -81,10 +81,32 @@ local function pageNames()
     for i, c in ipairs(fpp:GetSubcategories()) do names[i] = c:GetName() end
     return table.concat(names, ",")
 end
+
+local function pageByName(parent, name)
+    for _, page in ipairs(parent:GetSubcategories() or {}) do
+        if page:GetName() == name then return page end
+    end
+end
+
+local function hasChild(parent, name)
+    return pageByName(parent, name) ~= nil
+end
+
 eq(pageNames(), "Profiles,Changelog,About", "off: no Visuals page")
 ns:SetEnabled("Visuals", true)
 eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. ",Changelog,About",
     "on: one Advanced Graphics page, before Forever++'s last two")
+local fppVisuals = pageByName(fpp, L.VISUALS_TITLE)
+check(fppVisuals ~= nil and hasChild(fppVisuals, L.DLIGHT_TITLE),
+    "under Forever++: Advanced Graphics has Dynamic Light as its child page")
+local ownVisuals
+for _, category in pairs(W.categories) do
+    if category ~= fpp and hasChild(category, L.VISUALS_TITLE) then
+        ownVisuals = pageByName(category, L.VISUALS_TITLE)
+    end
+end
+check(ownVisuals ~= nil and hasChild(ownVisuals, L.DLIGHT_TITLE),
+    "under Gearbox: Advanced Graphics has Dynamic Light as its child page")
 eq(V.module.db.values.outlineModeShowLootEffectWhenDisabled, nil, "3.3.0: the old loot sparkle isn't kept any more")
 eq(V.module.db.values.graphicsOutlineMode, nil, "nor the Outline Mode it set")
 
@@ -288,7 +310,7 @@ check(V.Dynamic(gamma), "the Gamma row says Dynamic Light sets it")
 ns:SetOption("Visuals", "dynamic", false)
 eq(W.cvars.Gamma, "1.1", "off: your gamma back")
 
--- The page: one scrolling column; Dynamic Light's sections only while it's on.
+-- The page: one scrolling column in a fixed order; Dynamic Light is on its own child page.
 C_SettingsUtil.OpenSettingsPanel(L.VISUALS_TITLE)
 check(#W.categories[L.VISUALS_TITLE].frame._children > 0, "the page filled")
 local function stackOf(name)
@@ -303,12 +325,24 @@ local function shownRows()
     for _, entry in ipairs(stack.entries) do if entry.frame:IsShown() then n = n + 1 end end
     return n
 end
--- The graphics settings in two columns, Dynamic Light under them across the page.
-local columns = stack.entries[1].frame._children
-local function rowsIn(column) return #column.entries end
-check(#columns == 2 and rowsIn(columns[1]) >= 10 and rowsIn(columns[2]) >= 8,
-    "Look, Image and World Detail left; Lighting and Camera right")
-check(#stack.entries >= 40, "then Dynamic Light across the page")
+local function rowIndex(label)
+    for i, entry in ipairs(stack.entries) do
+        local row = entry.frame
+        local text = row.label and row.label:GetText()
+        if text == label then return i end
+    end
+end
+local look = rowIndex(L.VISUALS_PRESET)
+local image = rowIndex(L.VISUALS_BRIGHTNESS)
+local world = rowIndex(L.VISUALS_GRASS)
+local lighting = rowIndex(L.VISUALS_GI)
+local view = rowIndex(L.VISUALS_ZOOM)
+local skyRow = rowIndex(L.VISUALS_SKY_ENABLE)
+check(look and image and world and lighting and view and skyRow, "the expected rows are present")
+check(look < image and image < world and world < lighting and lighting < view and view < skyRow,
+    "one-column order: Look, Image, World Detail, Lighting, Camera, Sky")
+check(rowIndex(L.DLIGHT_MOON) == nil and rowIndex(L.DLIGHT_DUSK) == nil,
+    "Advanced Graphics no longer includes Dynamic Light section rows")
 local offRows = shownRows()
 -- The Sky toggle stays visible while the rest of the sky rows are hidden.
 local skyShown = shownRows()
@@ -385,17 +419,48 @@ V.module.db.skySunriseHour = 6
 check(V.SkyAlpha() ~= afterDynamic, "the sky keeps its own clock even while Dynamic Light is on")
 ns:SetOption("Visuals", "dynamic", false)
 ns:SetOption("Visuals", "dynamic", true)
-check(shownRows() > offRows + 30, "Dynamic Light on: its sections show")
+eq(shownRows(), offRows + 1, "Advanced Graphics only gains Sky's Dynamic Time Scaling row")
+
+ns:SetOption("Visuals", "dynamic", false)
+C_SettingsUtil.OpenSettingsPanel(L.DLIGHT_TITLE)
+local lightStack = stackOf(L.DLIGHT_TITLE)
+check(lightStack and #lightStack.entries > 30, "Dynamic Light page is built and long enough to scroll")
+local function lightShownRows()
+    local n = 0
+    for _, entry in ipairs(lightStack.entries) do if entry.frame:IsShown() then n = n + 1 end end
+    return n
+end
+local lightOffRows = lightShownRows()
+check(lightOffRows >= 6, "Dynamic Light page stays reachable while Dynamic Light is off")
+local function lightRowShown(label)
+    for _, entry in ipairs(lightStack.entries) do
+        local row = entry.frame
+        local text = row.label and row.label:GetText()
+        if text == label then return row:IsShown() end
+    end
+end
+check(lightRowShown(L.DLIGHT_MOON) == false and lightRowShown(L.DLIGHT_SUNRISE) == false,
+    "while off, the detailed Dynamic Light rows are hidden")
 local now
-for _, entry in ipairs(stack.entries) do
+for _, entry in ipairs(lightStack.entries) do
     local text = rawget(entry.frame, "text") and entry.frame.text:GetText()
     if text and text:find("Now:", 1, true) then now = text end
 end
-check(now and now:find("Brightness", 1, true) ~= nil, "a line says what it sets now: " .. tostring(now))
+eq(now, nil, "while off, the status line is hidden with the detailed rows")
+ns:SetOption("Visuals", "dynamic", true)
+check(lightShownRows() > lightOffRows, "Dynamic Light on: its detail sections show on its own page")
+check(lightRowShown(L.DLIGHT_MOON) == true and lightRowShown(L.DLIGHT_SUNRISE) == true,
+    "with Dynamic Light on, its detailed rows are visible")
+now = nil
+for _, entry in ipairs(lightStack.entries) do
+    local text = rawget(entry.frame, "text") and entry.frame.text:GetText()
+    if text and text:find("Now:", 1, true) then now = text end
+end
+check(now and now:find("Brightness", 1, true) ~= nil, "its status line says what it sets now: " .. tostring(now))
 -- Blizzard Default: the game's own look, Dynamic Light off too.
 V.ApplyPreset("default")
 eq(V.module.db.dynamic, false, "Blizzard Default turns Dynamic Light off")
-eq(shownRows(), offRows, "and its sections hide")
+check(lightShownRows() <= lightOffRows, "and its Dynamic Light detail rows hide on that page")
 
 -- Off: the page leaves Forever++'s list.
 ns:SetEnabled("Visuals", false)

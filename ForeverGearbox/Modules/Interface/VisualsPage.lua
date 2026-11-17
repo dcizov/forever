@@ -1,46 +1,48 @@
 --[[
-    Forever Gearbox - Modules/Interface/VisualsPage.lua
-    The Advanced Graphics page (Visuals.lua), its own entry under Forever++ in Settings while the
-    module is on, as Forever++'s Console Variables page is. Rows as the suite's other Settings pages
-    (Kit.NewRowPage: a gold label left and Blizzard's control right):
-      * The graphics settings in two columns (Kit.AddColumns): Look (Preset: Visuals.PRESETS,
-        "Custom" once a value is changed by hand; Protect Values), Image (with a line while Dynamic
-        Light sets Brightness, Contrast and Gamma) and World Detail on the left; Lighting &
-        Atmosphere and Camera & Interaction on the right. A row per setting this client has (a
-        slider or a checkbox); one another addon makes its own (Visuals.Conflict) is greyed and its
-        tooltip says why.
-      * Then Dynamic Light across the page, well apart under a divider and a big heading of its
-        own (DynamicLightPage.lua).
-    With Forever++ the entry is found as Forever++ gives its own to Blizzard's Settings
-    (Settings.RegisterAddOnCategory, hooked as it's called at Forever++'s login, after this file
-    loads; matched by its title as UI/ForeverPage.lua does), and kept in its list of pages as
-    Forever++ keeps its tools' (Settings shows a category's GetSubcategories). Forever++ redraws
-    that list when one of its own tools turns on or off, so ours is put back each time Settings
-    opens. It's always under Forever Gearbox' own entry (Settings/Alone.lua) and, with Forever++
-    Integration, under Forever++'s too, the same way. Page.UseHost(category, keepLast, fpp) puts it
-    under one.
+        Forever Gearbox - Modules/Interface/VisualsPage.lua
+        Advanced Graphics' page (Visuals.lua), its own entry under Forever++ in Settings while the
+        module is on, as Forever++'s Console Variables page is. Rows as the suite's other Settings
+        pages (Kit.NewRowPage: a gold label left and Blizzard's control right):
+            * The graphics settings in one column, in this order: Look (Preset: Visuals.PRESETS,
+                "Custom" once a value is changed by hand; Protect Values), Image (with a line while
+                Dynamic Light sets Brightness, Contrast and Gamma), World Detail, Lighting & Atmosphere,
+                Camera & Interaction, then Sky. A row per setting this client has (a slider or a checkbox);
+                one another addon makes its own (Visuals.Conflict) is greyed and its tooltip says why.
+            * Dynamic Light on its own nested page under Advanced Graphics (DynamicLightPage.lua).
+        With Forever++ the entry is found as Forever++ gives its own to Blizzard's Settings
+        (Settings.RegisterAddOnCategory, hooked as it's called at Forever++'s login, after this file
+        loads; matched by its title as UI/ForeverPage.lua does), and kept in its list of pages as
+        Forever++ keeps its tools' (Settings shows a category's GetSubcategories). Forever++ redraws
+        that list when one of its own tools turns on or off, so ours is put back each time Settings
+        opens. It's always under Forever Gearbox' own entry (Settings/Alone.lua) and, with Forever++
+        Integration, under Forever++'s too, the same way. Page.UseHost(category, keepLast, fpp) puts it
+        under one.
 ]]
 
 local _, ns = ...
 local L, Kit, Controls = ns.L, ns.Kit, ns.Controls
 
-local ipairs, format, math, type, unpack = ipairs, string.format, math, type, unpack
+local ipairs, format, math = ipairs, string.format, math
 
 local Page = {}
 ns.VisualsPage = Page
 
 local owner = { name = "Visuals page" } -- what this file's work is charged to
-local ROW_CONTROL = 200   -- where a full-width row's control starts (Kit's PAGE_CONTROL)
-local COLUMN_CONTROL = 125 -- and a column's
--- Which column each part of the graphics settings is in: Look, Image, World Detail on the left;
--- Lighting & Atmosphere, Camera & Interaction on the right. Dynamic Light comes after both,
--- across the page.
-local RIGHT = { new = true, view = true }
+local ROW_CONTROL = 200  -- where a full-width row's control starts (Kit's PAGE_CONTROL)
+local MAX_WIDTH = 620    -- content width cap: keeps labels and sliders readable on wider panels
+-- The settings page's own order (Visuals.SECTIONS keeps data order for module wiring).
+local ORDER = { "image", "world", "new", "view" }
 
 local wanted -- whether ours is listed (the module is on)
 local refreshers = {}
 
 local function Visuals() return ns.Visuals end
+
+local function sectionByKey(key)
+    for _, section in ipairs(Visuals().SECTIONS) do
+        if section.key == key then return section end
+    end
+end
 
 -- Whether Dynamic Light's rows are live (it's on).
 function Page.Enabled() return Visuals().module.db.dynamic and true or false end
@@ -124,6 +126,7 @@ local function addSkyRows(stack)
     slider("skyDayAlpha", L.VISUALS_SKY_DAY, L.VISUALS_SKY_DAY_TIP, 0, 1, 0.05, "%.2f")
     slider("skyNightAlpha", L.VISUALS_SKY_NIGHT, L.VISUALS_SKY_NIGHT_TIP, 0, 1, 0.05, "%.2f")
     slider("skyGradientIntensity", L.VISUALS_SKY_GRADIENT, L.VISUALS_SKY_GRADIENT_TIP, 0, 1, 0.05, "%.2f")
+    slider("skyColorDarkness", L.VISUALS_SKY_COLOR, L.VISUALS_SKY_COLOR_TIP, 0, 1, 0.05, "%.2f")
     slider("skySunriseHour", L.VISUALS_SKY_SUNRISE, L.VISUALS_SKY_SUNRISE_TIP, 0, 24, 0.5, "%.1f h")
     slider("skySunsetHour", L.VISUALS_SKY_SUNSET, L.VISUALS_SKY_SUNSET_TIP, 0, 24, 0.5, "%.1f h")
     slider("skyTwilightHours", L.VISUALS_SKY_TWILIGHT, L.VISUALS_SKY_TWILIGHT_TIP, 0, 6, 0.25, "%.2f h")
@@ -135,9 +138,9 @@ end
 local function fillVisuals(frame)
     local V = Visuals()
     local stack = Kit.NewRowPage(frame, L.VISUALS_TITLE)
-    local left, right = unpack(Kit.AddColumns(stack, 2, COLUMN_CONTROL, 24))
-    Kit.AddHeaderRow(left, L.VISUALS_KEEP)
-    local preset = Kit.AddDropdownRow(left, L.VISUALS_PRESET, function(root)
+    stack:SetWidth(math.min(stack:GetWidth(), MAX_WIDTH))
+    Kit.AddHeaderRow(stack, L.VISUALS_KEEP)
+    local preset = Kit.AddDropdownRow(stack, L.VISUALS_PRESET, function(root)
         for _, p in ipairs(V.PRESETS) do
             local radio = root:CreateRadio(p.label, function(key) return V.module.db.preset == key end,
                 function(key) V.ApplyPreset(key) end, p.key)
@@ -150,26 +153,25 @@ local function fillVisuals(frame)
         return L.VISUALS_PRESET_CUSTOM
     end, L.VISUALS_PRESET_TIP)
     Page.AddRefresh(preset.Refresh)
-    Page.AddOptionRow(left, "protect")
-    local light
-    for _, section in ipairs(V.SECTIONS) do
-        local column = RIGHT[section.key] and right or left
+    Page.AddOptionRow(stack, "protect")
+    for _, key in ipairs(ORDER) do
+        local section = sectionByKey(key)
         local rows = {}
         for _, def in ipairs(V.SETTINGS) do
             if def.section == section.key and V.Has(def.cvar) then rows[#rows + 1] = def end
         end
         if #rows > 0 then
-            Kit.AddHeaderRow(column, section.title)
+            Kit.AddHeaderRow(stack, section.title)
             if section.key == "image" then
-                Kit.AddTextRow(column, L.VISUALS_DAYTIME, "GameFontNormalSmall", 4)
-                Kit.ShowWhen(column, Page.Enabled)
+                Kit.AddTextRow(stack, L.VISUALS_DAYTIME, "GameFontNormalSmall", 4)
+                Kit.ShowWhen(stack, Page.Enabled)
             end
-            for _, def in ipairs(rows) do settingRow(column, def) end
+            for _, def in ipairs(rows) do settingRow(stack, def) end
         end
-        light = light or section.light
     end
-    -- Dynamic Light: a part of the page of its own, under both columns.
-    if light then ns.DynamicLightPage.AddTo(stack) end
+    -- Sky is a graphics feature and stays on Advanced Graphics, after the camera rows.
+    Kit.AddHeaderRow(stack, L.VISUALS_SKY)
+    addSkyRows(stack)
     Page.AddRefresh(function() Kit.Layout(stack) end)
     Kit.Layout(stack)
     frame:HookScript("OnShow", Page.Redraw)
@@ -181,7 +183,7 @@ end
 ---------------------------------------------------------------------------
 
 local PAGE = { title = L.VISUALS_TITLE, fill = fillVisuals }
-local hosts = {} -- { category (the entry), keepLast, page (ours under it), fpp } each
+local hosts = {} -- { category, keepLast, page, lightPage, fpp } each
 
 -- Whether our page is listed under `host` now: while the module is on, and under Forever++'s only
 -- with Forever++ Integration.
@@ -199,6 +201,13 @@ local function listPages()
             if list[i] == host.page then table.remove(list, i) end
         end
         if listedUnder(host) then table.insert(list, math.max(1, #list - host.keepLast + 1), host.page) end
+        if host.page and host.lightPage and host.page.GetSubcategories then
+            local subs = host.page:GetSubcategories()
+            for i = #subs, 1, -1 do
+                if subs[i] == host.lightPage then table.remove(subs, i) end
+            end
+            if listedUnder(host) then table.insert(subs, 1, host.lightPage) end
+        end
     end
 end
 
@@ -215,6 +224,14 @@ function Page.Open()
     end
     ns:OpenSettings(Visuals().module.name)
 end
+
+function Page.OpenDynamicLight()
+    for _, host in ipairs(hosts) do
+        if not host.fpp and wanted and host.lightPage then return Kit.Open(host.lightPage) end
+    end
+    if wanted then return Page.Open() end
+    ns:OpenSettings(Visuals().module.name)
+end
 ns.Visuals.Redraw = Page.Redraw
 
 -- Our page under `category`, before its last `count` pages; `fpp` for Forever++'s entry.
@@ -222,7 +239,10 @@ function Page.UseHost(category, count, fpp)
     local page = Settings.RegisterCanvasLayoutSubcategory(category, Kit.CanvasFrame(function(frame)
         ns.ChargedCall(owner, "visuals page", PAGE.fill, frame)
     end), PAGE.title)
-    hosts[#hosts + 1] = { category = category, keepLast = count, page = page, fpp = fpp }
+    local lightPage = Settings.RegisterCanvasLayoutSubcategory(page, Kit.CanvasFrame(function(frame)
+        ns.ChargedCall(owner, "dynamic light page", ns.DynamicLightPage.Fill, frame)
+    end), L.DLIGHT_TITLE)
+    hosts[#hosts + 1] = { category = category, keepLast = count, page = page, lightPage = lightPage, fpp = fpp }
     listPages()
 end
 
