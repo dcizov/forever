@@ -54,6 +54,7 @@ J.TITLE_FONT = "QuestTitleFont"
 J.PORTRAIT = 62
 J.LIST_WIDTH = 280
 J.GAP = 16
+J.INSET = 15
 
 -- Blizzard's inset (InsetFrameTemplate).
 function J.Inset(parent)
@@ -189,7 +190,7 @@ end
 -- `filter`): setup(dropdown, root) fills its menu each time it opens.
 function J.Dropdown(parent, width, setup, filter)
     local d = CreateFrame("DropdownButton", nil, parent, filter and "WowStyle1FilterDropdownTemplate" or "WowStyle1DropdownTemplate")
-    d:SetWidth(width)
+    if width then d:SetWidth(width) end
     d:SetupMenu(setup)
     return d
 end
@@ -214,7 +215,7 @@ local searches = {} -- every search box made, with what hears it (J.ClearSearche
 function J.Search(parent, width, instructions, onChange)
     local box = CreateFrame("EditBox", nil, parent, "SearchBoxTemplate")
     searches[#searches + 1] = { box = box, onChange = onChange }
-    box:SetSize(width, 20)
+    box:SetWidth(width)
     box:SetAutoFocus(false)
     box.Instructions:SetText(instructions)
     box:HookScript("OnTextChanged", function(self) onChange(strlower(strtrim(self:GetText()))) end)

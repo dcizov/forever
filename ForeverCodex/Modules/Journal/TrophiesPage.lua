@@ -138,8 +138,8 @@ end
 function page.Build(frame)
     summary = J.CountBox(frame, L.TROPHY_DEFEATED)
     summary:SetPoint("LEFT", frame, "TOPLEFT", J.PORTRAIT, -J.STRIP / 2 + 2)
-    filterButton = J.Dropdown(frame, 90, filterMenu, true)
-    filterButton:SetPoint("RIGHT", frame, "TOPRIGHT", -2, -J.STRIP / 2 + 2)
+    filterButton = J.Dropdown(frame, nil, filterMenu, true)
+    filterButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -J.INSET, -J.INSET)
     filterButton:SetIsDefaultCallback(function() return next(shown) == nil end)
     filterButton:SetDefaultCallback(function()
         shown = {}
