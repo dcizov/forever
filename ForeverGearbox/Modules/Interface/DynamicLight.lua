@@ -339,7 +339,11 @@ local function applyProfile(profile)
     if profile.zones then mod.db.zones = copyZones(profile.zones) end
     if profile.zoneDay then mod.db.zoneDay = copyZoneDay(profile.zoneDay) end
     mod.db.lightProfile = profile.id
-    DL.Changed()
+    if DL.IsRunning() then
+        target, place = DL.Target()
+    else
+        DL.Changed()
+    end
 end
 
 function DL.ApplyProfile(id)
