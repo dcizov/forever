@@ -125,17 +125,28 @@ end
 local function showPin(layer, i, spec, size)
     local pin = layer.pins[i] or newPin(layer.mod, layer.opts, layer.holder, layer.kind)
     layer.pins[i] = pin
-    if pin.spec ~= spec then
-        pin.spec = spec
+    local color = spec.color
+    local r, g, b, a = 1, 1, 1, 1
+    if color then r, g, b, a = color[1], color[2], color[3], color[4] or 1 end
+    local alpha = spec.alpha or 1
+    local gray = spec.gray or false
+    local level = layer.holder:GetFrameLevel() + (spec.layer or 0)
+    local changed = pin.atlas ~= spec.atlas or pin.texturePath ~= spec.texture
+        or pin.colorR ~= r or pin.colorG ~= g or pin.colorB ~= b or pin.colorA ~= a
+        or pin.gray ~= gray or pin.alpha ~= alpha or pin.level ~= level
+    if changed then
         for _, texture in ipairs({ pin.icon, pin.highlight }) do
             if spec.atlas then texture:SetAtlas(spec.atlas) else texture:SetTexture(spec.texture) end
-            local color = spec.color
-            if color then texture:SetVertexColor(color[1], color[2], color[3], color[4] or 1) else texture:SetVertexColor(1, 1, 1, 1) end
-            texture:SetDesaturated(spec.gray or false)
+            texture:SetVertexColor(r, g, b, a)
+            texture:SetDesaturated(gray)
         end
-        pin:SetAlpha(spec.alpha or 1)
-        pin:SetFrameLevel(layer.holder:GetFrameLevel() + (spec.layer or 0))
+        pin:SetAlpha(alpha)
+        pin:SetFrameLevel(level)
+        pin.atlas, pin.texturePath = spec.atlas, spec.texture
+        pin.colorR, pin.colorG, pin.colorB, pin.colorA = r, g, b, a
+        pin.gray, pin.alpha, pin.level = gray, alpha, level
     end
+    pin.spec = spec
     if pin.size ~= size then
         pin.size = size
         pin:SetSize(size, size)
@@ -275,6 +286,11 @@ local function drawWorld(layer)
         local scale = WorldMapFrame:GetCanvasScale()
         local size = layer.opts.size()
         local api = openMap()
+        local stitched = api and type(api.IsStitched) == "function" and api.IsStitched() or false
+        -- OpenMap's stitched zoom is not the world-map canvas scale, so world-pin px size must stay
+        -- in screen pixels while stitched view zooms.
+        if stitched then scale = 1 end
+        if not (type(scale) == "number" and scale > 0) then scale = 1 end
         -- On OpenMap's stitched map, every zone in view; else the map shown.
         local zones = api and stitchedZones(api, host) or { host }
         for _, mapID in ipairs(zones) do

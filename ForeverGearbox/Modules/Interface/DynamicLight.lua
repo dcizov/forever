@@ -138,6 +138,8 @@ local function sameZoneDay(a, b)
     return true
 end
 
+-- Built-in profiles are static references. The addon cannot detect monitor OSD, ICC state,
+-- panel nits, or white point, so profile notes stay documentation only.
 DL["PROFILES"] = {
     {
         id = REFERENCE,
@@ -150,10 +152,10 @@ DL["PROFILES"] = {
         title = function() return L.DLIGHT_PROFILE_VA_G5 end,
         tip = function() return L.DLIGHT_PROFILE_VA_G5_TIP end,
         values = function() return withDefaults({
-            dusk = { 34, 37, 0.93 }, midnight = { 22, 24, 0.88 }, moonlit = { 27, 28, 0.9 },
-            indoorNight = { 37, 47, 0.95 }, cave = { 20, 24, 0.86 }, undercity = { 33, 28, 0.91 },
-            capitalLift = 32, lightBoost = 4, lightMax = 8, nightVision = 4,
-            multBrightness = 110, multContrast = 95,
+            dusk = { 33, 36, 0.93 }, midnight = { 20, 22, 0.87 }, moonlit = { 25, 26, 0.89 },
+            indoorNight = { 35, 45, 0.94 }, cave = { 18, 22, 0.85 }, undercity = { 31, 27, 0.9 },
+            capitalLift = 30, lightBoost = 3, lightMax = 7, nightVision = 3,
+            multBrightness = 100, multContrast = 95,
         }) end,
     },
     {

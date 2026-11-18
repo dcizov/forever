@@ -25,6 +25,11 @@ L.PLUGIN_OPEN_LIST_TIP = "Open its list in a window of its own."
 L.FPP_TITLE = "Forever++ Integration"
 L.FPP_DESC = "Work together with Forever++: Upgrade Arrows in Baganator judges gear the way Forever++'s Upgrade Arrows does, Quest Markers, Fishing and Upgrade Arrows in Baganator are also on the pages of the Forever++ modules they go with (and Quest Markers hides Forever++'s own nameplate mark), Advanced Graphics is listed under Forever++ in Settings too, and a console variable a module needs can be found in Forever++'s Console Variables. Off, Forever Gearbox leaves Forever++ alone."
 L.FPP_RELOAD = "Forever++'s settings pages show Forever Gearbox' sections after a /reload."
+-- Forever Codex Integration (Modules/Addons/ForeverCodex.lua)
+L.FCODEX_TITLE = "Forever Codex Integration"
+L.FCODEX_DESC = "Work together with Forever Codex while keeping each addon's owner lines clear: Codex keeps map pins, OpenMap menu switches and its QuestieDB wrapper, and Gearbox keeps its own nameplate and minimap-button behavior. Off, Gearbox leaves Codex alone."
+L.FCODEX_OWNERS = "With this on, Codex owns map pins and OpenMap menu switches; Gearbox keeps its own nameplate and minimap-button features."
+L.FCODEX_NO_API = "This copy of Forever Codex has no public API yet. Update Forever Codex to use this integration."
 -- Forever Gearbox' own Modules page without Forever++ (Settings/AlonePage.lua, UI/ForeverRows.lua).
 L.ALONE_ENABLED = "Enabled"
 L.ALONE_OPTIONS = "Options"

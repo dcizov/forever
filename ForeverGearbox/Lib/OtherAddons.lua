@@ -23,6 +23,7 @@ ns.OtherAddons = OtherAddons
 -- loads them first and a module never meets one half set up.
 OtherAddons.KNOWN = {
     { "ForeverPlusPlus", "Forever++" },
+    { "ForeverCodex", "Forever Codex" },
     { "Baganator", "Baganator" },
     { "Auctionator", "Auctionator" },
     { "Chattynator", "Chattynator" },
@@ -64,6 +65,13 @@ local function foreverPlusPlus()
     return _G.ForeverPlusPlusAPI.v1
 end
 
+-- Forever Codex's API while Forever Codex Integration is on (Core/Plugin.lua); else nil, as if
+-- it weren't there: Forever Gearbox leaves Forever Codex alone by default.
+local function foreverCodex()
+    if not ns.Plugin.CodexIntegrated() then return nil end
+    return _G.ForeverCodexAPI.v1
+end
+
 -- Whether Forever++'s module `name` is on: true or false, or nil without Forever++ (or a module
 -- it doesn't have).
 function OtherAddons.ForeverPlusPlusOn(name)
@@ -80,6 +88,16 @@ function OtherAddons.ForeverPlusPlusOption(name, key)
     if not api or not OtherAddons.ForeverPlusPlusOn(name) then return nil end
     local ok, value = call(nil, "Forever++ GetModuleOption", api.GetModuleOption, name, key)
     if ok then return value end
+end
+
+-- Whether Forever Codex's module `name` is on: true or false, or nil without Forever Codex (or
+-- a module it doesn't have).
+function OtherAddons.ForeverCodexOn(name)
+    local api = foreverCodex()
+    if not api then return nil end
+    local ok, on = call(nil, "Forever Codex IsModuleEnabled", api.IsModuleEnabled, name)
+    if not ok or on == nil then return nil end
+    return on and true or false
 end
 
 -- Opens Forever++'s settings on its module `name`.
@@ -139,6 +157,7 @@ end
 
 local IS_ON = {
     ForeverPlusPlus = function(name) return OtherAddons.ForeverPlusPlusOn(name) end,
+    ForeverCodex = function(name) return OtherAddons.ForeverCodexOn(name) end,
     ["!WilduTools"] = wilduSetting,
     Plumber = plumberSetting,
 }

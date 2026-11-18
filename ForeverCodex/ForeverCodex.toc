@@ -107,5 +107,8 @@ Modules\Social\Badges.lua
 Modules\Social\BadgesPage.lua
 Modules\Notifications\Banner.lua
 
+# Public API
+API.lua
+
 # Start everything
 Init.lua

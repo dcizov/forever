@@ -2,8 +2,8 @@
     Forever Gearbox - Settings/Alone.lua
     Forever Gearbox' own entry in Settings > AddOns (with Forever++ installed or not), in Forever++'s
     look and no window of its own: the Modules page
-    (Settings/AlonePage.lua) and, under it while the module is on, Advanced Graphics
-    (Modules/Interface/VisualsPage.lua). Made at login (Init.lua). /fg, its subcommands and the
+    (Settings/AlonePage.lua) and, under it while the module is on, Advanced Graphics and Dynamic
+    Light (Modules/Interface/VisualsPage.lua). Made at login (Init.lua). /fg, its subcommands and the
     modules' Settings buttons open it here (ns:OpenSettings, ns:OpenMember).
 ]]
 

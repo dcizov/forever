@@ -137,17 +137,23 @@ check(find(canvas, texted(ns.L.NO_MODULES_MATCH:format("zzzz-nothing"))) ~= nil,
 search:SetText("")
 search:Fire("OnTextChanged")
 
--- Advanced Graphics: under the entry while it's on.
-local function hasVisuals()
+-- Advanced Graphics and Dynamic Light: under the entry while Visuals is on.
+local function hasPage(name)
     for _, sub in ipairs(entry:GetSubcategories()) do
-        if sub.name == ns.L.VISUALS_TITLE then return true end
+        if sub.name == name then return true end
     end
     return false
 end
 ns:SetEnabled("Visuals", false)
-eq(hasVisuals(), false, "Advanced Graphics isn't listed while it's off")
+eq(hasPage(ns.L.VISUALS_TITLE), false, "Advanced Graphics isn't listed while it's off")
+eq(hasPage(ns.L.DLIGHT_TITLE), false, "Dynamic Light isn't listed while it's off")
 ns:SetEnabled("Visuals", true)
-check(hasVisuals(), "Advanced Graphics under Forever Gearbox while it's on")
+check(hasPage(ns.L.VISUALS_TITLE), "Advanced Graphics under Forever Gearbox while it's on")
+eq(hasPage(ns.L.DLIGHT_TITLE), false, "Dynamic Light stays hidden while it is off")
+ns:SetOption("Visuals", "dynamic", true)
+check(hasPage(ns.L.DLIGHT_TITLE), "Dynamic Light under Forever Gearbox while it is on")
+ns:SetOption("Visuals", "dynamic", false)
+eq(hasPage(ns.L.DLIGHT_TITLE), false, "Dynamic Light leaves the sidebar when turned off")
 ns.VisualsPage.Open()
 eq(W.opened, ns.L.VISUALS_TITLE, "its button opens it there, not in a window")
 ns:SetEnabled("Visuals", false)

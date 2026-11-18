@@ -428,7 +428,7 @@ W.METHODS = {
 -- path without them is what runs.
 W.PROBED = { GetBagID = true }
 W.missing = {}
-W.OPTIONAL = { ForeverPlusPlusAPI = true, ForeverPlusPlusCharDB = true, GetAttackPowerForStat = true, GetRangedAttackPowerForStat = true,
+W.OPTIONAL = { ForeverPlusPlusAPI = true, ForeverCodexAPI = true, ForeverPlusPlusCharDB = true, GetAttackPowerForStat = true, GetRangedAttackPowerForStat = true,
     GetCritChanceFromStat = true, GetDodgeChanceFromAttribute = true, GetSpellCritChanceFromStat = true, UnitHPPerStamina = true,
     MANA_PER_INTELLECT = true, BLOCK_VALUE_PER_STRENGTH = true, QuickJoinToastButton = true, ForeverPlusPlusDB = true, PlumberDB = true, WilduToolsDB = true, Auctionator = true, Baganator = true, ForeverGearboxDB = true, ForeverGearboxCharDB = true, ForeverTweaksDB = true, ForeverTweaksCharDB = true, ForeverCompendiumDB = true, ForeverCompendiumCharDB = true,
     ForeverCoreDB = true, ForeverCoreCharDB = true, ForeverCodexDB = true, ForeverCodexCharDB = true, NWB_CurrentLayer = true, LibQuestieDB = true, Spoken = true, SpokenCompendium = true, VoiceOver = true,

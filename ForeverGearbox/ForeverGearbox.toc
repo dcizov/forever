@@ -89,6 +89,7 @@ Modules\Gathering\Fishing.lua
 Modules\Map\ButtonBag.lua
 # (Addons: tweaks to other addons, offered while that addon is loaded)
 Modules\Addons\ForeverPlusPlus.lua
+Modules\Addons\ForeverCodex.lua
 Modules\Addons\DungeonJournalPages.lua
 Modules\Addons\DungeonJournalSkin.lua
 

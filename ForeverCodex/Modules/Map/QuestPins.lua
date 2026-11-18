@@ -53,7 +53,7 @@ local M = ns:NewModule("QuestPins", {
         givers = true, available = true, items = true, turnIns = true, objectives = true, continent = true,
         nativeTurnIns = true,
         worldMap = true, size = 16, minimap = true, minimapSize = 14,
-        color = "kind", clusters = true, upcoming = true,
+          color = "kind", clusters = true, upcoming = true, low = false,
         kindClass = true, kindProfession = true, kindRepeatable = false, kindDungeon = false, kindHoliday = false,
     },
     options = {
@@ -76,6 +76,7 @@ local M = ns:NewModule("QuestPins", {
         { key = "kindHoliday", type = "checkbox", label = L.QPINS_KIND_HOLIDAY, tooltip = L.QPINS_KIND_HOLIDAY_TIP,
           group = KINDS, added = "3.2.0" },
         { key = "upcoming", type = "checkbox", label = L.QPINS_UPCOMING, tooltip = L.QPINS_UPCOMING_TIP, added = "3.2.0" },
+                    { key = "low", type = "checkbox", label = L.QPINS_LOW, tooltip = L.QPINS_LOW_TIP, added = "3.3.0" },
         { key = "clusters", type = "checkbox", label = L.QPINS_CLUSTERS, tooltip = L.QPINS_CLUSTERS_TIP, added = "3.2.0" },
         { key = "color", type = "dropdown", label = L.QPINS_COLOR, tooltip = L.QPINS_COLOR_TIP, choices = COLORS,
           added = "3.2.0" },
@@ -190,7 +191,7 @@ local function rules()
     return {
         kinds = { normal = true, class = db.kindClass, profession = db.kindProfession, repeatable = db.kindRepeatable,
             instance = db.kindDungeon, holiday = db.kindHoliday },
-        upcoming = db.upcoming and UPCOMING_LEVELS or 0, low = "fade", lowGap = LOW_GAP, highGap = HIGH_GAP,
+        upcoming = db.upcoming and UPCOMING_LEVELS or 0, low = db.low and "fade" or "hide", lowGap = LOW_GAP, highGap = HIGH_GAP,
     }
 end
 
@@ -247,6 +248,9 @@ local function pinsOn(mapID, host, kind)
     local db, pins, byKey = M.db, {}, {}
     host = host or mapID
     if not isZoneMap(host) then return pins end
+    -- OpenMap's stitched view asks for nearby zones around the host zone: treat those like
+    -- continent-expanded pins, controlled by the same option.
+    if mapID ~= host and not db.continent then return pins end
     local log = questsInLog()
     local rects = db.continent and isContinent(mapID) and {} or nil
     local available, shown = {}, {}
@@ -269,6 +273,16 @@ local function pinsOn(mapID, host, kind)
     for _, pin in ipairs(available) do pins[#pins + 1] = pin end
     pins = Look.Stack(pins)
     for _, pin in ipairs(pins) do lookOf(pin) end
+    -- Keep pin-frame reuse stable between redraws (zoom/pan), so visuals do not shimmer.
+    sort(pins, function(a, b)
+        if a.layer ~= b.layer then return a.layer < b.layer end
+        if a.kind ~= b.kind then return a.kind < b.kind end
+        if a.x ~= b.x then return a.x < b.x end
+        if a.y ~= b.y then return a.y < b.y end
+        local ai = a.entries[1] and a.entries[1].questID or 0
+        local bi = b.entries[1] and b.entries[1].questID or 0
+        return ai < bi
+    end)
     return pins
 end
 

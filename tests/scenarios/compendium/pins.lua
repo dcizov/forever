@@ -78,8 +78,13 @@ ns:SetOption("QuestPins", "size", 21)
 W.RunTimers()
 check(givers[1]:GetParent():GetFrameLevel() > 5000, "OpenMap: the pins over its stitched art")
 check(heard.OpenMap_ViewChanged ~= nil and heard.OpenMap_StitchedChanged ~= nil, "listening to its view and map")
+local arts = 0
+local setAtlas = givers[1].icon.SetAtlas
+givers[1].icon.SetAtlas = function(self, ...) arts = arts + 1; return setAtlas(self, ...) end
 heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 2)
 W.RunTimers()
+eq(arts, 0, "OpenMap redraw: a pin's icon art isn't reset when style is unchanged")
+givers[1].icon.SetAtlas = setAtlas
 eq(#ofKind("giver"), 1, "drawn again as the view moves")
 -- Its stitched map, as Questie's pins are there: the zone beside the one underneath (999, right of
 -- it on the stitched world) has its pins drawn too, carried onto the map underneath.
@@ -99,6 +104,12 @@ end
 check(beside ~= nil, "OpenMap: the next zone's quest giver on its stitched map")
 eq(beside and beside._point[4], 1.5 * WorldMapFrame.ScrollContainer.Child:GetWidth(), "where it is on the stitched world")
 eq(#ofKind("giver"), 2, "and the zone underneath's still")
+ns:SetOption("QuestPins", "continent", false)
+W.RunTimers()
+eq(#ofKind("giver"), 1, "OpenMap stitched: On Continent Maps off hides nearby zones")
+ns:SetOption("QuestPins", "continent", true)
+W.RunTimers()
+eq(#ofKind("giver"), 2, "OpenMap stitched: On Continent Maps on shows nearby zones again")
 W.worldMapID = 1414
 heard.OpenMap_ViewChanged("OpenMap_ViewChanged", 0.5, 0.5, 1)
 W.RunTimers()

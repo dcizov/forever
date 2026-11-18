@@ -35,6 +35,12 @@ function Plugin.Loaded()
     return type(fpp) == "table" and type(fpp.v1) == "table"
 end
 
+-- Whether Forever Codex is loaded (its API answers).
+function Plugin.CodexLoaded()
+    local codex = _G.ForeverCodexAPI
+    return type(codex) == "table" and type(codex.v1) == "table"
+end
+
 -- Whether Forever++ Integration is on (and Forever++ there).
 -- function Plugin.Integrated()
 --     local mod = ns.modules.ForeverPlusPlus
@@ -44,6 +50,12 @@ end
 function Plugin.Integrated()
     local mod = ns.modules.ForeverPlusPlus
     return Plugin.Loaded() and mod ~= nil and mod.active and true or false
+end
+
+-- Whether Forever Codex Integration is on (and Forever Codex there).
+function Plugin.CodexIntegrated()
+    local mod = ns.modules.ForeverCodex
+    return Plugin.CodexLoaded() and mod ~= nil and mod.active and true or false
 end
 
 -- Whether `value` can be module `mod`'s setting `key` (its option's choices and range).

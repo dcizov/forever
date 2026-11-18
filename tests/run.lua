@@ -15,7 +15,7 @@ local root = (arg[0]:match("^(.*)/tests/[^/]*$")) or "."
 -- quest ones in quests/; bags/ its bag features (Full Bags, Quest Items, Vendor)
 -- and how they share Baganator; compendium/ Forever Codex's.
 local GROUPS = {
-    { "core", { "suite", "bindings", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api",
+    { "core", { "suite", "bindings", "alone", "migrate", "upgrade", "removed", "fresh", "settings", "commands", "isolation", "store", "editmode", "ui", "api", "codexapi", "codexintegration",
         "changelog", "hints", "updates", "standalone", "lint" } },
     { "tweaks", { "fpppage", "bag", "djskin", "djcolors", "fishing", "chat", "chatsplit" } },
     { "interface", { "layer", "combathelpers", "performance", "cooldowns", "nameplatedistance", "visuals", "drawer" } },

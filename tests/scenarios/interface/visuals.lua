@@ -46,7 +46,29 @@ eq(V.module.db.lightProfiles["my-settings"].values.midnight[1], 21, "My Settings
 
 DL.ApplyProfile("va-odyssey-g5-sdr")
 eq(V.module.db.lightProfile, "va-odyssey-g5-sdr", "a built-in profile can be selected")
-eq(V.module.db.light.midnight[1], 22, "built-in apply writes expected Dynamic Light keys")
+eq(V.module.db.light.dusk[1], 33, "VA profile dusk brightness is pinned")
+eq(V.module.db.light.dusk[2], 36, "VA profile dusk contrast is pinned")
+eq(V.module.db.light.dusk[3], 0.93, "VA profile dusk gamma is pinned")
+eq(V.module.db.light.midnight[1], 20, "VA profile midnight brightness is pinned")
+eq(V.module.db.light.midnight[2], 22, "VA profile midnight contrast is pinned")
+eq(V.module.db.light.midnight[3], 0.87, "VA profile midnight gamma is pinned")
+eq(V.module.db.light.moonlit[1], 25, "VA profile moonlit brightness is pinned")
+eq(V.module.db.light.moonlit[2], 26, "VA profile moonlit contrast is pinned")
+eq(V.module.db.light.moonlit[3], 0.89, "VA profile moonlit gamma is pinned")
+eq(V.module.db.light.indoorNight[1], 35, "VA profile indoor-night brightness is pinned")
+eq(V.module.db.light.indoorNight[2], 45, "VA profile indoor-night contrast is pinned")
+eq(V.module.db.light.indoorNight[3], 0.94, "VA profile indoor-night gamma is pinned")
+eq(V.module.db.light.cave[1], 18, "VA profile cave brightness is pinned")
+eq(V.module.db.light.cave[2], 22, "VA profile cave contrast is pinned")
+eq(V.module.db.light.cave[3], 0.85, "VA profile cave gamma is pinned")
+eq(V.module.db.light.undercity[1], 31, "VA profile undercity brightness is pinned")
+eq(V.module.db.light.undercity[2], 27, "VA profile undercity contrast is pinned")
+eq(V.module.db.light.undercity[3], 0.9, "VA profile undercity gamma is pinned")
+eq(DL.Value("capitalLift"), 30, "VA profile capital lift is pinned")
+eq(V.module.db.light.lightBoost, 3, "VA profile light boost is pinned")
+eq(V.module.db.light.lightMax, 7, "VA profile light max is pinned")
+eq(V.module.db.light.nightVision, 3, "VA profile night vision lift is pinned")
+eq(DL.Value("multBrightness"), 100, "VA profile brightness multiplier is pinned")
 eq(V.module.db.light.multContrast, 95, "built-in apply writes expected scalar values")
 
 V.module.db.lightProfiles.sparse = { title = "Sparse", values = { midnight = { 26, 27, 0.92 } } }
@@ -71,6 +93,10 @@ eq(L.VISUALS_SKY_ENABLE, "Sky Gradient", "the sky toggle has its own name")
 eq(L.VISUALS_SKY_HIDE, "Fade Indoors or While Flying", "the sky hide row names indoors first")
 check(L.VISUALS_SKY_HIDE_TIP:find("client reports flying", 1, true) ~= nil,
     "the sky hide tip explains flying depends on client reporting")
+check(L.DLIGHT_PROFILE_VA_G5_TIP:find("Brightness 60", 1, true) ~= nil,
+    "VA profile tip documents the tuned OSD brightness")
+check(L.VISUALS_SHARPEN_MONITOR_NOTICE:find("double edge halos", 1, true) ~= nil,
+    "Advanced Graphics includes a monitor sharpening advisory")
 eq(L.VISUALS_SKY_DYNAMIC_TIP:match("Dynamic Light"), "Dynamic Light", "the hybrid mapping explains the time curve source")
 eq(type(V.module.defaults.skyGradientIntensity), "number", "there is a dedicated sky gradient intensity value")
 eq(type(V.module.defaults.skyColorDarkness), "number", "there is a dedicated sky color darkness value")
@@ -88,25 +114,26 @@ local function pageByName(parent, name)
     end
 end
 
-local function hasChild(parent, name)
-    return pageByName(parent, name) ~= nil
-end
-
 eq(pageNames(), "Profiles,Changelog,About", "off: no Visuals page")
 ns:SetEnabled("Visuals", true)
 eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. ",Changelog,About",
-    "on: one Advanced Graphics page, before Forever++'s last two")
-local fppVisuals = pageByName(fpp, L.VISUALS_TITLE)
-check(fppVisuals ~= nil and hasChild(fppVisuals, L.DLIGHT_TITLE),
-    "under Forever++: Advanced Graphics has Dynamic Light as its child page")
-local ownVisuals
+    "on and Dynamic Light off: only Advanced Graphics is listed before Forever++'s last two")
+local ownCategory
 for _, category in pairs(W.categories) do
-    if category ~= fpp and hasChild(category, L.VISUALS_TITLE) then
-        ownVisuals = pageByName(category, L.VISUALS_TITLE)
-    end
+    if category ~= fpp and pageByName(category, L.VISUALS_TITLE) then ownCategory = category end
 end
-check(ownVisuals ~= nil and hasChild(ownVisuals, L.DLIGHT_TITLE),
-    "under Gearbox: Advanced Graphics has Dynamic Light as its child page")
+check(ownCategory ~= nil, "under Gearbox: Advanced Graphics is listed while it's on")
+eq(pageByName(ownCategory, L.DLIGHT_TITLE), nil, "under Gearbox: Dynamic Light is hidden while it is off")
+
+ns:SetOption("Visuals", "dynamic", true)
+eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. "," .. L.DLIGHT_TITLE .. ",Changelog,About",
+    "on and Dynamic Light on: child is listed directly under Advanced Graphics")
+check(pageByName(ownCategory, L.DLIGHT_TITLE) ~= nil, "under Gearbox: Dynamic Light appears while it is on")
+
+ns:SetOption("Visuals", "dynamic", false)
+eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. ",Changelog,About",
+    "turning Dynamic Light off removes only the child page")
+check(pageByName(ownCategory, L.VISUALS_TITLE) ~= nil, "parent page stays listed while module is on")
 eq(V.module.db.values.outlineModeShowLootEffectWhenDisabled, nil, "3.3.0: the old loot sparkle isn't kept any more")
 eq(V.module.db.values.graphicsOutlineMode, nil, "nor the Outline Mode it set")
 
@@ -337,15 +364,46 @@ local image = rowIndex(L.VISUALS_BRIGHTNESS)
 local world = rowIndex(L.VISUALS_GRASS)
 local lighting = rowIndex(L.VISUALS_GI)
 local view = rowIndex(L.VISUALS_ZOOM)
-local skyRow = rowIndex(L.VISUALS_SKY_ENABLE)
-check(look and image and world and lighting and view and skyRow, "the expected rows are present")
-check(look < image and image < world and world < lighting and lighting < view and view < skyRow,
-    "one-column order: Look, Image, World Detail, Lighting, Camera, Sky")
-check(rowIndex(L.DLIGHT_MOON) == nil and rowIndex(L.DLIGHT_DUSK) == nil,
-    "Advanced Graphics no longer includes Dynamic Light section rows")
-local offRows = shownRows()
--- The Sky toggle stays visible while the rest of the sky rows are hidden.
-local skyShown = shownRows()
+check(look and image and world and lighting and view, "the expected rows are present")
+check(look < image and image < world and world < lighting and lighting < view,
+    "one-column order: Look, Image, World Detail, Lighting, Camera")
+check(rowIndex(L.VISUALS_DYNAMIC) ~= nil and rowIndex(L.VISUALS_DYNAMIC_STRENGTH) ~= nil,
+    "Advanced Graphics includes Dynamic Light quick rows")
+check(rowIndex(L.VISUALS_DYNAMIC_PAGE) ~= nil, "Advanced Graphics includes a Dynamic Light page link row")
+check(rowIndex(L.VISUALS_DYNAMIC_PAGE) < image, "Dynamic Light quick rows are before the graphics settings sections")
+check(rowIndex(L.VISUALS_SKY_ENABLE) == nil and rowIndex(L.VISUALS_SKY_DYNAMIC) == nil,
+    "Advanced Graphics no longer includes Sky rows")
+
+ns.VisualsPage.OpenDynamicLight()
+eq(W.opened, L.VISUALS_TITLE, "opening Dynamic Light while hidden falls back to Advanced Graphics")
+
+ns:SetOption("Visuals", "dynamic", true)
+eq(pageNames(), "Profiles," .. L.VISUALS_TITLE .. "," .. L.DLIGHT_TITLE .. ",Changelog,About",
+    "child appears again with parent-then-child order when Dynamic Light turns on")
+
+ns:SetOption("Visuals", "dynamic", false)
+C_SettingsUtil.OpenSettingsPanel(L.DLIGHT_TITLE)
+local lightStack = stackOf(L.DLIGHT_TITLE)
+check(lightStack and #lightStack.entries > 30, "Dynamic Light page is built and long enough to scroll")
+local function lightShownRows()
+    local n = 0
+    for _, entry in ipairs(lightStack.entries) do if entry.frame:IsShown() then n = n + 1 end end
+    return n
+end
+local function lightRowShown(label)
+    for _, entry in ipairs(lightStack.entries) do
+        local row = entry.frame
+        local text = row.label and row.label:GetText()
+        if text == label then return row:IsShown() end
+    end
+end
+
+local lightOffRows = lightShownRows()
+check(lightOffRows >= 6, "Dynamic Light page stays reachable while Dynamic Light is off")
+check(lightRowShown(L.DLIGHT_MOON) == false and lightRowShown(L.DLIGHT_SUNRISE) == false,
+    "while off, the detailed Dynamic Light rows are hidden")
+check(lightRowShown(L.VISUALS_SKY_ENABLE) == true, "Sky toggle stays visible on Dynamic Light page")
+local skyShown = lightShownRows()
 V.module.db.skyNightOnly = false
 V.UpdateSky()
 local sky = _G.ForeverGearboxVisualsSky
@@ -404,43 +462,20 @@ local r1, g1, b1 = gradientTopColor()
 check(r1 < r0 and g1 < g0 and b1 < b0, "Color Darkness darkens the gradient tint")
 
 ns:SetOption("Visuals", "skyEnabled", false)
-check(shownRows() < skyShown, "sky off: the detail rows hide")
-check(shownRows() >= 1, "sky off: the toggle stays visible")
+check(lightShownRows() < skyShown, "sky off: the detail rows hide")
+check(lightShownRows() >= 1, "sky off: the toggle stays visible")
 ns:SetOption("Visuals", "skyEnabled", true)
-check(shownRows() == skyShown, "sky on: the detail rows come back")
+check(lightShownRows() == skyShown, "sky on: the detail rows come back")
 ns:SetOption("Visuals", "skyDynamicTime", true)
 W.gameTime = { 6, 30 }
 local before = V.SkyAlpha()
-V.module.db.skySunriseHour = 10
-check(V.SkyAlpha() ~= before, "the sky reads its own sunrise time")
+DL.SetValue("sunrise", 10)
+check(V.SkyAlpha() ~= before, "the sky reads Dynamic Light's sunrise time")
 ns:SetOption("Visuals", "dynamic", true)
 local afterDynamic = V.SkyAlpha()
-V.module.db.skySunriseHour = 6
-check(V.SkyAlpha() ~= afterDynamic, "the sky keeps its own clock even while Dynamic Light is on")
+DL.SetValue("sunrise", 6)
+check(V.SkyAlpha() ~= afterDynamic, "the sky follows Dynamic Light's clock while Dynamic Light is on")
 ns:SetOption("Visuals", "dynamic", false)
-ns:SetOption("Visuals", "dynamic", true)
-eq(shownRows(), offRows + 1, "Advanced Graphics only gains Sky's Dynamic Time Scaling row")
-
-ns:SetOption("Visuals", "dynamic", false)
-C_SettingsUtil.OpenSettingsPanel(L.DLIGHT_TITLE)
-local lightStack = stackOf(L.DLIGHT_TITLE)
-check(lightStack and #lightStack.entries > 30, "Dynamic Light page is built and long enough to scroll")
-local function lightShownRows()
-    local n = 0
-    for _, entry in ipairs(lightStack.entries) do if entry.frame:IsShown() then n = n + 1 end end
-    return n
-end
-local lightOffRows = lightShownRows()
-check(lightOffRows >= 6, "Dynamic Light page stays reachable while Dynamic Light is off")
-local function lightRowShown(label)
-    for _, entry in ipairs(lightStack.entries) do
-        local row = entry.frame
-        local text = row.label and row.label:GetText()
-        if text == label then return row:IsShown() end
-    end
-end
-check(lightRowShown(L.DLIGHT_MOON) == false and lightRowShown(L.DLIGHT_SUNRISE) == false,
-    "while off, the detailed Dynamic Light rows are hidden")
 local now
 for _, entry in ipairs(lightStack.entries) do
     local text = rawget(entry.frame, "text") and entry.frame.text:GetText()

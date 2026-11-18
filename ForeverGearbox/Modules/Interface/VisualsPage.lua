@@ -6,9 +6,10 @@
             * The graphics settings in one column, in this order: Look (Preset: Visuals.PRESETS,
                 "Custom" once a value is changed by hand; Protect Values), Image (with a line while
                 Dynamic Light sets Brightness, Contrast and Gamma), World Detail, Lighting & Atmosphere,
-                Camera & Interaction, then Sky. A row per setting this client has (a slider or a checkbox);
+                then Camera & Interaction. A row per setting this client has (a slider or a checkbox);
                 one another addon makes its own (Visuals.Conflict) is greyed and its tooltip says why.
-            * Dynamic Light on its own nested page under Advanced Graphics (DynamicLightPage.lua).
+            * Dynamic Light (and Sky) on its own sibling page under the same host entry
+                (DynamicLightPage.lua), listed just after Advanced Graphics.
         With Forever++ the entry is found as Forever++ gives its own to Blizzard's Settings
         (Settings.RegisterAddOnCategory, hooked as it's called at Forever++'s login, after this file
         loads; matched by its title as UI/ForeverPage.lua does), and kept in its list of pages as
@@ -104,37 +105,6 @@ local function settingRow(stack, def)
     row:SetScript("OnEnter", function(self) Kit.ShowTooltip(self, def.label, tip()) end)
 end
 
-local function addSkyRows(stack)
-    local mod = Visuals().module
-    local start = #stack.entries + 1
-    local function check(key, label, tip)
-        local row = Kit.AddCheckRow(stack, label, function() return mod.db[key] end,
-            function(checked) ns:SetOption(mod.name, key, checked) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    local function slider(key, label, tip, min, max, step, format)
-        local row = Kit.AddSliderRow(stack, label, { min = min, max = max, step = step, format = format },
-            function() return mod.db[key] end,
-            function(value) ns:SetOption(mod.name, key, value) end, tip)
-        Page.AddRefresh(function() row.Refresh(mod.db.skyEnabled) end)
-    end
-    check("skyEnabled", L.VISUALS_SKY_ENABLE, L.VISUALS_SKY_ENABLE_TIP)
-    check("skyDynamicTime", L.VISUALS_SKY_DYNAMIC, L.VISUALS_SKY_DYNAMIC_TIP)
-    check("skyNightOnly", L.VISUALS_SKY_NIGHT_ONLY, L.VISUALS_SKY_NIGHT_ONLY_TIP)
-    check("skyHideFlyingOrIndoors", L.VISUALS_SKY_HIDE, L.VISUALS_SKY_HIDE_TIP)
-    slider("skyGradientHeight", L.VISUALS_SKY_HEIGHT, L.VISUALS_SKY_HEIGHT_TIP, 120, 500, 10, "%d px")
-    slider("skyDayAlpha", L.VISUALS_SKY_DAY, L.VISUALS_SKY_DAY_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyNightAlpha", L.VISUALS_SKY_NIGHT, L.VISUALS_SKY_NIGHT_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyGradientIntensity", L.VISUALS_SKY_GRADIENT, L.VISUALS_SKY_GRADIENT_TIP, 0, 1, 0.05, "%.2f")
-    slider("skyColorDarkness", L.VISUALS_SKY_COLOR, L.VISUALS_SKY_COLOR_TIP, 0, 1, 0.05, "%.2f")
-    slider("skySunriseHour", L.VISUALS_SKY_SUNRISE, L.VISUALS_SKY_SUNRISE_TIP, 0, 24, 0.5, "%.1f h")
-    slider("skySunsetHour", L.VISUALS_SKY_SUNSET, L.VISUALS_SKY_SUNSET_TIP, 0, 24, 0.5, "%.1f h")
-    slider("skyTwilightHours", L.VISUALS_SKY_TWILIGHT, L.VISUALS_SKY_TWILIGHT_TIP, 0, 6, 0.25, "%.2f h")
-    for i = start + 1, #stack.entries do
-        stack.entries[i].shown = function() return mod.db.skyEnabled end
-    end
-end
-
 local function fillVisuals(frame)
     local V = Visuals()
     local stack = Kit.NewRowPage(frame, L.VISUALS_TITLE)
@@ -154,6 +124,20 @@ local function fillVisuals(frame)
     end, L.VISUALS_PRESET_TIP)
     Page.AddRefresh(preset.Refresh)
     Page.AddOptionRow(stack, "protect")
+    Kit.AddHeaderRow(stack, L.VISUALS_DYNAMIC)
+    Page.AddOptionRow(stack, "dynamic")
+    Page.AddOptionRow(stack, "dynamicStrength", Page.Enabled)
+    local _, open = Kit.AddButtonRow(stack, L.VISUALS_DYNAMIC_PAGE, L.VISUALS_OPEN_BUTTON, function()
+        Page.OpenDynamicLight()
+    end, L.VISUALS_DYNAMIC_PAGE_TIP)
+    Page.AddRefresh(function()
+        open:SetEnabled(Page.Enabled())
+        open:SetAlpha(Page.Enabled() and 1 or 0.5)
+    end)
+    local note = Kit.AddTextRow(stack, "", "GameFontDisableSmall", 4)
+    Page.AddRefresh(function()
+        note:SetText(Page.Enabled() and L.VISUALS_DYNAMIC_NOTE_ON or L.VISUALS_DYNAMIC_NOTE_OFF)
+    end)
     for _, key in ipairs(ORDER) do
         local section = sectionByKey(key)
         local rows = {}
@@ -167,11 +151,11 @@ local function fillVisuals(frame)
                 Kit.ShowWhen(stack, Page.Enabled)
             end
             for _, def in ipairs(rows) do settingRow(stack, def) end
+            if section.key == "image" then
+                Kit.AddTextRow(stack, L.VISUALS_SHARPEN_MONITOR_NOTICE, "GameFontDisableSmall", 4)
+            end
         end
     end
-    -- Sky is a graphics feature and stays on Advanced Graphics, after the camera rows.
-    Kit.AddHeaderRow(stack, L.VISUALS_SKY)
-    addSkyRows(stack)
     Page.AddRefresh(function() Kit.Layout(stack) end)
     Kit.Layout(stack)
     frame:HookScript("OnShow", Page.Redraw)
@@ -183,33 +167,52 @@ end
 ---------------------------------------------------------------------------
 
 local PAGE = { title = L.VISUALS_TITLE, fill = fillVisuals }
-local hosts = {} -- { category, keepLast, page, lightPage, fpp } each
+local hosts = {} -- { category, keepLast, visualsPage, dynamicPage, fpp } each
 
--- Whether our page is listed under `host` now: while the module is on, and under Forever++'s only
--- with Forever++ Integration.
-local function listedUnder(host)
+-- Whether one of our pages is listed under `host` now:
+--   * parent while Advanced Graphics is on,
+--   * child while Advanced Graphics and Dynamic Light are both on,
+-- and for Forever++'s host only while Forever++ Integration is on.
+local function listedUnder(host, child)
     if not wanted then return false end
-    if host.fpp then return ns.Plugin.Integrated() end
+    if host.fpp and not ns.Plugin.Integrated() then return false end
+    if child then return Page.Enabled() end
     return true
 end
 
--- Ours in each entry's list of pages (before its last keepLast) while listed, else out of it.
+-- Writes the whole list from what should be in it, preserving this host's own pages in place:
+-- everything before its keepLast tail, our pages (if listed), then that tail as it is now.
 local function listPages()
     for _, host in ipairs(hosts) do
-        local list = host.category:GetSubcategories()
-        for i = #list, 1, -1 do
-            if list[i] == host.page then table.remove(list, i) end
-        end
-        if listedUnder(host) then table.insert(list, math.max(1, #list - host.keepLast + 1), host.page) end
-        if host.page and host.lightPage and host.page.GetSubcategories then
-            local subs = host.page:GetSubcategories()
-            for i = #subs, 1, -1 do
-                if subs[i] == host.lightPage then table.remove(subs, i) end
+        local list = host.category.GetSubcategories and host.category:GetSubcategories()
+        if list then
+            local base = {}
+            for _, page in ipairs(list) do
+                if page ~= host.visualsPage and page ~= host.dynamicPage then
+                    base[#base + 1] = page
+                end
             end
-            if listedUnder(host) then table.insert(subs, 1, host.lightPage) end
+            local tailCount = math.min(host.keepLast or 0, #base)
+            local keep = #base - tailCount
+            local want = {}
+            for i = 1, keep do want[#want + 1] = base[i] end
+            if listedUnder(host, false) then want[#want + 1] = host.visualsPage end
+            if listedUnder(host, true) then want[#want + 1] = host.dynamicPage end
+            for i = keep + 1, #base do want[#want + 1] = base[i] end
+
+            local same = #list == #want
+            for i = 1, #want do
+                same = same and list[i] == want[i]
+            end
+            if not same then
+                for i = #list, 1, -1 do list[i] = nil end
+                for i, page in ipairs(want) do list[i] = page end
+            end
         end
     end
 end
+
+Page.UpdateEntries = listPages
 
 function Page.Show(on)
     wanted = on
@@ -220,14 +223,14 @@ end
 -- module, to turn it on.
 function Page.Open()
     for _, host in ipairs(hosts) do
-        if not host.fpp and wanted then return Kit.Open(host.page) end
+        if not host.fpp and listedUnder(host, false) then return Kit.Open(host.visualsPage) end
     end
     ns:OpenSettings(Visuals().module.name)
 end
 
 function Page.OpenDynamicLight()
     for _, host in ipairs(hosts) do
-        if not host.fpp and wanted and host.lightPage then return Kit.Open(host.lightPage) end
+        if not host.fpp and listedUnder(host, true) and host.dynamicPage then return Kit.Open(host.dynamicPage) end
     end
     if wanted then return Page.Open() end
     ns:OpenSettings(Visuals().module.name)
@@ -236,13 +239,19 @@ ns.Visuals.Redraw = Page.Redraw
 
 -- Our page under `category`, before its last `count` pages; `fpp` for Forever++'s entry.
 function Page.UseHost(category, count, fpp)
-    local page = Settings.RegisterCanvasLayoutSubcategory(category, Kit.CanvasFrame(function(frame)
+    local visualsPage = Settings.RegisterCanvasLayoutSubcategory(category, Kit.CanvasFrame(function(frame)
         ns.ChargedCall(owner, "visuals page", PAGE.fill, frame)
     end), PAGE.title)
-    local lightPage = Settings.RegisterCanvasLayoutSubcategory(page, Kit.CanvasFrame(function(frame)
+    local dynamicPage = Settings.RegisterCanvasLayoutSubcategory(category, Kit.CanvasFrame(function(frame)
         ns.ChargedCall(owner, "dynamic light page", ns.DynamicLightPage.Fill, frame)
     end), L.DLIGHT_TITLE)
-    hosts[#hosts + 1] = { category = category, keepLast = count, page = page, lightPage = lightPage, fpp = fpp }
+    hosts[#hosts + 1] = {
+        category = category,
+        keepLast = count,
+        visualsPage = visualsPage,
+        dynamicPage = dynamicPage,
+        fpp = fpp,
+    }
     listPages()
 end
 
@@ -255,5 +264,10 @@ end)
 
 -- Forever++ draws its list of pages again when one of its tools turns on or off: ours put back.
 SettingsPanel:HookScript("OnShow", function() ns.ChargedCall(owner, "visuals entries", listPages) end)
+
+-- Forever++ Integration turned on or off: both hosts' lists rebuilt from the same predicate.
+ns:OnChanged(owner, function(_, name, key)
+    if name == "ForeverPlusPlus" and key == "enabled" then listPages() end
+end)
 
 -- No Forever++ host: Gearbox stays standalone.

@@ -1,16 +1,19 @@
 --[[
     Forever Gearbox - Advanced Graphics (module key Visuals)
-    How the game looks, on top of its own graphics menu, in one page (VisualsPage.lua): the image
-    (brightness, contrast, gamma, sharpening), Forever's new lighting and atmosphere (indirect
-    lighting, fog, god rays, bloom, water, weather), Dynamic Light (DynamicLight.lua: brightness,
-    contrast and gamma following the time of day and where you are), world detail (grass, distant
-    objects) and the camera and the nearest object's name (SETTINGS, in SECTIONS); with presets
-    (PRESETS: from Performance to Maximum, the classic or modern look, Blizzard's defaults, and the
-    values before the module first ran). Each is a console variable (a few set others with it, as
-    the game's menu does: `linked`); one this client doesn't have isn't shown.
+    How the game looks, on top of its own graphics menu, in Settings pages (VisualsPage.lua and
+    DynamicLightPage.lua): Advanced Graphics has the image (brightness, contrast, gamma,
+    sharpening), Forever's new lighting and atmosphere (indirect lighting, fog, god rays, bloom,
+    water, weather), world detail (grass, distant objects) and the camera and the nearest object's
+    name (SETTINGS, in SECTIONS); Dynamic Light has Dynamic Light (DynamicLight.lua: brightness,
+    contrast and gamma following the time of day and where you are) and Sky (the top-screen
+    gradient). With presets (PRESETS: from Performance to Maximum, the classic or modern look,
+    Blizzard's defaults, and the values before the module first ran). Each is a console variable
+    (a few set others with it, as the game's menu does: `linked`); one this client doesn't have
+    isn't shown.
 
-      * The page: its own entry under Forever++ in Settings while the module is on, as Forever++'s
-        Console Variables has; without Forever++, a window of its own.
+            * The pages: their own entries under Forever++ in Settings while the module is on, as
+                Forever++'s Console Variables and Gathering Map have; without Forever++, under Forever
+                Gearbox' own AddOns entry.
       * Protect Values: what you set here is put back when the game's graphics menu (one of its
         "graphics..." variables) or a login overwrites it.
       * Dynamic Light and the image: while it's on it sets Brightness, Contrast and Gamma (`light`);
@@ -128,7 +131,7 @@ local M = ns:NewModule("Visuals", {
         enabled = false, protect = true, dynamic = false, dynamicStrength = 100,
         skyEnabled = true, skyDynamicTime = true, skyNightOnly = true, skyHideFlyingOrIndoors = true,
         skyGradientHeight = 250, skyDayAlpha = 0.25, skyNightAlpha = 0.5,
-        skyGradientIntensity = 0.65, skyColorDarkness = 0, skySunriseHour = 6, skySunsetHour = 20, skyTwilightHours = 1,
+        skyGradientIntensity = 0.65, skyColorDarkness = 0,
         values = {},   -- data: cvar -> the value you set here (Protect Values puts it back)
         original = {}, -- data: cvar -> its value when the module first ran (the Before preset)
         preset = "",   -- data: the preset last applied ("" once a value is changed by hand)
@@ -140,30 +143,9 @@ local M = ns:NewModule("Visuals", {
     },
     options = {
         { key = "protect", type = "checkbox", label = L.VISUALS_PROTECT, tooltip = L.VISUALS_PROTECT_TIP },
-        { key = "dynamic", type = "checkbox", label = L.VISUALS_DYNAMIC, tooltip = L.VISUALS_DYNAMIC_TIP,
-          slider = "dynamicStrength" },
+        { key = "dynamic", type = "checkbox", label = L.VISUALS_DYNAMIC, tooltip = L.VISUALS_DYNAMIC_TIP },
         { key = "dynamicStrength", type = "slider", label = L.VISUALS_DYNAMIC_STRENGTH, tooltip = L.VISUALS_DYNAMIC_STRENGTH_TIP,
           min = 0, max = 150, step = 10, format = "%d%%", requires = "dynamic" },
-        { key = "skyEnabled", type = "checkbox", label = L.VISUALS_SKY_ENABLE, tooltip = L.VISUALS_SKY_ENABLE_TIP },
-        { key = "skyDynamicTime", type = "checkbox", label = L.VISUALS_SKY_DYNAMIC, tooltip = L.VISUALS_SKY_DYNAMIC_TIP },
-        { key = "skyNightOnly", type = "checkbox", label = L.VISUALS_SKY_NIGHT_ONLY, tooltip = L.VISUALS_SKY_NIGHT_ONLY_TIP },
-        { key = "skyHideFlyingOrIndoors", type = "checkbox", label = L.VISUALS_SKY_HIDE, tooltip = L.VISUALS_SKY_HIDE_TIP },
-        { key = "skyGradientHeight", type = "slider", label = L.VISUALS_SKY_HEIGHT, tooltip = L.VISUALS_SKY_HEIGHT_TIP,
-          min = 120, max = 500, step = 10, format = "%d px" },
-        { key = "skyDayAlpha", type = "slider", label = L.VISUALS_SKY_DAY, tooltip = L.VISUALS_SKY_DAY_TIP,
-          min = 0, max = 1, step = 0.05, format = "%.2f" },
-        { key = "skyNightAlpha", type = "slider", label = L.VISUALS_SKY_NIGHT, tooltip = L.VISUALS_SKY_NIGHT_TIP,
-          min = 0, max = 1, step = 0.05, format = "%.2f" },
-        { key = "skyGradientIntensity", type = "slider", label = L.VISUALS_SKY_GRADIENT, tooltip = L.VISUALS_SKY_GRADIENT_TIP,
-          min = 0, max = 1, step = 0.05, format = "%.2f" },
-                { key = "skyColorDarkness", type = "slider", label = L.VISUALS_SKY_COLOR, tooltip = L.VISUALS_SKY_COLOR_TIP,
-                    min = 0, max = 1, step = 0.05, format = "%.2f" },
-        { key = "skySunriseHour", type = "slider", label = L.VISUALS_SKY_SUNRISE, tooltip = L.VISUALS_SKY_SUNRISE_TIP,
-          min = 0, max = 24, step = 0.5, format = "%.1f h" },
-        { key = "skySunsetHour", type = "slider", label = L.VISUALS_SKY_SUNSET, tooltip = L.VISUALS_SKY_SUNSET_TIP,
-          min = 0, max = 24, step = 0.5, format = "%.1f h" },
-        { key = "skyTwilightHours", type = "slider", label = L.VISUALS_SKY_TWILIGHT, tooltip = L.VISUALS_SKY_TWILIGHT_TIP,
-          min = 0, max = 6, step = 0.25, format = "%.2f h" },
     },
 })
 Visuals.module = M
@@ -224,11 +206,19 @@ local function skyCanRender()
     return skySupported
 end
 
+local function skyCurve()
+    local sunrise, sunset, twilight = 6, 20, 1
+    local light = ns.DynamicLight
+    if M.db and M.db.skyDynamicTime and light and light.Value then
+        sunrise = tonumber(light.Value("sunrise")) or sunrise
+        sunset = tonumber(light.Value("sunset")) or sunset
+        twilight = tonumber(light.Value("twilight")) or twilight
+    end
+    return sunrise, sunset, twilight
+end
+
 local function skyPhase(now)
-    local db = M.db
-    local sunrise = db.skySunriseHour or 6
-    local sunset = db.skySunsetHour or 20
-    local twilight = db.skyTwilightHours or 1
+    local sunrise, sunset, twilight = skyCurve()
     local dawnStart = sunrise - twilight
     local dawnEnd = sunrise + twilight
     local duskStart = sunset - twilight
@@ -527,6 +517,7 @@ end
 function M:OnSettingChanged(key)
     if key == "dynamic" then
         if self.db.dynamic then ns.DynamicLight.Start() else ns.DynamicLight.Stop() end
+        if ns.VisualsPage and ns.VisualsPage.UpdateEntries then ns.VisualsPage.UpdateEntries() end
     elseif key == "dynamicStrength" then
         ns.DynamicLight.Changed()
     elseif key == "protect" then

@@ -7,7 +7,10 @@
   "badge_path": "scorecard.png",
   "exclude": [
     "ForeverGearbox/Shared",
-    "ForeverCodex/Shared"
+    "ForeverCodex/Shared",
+    ".git",
+    ".venv",
+    ".desloppify"
   ],
   "ignore": [
     "orphaned::*",
