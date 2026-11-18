@@ -136,7 +136,7 @@ local function fillVisuals(frame)
     end)
     local note = Kit.AddTextRow(stack, "", "GameFontDisableSmall", 4)
     Page.AddRefresh(function()
-        note:SetText(Page.Enabled() and L.VISUALS_DYNAMIC_NOTE_ON or L.VISUALS_DYNAMIC_NOTE_OFF)
+        note.text:SetText(Page.Enabled() and L.VISUALS_DYNAMIC_NOTE_ON or L.VISUALS_DYNAMIC_NOTE_OFF)
     end)
     for _, key in ipairs(ORDER) do
         local section = sectionByKey(key)
