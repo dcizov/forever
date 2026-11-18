@@ -58,6 +58,9 @@ eq(V.module.db.light.moonlit[3], 0.89, "VA profile moonlit gamma is pinned")
 eq(V.module.db.light.indoorNight[1], 35, "VA profile indoor-night brightness is pinned")
 eq(V.module.db.light.indoorNight[2], 45, "VA profile indoor-night contrast is pinned")
 eq(V.module.db.light.indoorNight[3], 0.94, "VA profile indoor-night gamma is pinned")
+eq(DL.Value("indoorDay")[1], 50, "VA profile indoor-day brightness is pinned")
+eq(DL.Value("indoorDay")[2], 50, "VA profile indoor-day contrast is pinned")
+eq(DL.Value("indoorDay")[3], 1, "VA profile indoor-day gamma is pinned")
 eq(V.module.db.light.cave[1], 18, "VA profile cave brightness is pinned")
 eq(V.module.db.light.cave[2], 22, "VA profile cave contrast is pinned")
 eq(V.module.db.light.cave[3], 0.85, "VA profile cave gamma is pinned")
@@ -95,6 +98,8 @@ check(L.VISUALS_SKY_HIDE_TIP:find("client reports flying", 1, true) ~= nil,
     "the sky hide tip explains flying depends on client reporting")
 check(L.DLIGHT_PROFILE_VA_G5_TIP:find("Brightness 60", 1, true) ~= nil,
     "VA profile tip documents the tuned OSD brightness")
+check(L.DLIGHT_PROFILE_VA_G5_TIP:find("Tuned for Samsung Odyssey G5 34\" VA panel in SDR (OSD Brightness 60, Contrast 70, Gamma Mode 1, Black Equalizer 13).", 1, true) ~= nil,
+    "VA profile tip documents the full SDR OSD baseline")
 check(L.VISUALS_SHARPEN_MONITOR_NOTICE:find("double edge halos", 1, true) ~= nil,
     "Advanced Graphics includes a monitor sharpening advisory")
 eq(L.VISUALS_SKY_DYNAMIC_TIP:match("Dynamic Light"), "Dynamic Light", "the hybrid mapping explains the time curve source")

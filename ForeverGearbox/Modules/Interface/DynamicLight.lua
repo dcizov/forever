@@ -152,7 +152,7 @@ DL["PROFILES"] = {
         title = function() return L.DLIGHT_PROFILE_VA_G5 end,
         tip = function() return L.DLIGHT_PROFILE_VA_G5_TIP end,
         values = function() return withDefaults({
-            dusk = { 33, 36, 0.93 }, midnight = { 20, 22, 0.87 }, moonlit = { 25, 26, 0.89 },
+            dusk = { 33, 36, 0.93 }, midnight = { 20, 22, 0.87 }, moonlit = { 25, 26, 0.89 }, indoorDay = { 50, 50, 1 },
             indoorNight = { 35, 45, 0.94 }, cave = { 18, 22, 0.85 }, undercity = { 31, 27, 0.9 },
             capitalLift = 30, lightBoost = 3, lightMax = 7, nightVision = 3,
             multBrightness = 100, multContrast = 95,
